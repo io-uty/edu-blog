@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { BANNED_PHRASES } from "@/config/brand";
+import { BANNED_PHRASES } from "@/config/rules";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
-import { SYSTEM_PROMPT } from "@/lib/prompts";
+import { systemPrompt } from "@/lib/prompts";
+import { NO_TENANT, readCtx } from "@/lib/requestCtx";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,6 +18,8 @@ const ACTIONS = {
 const Body = z.object({
   action: z.enum(["polish", "shorten", "expand", "simplify", "professional"]),
   text: z.string().trim().min(2).max(3000),
+  brand: z.unknown().optional(),
+  tenant: z.unknown().optional(),
 });
 const Out = z.object({ text: z.string().min(1) });
 
@@ -24,11 +27,13 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "선택한 문장을 확인해 주세요." }, { status: 400 });
   const { action, text } = p.data;
+  const ctx = readCtx(p.data);
+  if (!ctx) return NO_TENANT();
   if (IS_MOCK) return Response.json({ mock: true, text });
   try {
     const out = await generateJson({
-      system: SYSTEM_PROMPT,
-      user: `아래 선택 영역만 수정합니다.\n지시: ${ACTIONS[action]}\n규칙: 원문에 없는 사실·수치·일정·혜택을 만들지 않는다. 금지 표현(${BANNED_PHRASES.join(", ")}) 사용 금지. 줄바꿈 구조는 유지한다.\n\n원문:\n${text}\n\nJSON으로만 답하세요: {"text": "수정된 문장"}`,
+      system: systemPrompt(ctx),
+      user: `아래 선택 영역만 수정합니다.\n지시: ${ACTIONS[action]}\n규칙: 원문에 없는 사실·수치·일정·혜택을 만들지 않는다. 금지 표현(${[...BANNED_PHRASES, ...ctx.tenant.prohibited].join(", ")}) 사용 금지. 줄바꿈 구조는 유지한다.\n\n원문:\n${text}\n\nJSON으로만 답하세요: {"text": "수정된 문장"}`,
       schema: Out,
       mock: () => ({ text }),
       maxTokens: 1500,

@@ -1,4 +1,5 @@
-import { BANNED_PHRASES, BRAND, HASHTAG_COUNT, LENGTH_TARGET, MAX_TABLES, SECTION_RANGE } from "@/config/brand";
+import { BANNED_PHRASES, LENGTH_TARGET, MAX_TABLES, SECTION_RANGE, TOPIC_HASHTAG_COUNT } from "@/config/rules";
+import { DEFAULT_SETTINGS, type Brand } from "./settings";
 import { bodyCharCount } from "./render";
 import type { Draft } from "./schemas";
 
@@ -27,7 +28,8 @@ const PROMO_RE = /(할인|굿즈|증정|이벤트|장학|무료\s?특강|수강�
  * - 사실 검증 모듈(Phase 2) 전이므로 READY를 반환하지 않는다.
  * - 중대 오류(근거 없는 합격 주장, 실제 사례로 표시된 예시)는 FAILED.
  */
-export function checkQuality(d: Draft) {
+export function checkQuality(d: Draft, brand: Brand = DEFAULT_SETTINGS.brand, extraBanned: string[] = []) {
+  const HASHTAG_COUNT = TOPIC_HASHTAG_COUNT + brand.fixedHashtags.length + (brand.regionHashtagGroups[0]?.length ?? 0);
   const issues: QualityIssue[] = [];
   const bodyText = [
     d.title,
@@ -37,9 +39,9 @@ export function checkQuality(d: Draft) {
     ...d.conclusion,
   ].join("\n");
 
-  for (const phrase of BANNED_PHRASES) {
+  for (const phrase of [...BANNED_PHRASES, ...extraBanned]) {
     if (!bodyText.includes(phrase)) continue;
-    const fatal = /합격/.test(phrase);
+    const fatal = /합격|보장/.test(phrase) && BANNED_PHRASES.includes(phrase);
     issues.push({
       code: fatal ? "UNSUPPORTED_CLAIM" : "BANNED_PHRASE",
       severity: "error",
@@ -62,8 +64,8 @@ export function checkQuality(d: Draft) {
     issues.push({ code: "LENGTH", severity: "warning", message: `본문 ${len}자 (권장 ${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자)` });
 
   if (d.hashtags.length !== HASHTAG_COUNT)
-    issues.push({ code: "HASHTAG_COUNT", severity: "warning", message: `해시태그 ${d.hashtags.length}개 (기존 글 기준 ${HASHTAG_COUNT}개)` });
-  for (const t of BRAND.fixedHashtags)
+    issues.push({ code: "HASHTAG_COUNT", severity: "warning", message: `해시태그 ${d.hashtags.length}개 (설정 기준 ${HASHTAG_COUNT}개)` });
+  for (const t of brand.fixedHashtags)
     if (!d.hashtags.includes(t)) issues.push({ code: "HASHTAG_FIXED", severity: "warning", message: `고정 태그 누락: #${t}` });
 
   if (d.sections.length < SECTION_RANGE.min || d.sections.length > SECTION_RANGE.max)
@@ -80,8 +82,6 @@ export function checkQuality(d: Draft) {
     if (s.example && !s.example.is_fictional)
       issues.push({ code: "EXAMPLE_REAL_CASE", severity: "error", message: `소주제 ${i + 1} 예시가 실제 사례로 표시됨 — 근거 없으면 가상 표시 필요`, excerpt: s.example.text.slice(0, 40) });
   });
-
-  issues.push({ code: "FACTCHECK_NOT_IMPLEMENTED", severity: "info", message: "사실 검증 모듈 미구현(Phase 2) — 사람이 검토 후 게시하세요" });
 
   const FATAL = new Set(["UNSUPPORTED_CLAIM", "EXAMPLE_REAL_CASE"]);
   const status: PublishStatus = issues.some((i) => FATAL.has(i.code)) ? "FAILED" : "NEEDS_REVIEW";

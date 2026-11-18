@@ -1,11 +1,23 @@
 // 브라우저(localStorage) 기반 문서·이력 저장소. 서버 DB(Phase 5) 도입 전까지 사용한다.
+import type { ImageCopy, ImageKind } from "./imageCopy";
 import type { Draft, Plan } from "./schemas";
+import type { ImageLayout } from "./settings";
 import type { PublishStatus, QualityIssue } from "./quality";
 
 export interface Quality {
   status: PublishStatus;
   issues: QualityIssue[];
   charCount: number;
+}
+
+export interface ImageItem {
+  id: string;
+  kind: ImageKind;
+  sectionIndex: number | null;
+  copy: ImageCopy;
+  layout?: ImageLayout; // 없으면 블로그 설정의 기본 레이아웃
+  illustration: "none" | "ready";
+  updatedAt: number;
 }
 
 export interface DocRecord {
@@ -17,9 +29,11 @@ export interface DocRecord {
   plan: Plan;
   regionIndex: number;
   draft: Draft;
-  plainText: string;
-  html: string;
-  quality: Quality;
+  images?: ImageItem[];
+  // 아래 3개는 이전 버전 호환용(현재는 화면에서 바로 계산)
+  plainText?: string;
+  html?: string;
+  quality?: Quality;
   createdAt: number;
   updatedAt: number;
 }
@@ -69,6 +83,19 @@ export function formatTime(ts: number) {
   const d = new Date(ts);
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/** 썸네일 → 소주제 순서로 정렬 */
+export function sortImages(items: ImageItem[] = []) {
+  return [...items].sort((a, b) => (a.kind === b.kind ? (a.sectionIndex ?? 0) - (b.sectionIndex ?? 0) : a.kind === "thumbnail" ? -1 : 1));
+}
+
+export function imageLabel(it: ImageItem) {
+  return it.kind === "thumbnail" ? "썸네일" : `소주제 ${(it.sectionIndex ?? 0) + 1}`;
+}
+
+export function imagePosition(it: ImageItem) {
+  return it.kind === "thumbnail" ? "본문 맨 위" : `소주제 ${(it.sectionIndex ?? 0) + 1} 제목 아래`;
 }
 
 export const STATUS_LABEL: Record<PublishStatus, string> = {

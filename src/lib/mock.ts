@@ -4,11 +4,11 @@ import type { Analysis, Draft, Plan } from "./schemas";
 export function mockAnalysis(topic: string): Analysis {
   return {
     core_topic: `[MOCK] ${topic}`,
-    target_reader: "[MOCK] 편입 준비 수험생",
+    target_reader: "[MOCK] 수강 대상 학생",
     reader_problem: "[MOCK] API 미연결 상태의 더미 문제 정의",
     search_intent: "[MOCK] 정보 탐색",
-    main_keyword: "편입영어",
-    sub_keywords: ["편입공부", "편입학원"],
+    main_keyword: "[MOCK] 키워드",
+    sub_keywords: ["[MOCK] 보조 키워드"],
     core_message: "[MOCK] 실제 생성 결과가 아닙니다.",
     facts_needed: [],
     can_write_without_sources: true,

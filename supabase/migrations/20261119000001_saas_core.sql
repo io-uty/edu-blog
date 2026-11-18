@@ -1,0 +1,345 @@
+-- bbolog 멀티테넌트 SaaS 핵심 스키마 (초안 · 아직 어떤 DB에도 적용하지 않음)
+-- 대상: Supabase(Postgres 15+). auth.users / auth.uid() 는 Supabase Auth 가 제공한다.
+-- 원칙
+--   1) 테넌트 데이터는 모두 tenant_id 로 분리하고 RLS 로 막는다.
+--   2) 클라이언트가 보낸 tenant_id 는 믿지 않는다: 정책은 auth.uid() 의 소속(tenant_members)으로만 판단한다.
+--   3) 사용량·구독·결제는 클라이언트가 쓸 수 없다(service_role 또는 security definer 함수만).
+--   4) 기존 데이터는 브라우저 localStorage 에만 있으므로 삭제되는 DB 테이블은 없다.
+
+create extension if not exists pgcrypto;
+
+-- ───────────────────────── 테넌트 · 멤버 ─────────────────────────
+
+create table public.tenants (
+  id                  uuid primary key default gen_random_uuid(),
+  name                text not null check (char_length(name) between 1 and 80),
+  academy_type        text not null,                 -- 편입학원 | 영어학원 | ... | 기타
+  academy_type_custom text,                          -- 기타 교육기관일 때 직접 입력
+  branch_name         text,
+  onboarding_step     smallint not null default 1,   -- 1~3, 완료 시 4
+  subscription_status text not null default 'trial'
+    check (subscription_status in ('trial', 'active', 'past_due', 'canceled', 'expired')),
+  created_at          timestamptz not null default now()
+);
+
+create table public.tenant_members (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references public.tenants(id) on delete cascade,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  role       text not null default 'editor' check (role in ('owner', 'admin', 'editor')),
+  created_at timestamptz not null default now(),
+  unique (tenant_id, user_id)
+);
+create index tenant_members_user_idx on public.tenant_members (user_id);
+
+-- 서비스 운영자(전체 통계 접근). 테넌트 역할과 별개.
+create table public.platform_admins (
+  user_id    uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+-- ───────────────────────── 학원 설정 ─────────────────────────
+
+create table public.tenant_brands (
+  id                  uuid primary key default gen_random_uuid(),
+  tenant_id           uuid not null unique references public.tenants(id) on delete cascade,
+  logo_url            text,                 -- Storage 경로(테넌트 폴더)
+  logo_permission     boolean not null default false, -- 이미지에 로고 사용 권한 확인
+  primary_color       text check (primary_color ~* '^#[0-9a-f]{6}$'),
+  academy_description text,
+  official_website    text,
+  blog_url            text,
+  location            text,
+  sns_urls            text[] not null default '{}',
+  features            text[] not null default '{}',   -- 학원의 특징
+  instructors         jsonb  not null default '[]',   -- [{name, subject, intro}]
+  representative_instructor text,
+  main_subjects       text[] not null default '{}',
+  brand_guidelines    jsonb  not null default '{}',   -- 인사말, 마무리 소제목, 예약 링크, 장소 등
+  format_template     jsonb  not null default '{}',   -- 붙여넣기 서식(정렬·글자 크기·소제목)
+  image_design        jsonb  not null default '{}',   -- 이미지 레이아웃·색
+  updated_at          timestamptz not null default now()
+);
+
+create table public.tenant_content_settings (
+  id                     uuid primary key default gen_random_uuid(),
+  tenant_id              uuid not null unique references public.tenants(id) on delete cascade,
+  writing_tone           text,
+  target_audience        text,
+  courses                text[] not null default '{}',
+  subjects               text[] not null default '{}',   -- 콘텐츠 주제
+  seo_keywords           text[] not null default '{}',   -- 지역 SEO
+  official_promo_phrases text[] not null default '{}',
+  prohibited_expressions text[] not null default '{}',
+  style_profile          jsonb  not null default '{}',   -- 업로드한 기존 글에서 분석한 문체·구성
+  updated_at             timestamptz not null default now()
+);
+
+-- 홈페이지·SNS·업로드 자료 등 출처. 수집된 사실은 반드시 출처·확인일과 함께 저장.
+create table public.tenant_sources (
+  id                  uuid primary key default gen_random_uuid(),
+  tenant_id           uuid not null references public.tenants(id) on delete cascade,
+  source_url          text,
+  source_type         text not null check (source_type in
+                        ('homepage', 'sns', 'blog_sample', 'upload', 'university_official', 'image_asset')),
+  permission_status   text not null default 'unknown'
+    check (permission_status in ('unknown', 'user_consented', 'robots_allowed', 'robots_disallowed', 'licensed', 'denied')),
+  verification_status text not null default 'unverified'
+    check (verification_status in ('unverified', 'verified', 'rejected')),
+  license             text,          -- 예: CC BY-SA 4.0, 학교 서면 허락
+  extracted           jsonb not null default '{}',   -- 추출 결과(추측 금지: 발견한 값만)
+  checked_at          timestamptz,
+  created_at          timestamptz not null default now()
+);
+create index tenant_sources_tenant_idx on public.tenant_sources (tenant_id, source_type);
+
+-- ───────────────────────── 콘텐츠 ─────────────────────────
+
+create table public.projects (
+  id           uuid primary key default gen_random_uuid(),
+  tenant_id    uuid not null references public.tenants(id) on delete cascade,
+  created_by   uuid references auth.users(id) on delete set null,
+  topic        text not null,
+  content_type text not null,
+  title        text,
+  draft        jsonb,          -- 현재 Draft 구조 그대로
+  plan         jsonb,
+  status       text not null default 'draft' check (status in ('draft', 'ready', 'published_confirmed')),
+  published_confirmed_at timestamptz, -- 사용자가 직접 확인한 발행(공식 연동 아님)
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index projects_tenant_idx on public.projects (tenant_id, updated_at desc);
+
+create table public.project_images (
+  id                uuid primary key default gen_random_uuid(),
+  tenant_id         uuid not null references public.tenants(id) on delete cascade,
+  project_id        uuid not null references public.projects(id) on delete cascade,
+  target_section    smallint,                -- null = 썸네일
+  image_purpose     text,
+  key_message       text,
+  visual_description text,
+  style             text,
+  aspect_ratio      text not null default '1:1',
+  negative_prompt   text,
+  prompt            text,                    -- 실제 이미지 모델에 보낸 2~3문장
+  storage_path      text,                    -- tenant_id/ 폴더 아래
+  status            text not null default 'planned'
+    check (status in ('planned', 'generating', 'verifying', 'ready', 'rejected', 'failed')),
+  verification      jsonb not null default '{}',  -- Vision 검증 결과
+  source_id         uuid references public.tenant_sources(id), -- 실제 사진 기반일 때
+  is_real_photo_based boolean not null default false,
+  attempts          smallint not null default 0,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+create index project_images_project_idx on public.project_images (project_id);
+
+-- ───────────────────────── 요금제 · 사용량 · 결제 ─────────────────────────
+
+create table public.plans (
+  id            text primary key,              -- 'trial', 'basic', ...
+  name          text not null,
+  price         integer not null default 0,    -- 원
+  content_limit integer,                       -- null = 무제한
+  image_limit   integer,
+  period_days   integer,                       -- 체험은 null 가능
+  features      jsonb not null default '{}',
+  is_trial      boolean not null default false,
+  active        boolean not null default true
+);
+
+create table public.subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  tenant_id  uuid not null references public.tenants(id) on delete cascade,
+  plan_id    text not null references public.plans(id),
+  status     text not null check (status in ('trial', 'active', 'past_due', 'canceled', 'expired')),
+  started_at timestamptz not null default now(),
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index subscriptions_tenant_idx on public.subscriptions (tenant_id, started_at desc);
+
+create table public.payments (
+  id             uuid primary key default gen_random_uuid(),
+  tenant_id      uuid not null references public.tenants(id) on delete cascade,
+  plan_id        text not null references public.plans(id),
+  provider       text not null,                 -- 'toss' 등
+  mode           text not null check (mode in ('test', 'live')),
+  order_id       text not null unique,
+  payment_key    text,
+  amount         integer not null,
+  status         text not null check (status in ('pending', 'paid', 'failed', 'canceled')),
+  verified_at    timestamptz,                   -- PG 서버 검증 후에만 채움
+  raw            jsonb not null default '{}',
+  created_at     timestamptz not null default now()
+);
+
+-- 사용량 원장: 차감(+)·환불(-)을 행으로만 쌓는다. 같은 키 재요청은 무시(중복 차감 방지).
+create table public.usage_ledger (
+  id              uuid primary key default gen_random_uuid(),
+  tenant_id       uuid not null references public.tenants(id) on delete cascade,
+  user_id         uuid references auth.users(id) on delete set null,
+  usage_type      text not null check (usage_type in ('content', 'image')),
+  quantity        integer not null check (quantity <> 0),
+  project_id      uuid references public.projects(id) on delete set null,
+  idempotency_key text not null,
+  created_at      timestamptz not null default now(),
+  unique (tenant_id, usage_type, idempotency_key)
+);
+create index usage_ledger_tenant_idx on public.usage_ledger (tenant_id, usage_type, created_at);
+
+-- ───────────────────────── 이벤트 ─────────────────────────
+
+create table public.product_events (
+  id          uuid primary key default gen_random_uuid(),
+  tenant_id   uuid references public.tenants(id) on delete cascade, -- 가입 직후 등은 null 가능
+  user_id     uuid references auth.users(id) on delete set null,
+  event_type  text not null check (event_type in (
+    'signup_completed', 'onboarding_started', 'onboarding_completed',
+    'content_generation_started', 'content_generation_completed', 'image_generation_completed',
+    'content_edited', 'content_copied', 'image_downloaded', 'package_downloaded',
+    'naver_write_opened', 'publish_confirmed', 'pricing_viewed', 'purchase_clicked',
+    'checkout_started', 'payment_completed')),
+  session_id  text,
+  project_id  uuid references public.projects(id) on delete set null,
+  metadata    jsonb not null default '{}',   -- 본문·개인정보 저장 금지(서버에서 허용 키만 통과)
+  dedupe_key  text,                          -- 같은 사건의 중복 기록 방지
+  occurred_at timestamptz not null default now(),
+  unique (tenant_id, event_type, dedupe_key)
+);
+create index product_events_type_time_idx on public.product_events (event_type, occurred_at);
+create index product_events_tenant_time_idx on public.product_events (tenant_id, occurred_at);
+
+-- 분석 동의(필수 아님 이벤트 수집 여부)
+create table public.user_consents (
+  user_id      uuid primary key references auth.users(id) on delete cascade,
+  analytics    boolean not null default false,
+  policy_version text not null,
+  agreed_at    timestamptz not null default now()
+);
+
+-- ───────────────────────── 권한 함수 ─────────────────────────
+
+create or replace function public.is_member(t uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from tenant_members m where m.tenant_id = t and m.user_id = auth.uid());
+$$;
+
+create or replace function public.is_tenant_admin(t uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from tenant_members m
+                 where m.tenant_id = t and m.user_id = auth.uid() and m.role in ('owner', 'admin'));
+$$;
+
+create or replace function public.is_platform_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from platform_admins a where a.user_id = auth.uid());
+$$;
+
+-- 무료/유료 한도 안에서만 사용량을 차감한다. 같은 키로 다시 부르면 처음 결과를 돌려준다.
+-- 서버(API 라우트)만 호출한다: anon/authenticated 에게 실행 권한을 주지 않는다.
+create or replace function public.consume_usage(
+  p_tenant uuid, p_user uuid, p_type text, p_qty integer, p_project uuid, p_key text
+) returns table (allowed boolean, used integer, usage_limit integer)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_limit integer;
+  v_used  integer;
+  v_since timestamptz;
+begin
+  -- 같은 테넌트 동시 요청 직렬화
+  perform 1 from tenants where id = p_tenant for update;
+
+  if exists (select 1 from usage_ledger where tenant_id = p_tenant and usage_type = p_type and idempotency_key = p_key) then
+    select coalesce(sum(quantity), 0) into v_used from usage_ledger
+      where tenant_id = p_tenant and usage_type = p_type;
+    return query select true, v_used, null::integer;
+    return;
+  end if;
+
+  select case when p_type = 'content' then pl.content_limit else pl.image_limit end, s.started_at
+    into v_limit, v_since
+  from subscriptions s join plans pl on pl.id = s.plan_id
+  where s.tenant_id = p_tenant and s.status in ('trial', 'active')
+    and (s.expires_at is null or s.expires_at > now())
+  order by s.started_at desc limit 1;
+
+  if not found then
+    return query select false, 0, 0;
+    return;
+  end if;
+
+  select coalesce(sum(quantity), 0) into v_used from usage_ledger
+    where tenant_id = p_tenant and usage_type = p_type and created_at >= v_since;
+
+  if v_limit is not null and v_used + p_qty > v_limit then
+    return query select false, v_used, v_limit;
+    return;
+  end if;
+
+  insert into usage_ledger (tenant_id, user_id, usage_type, quantity, project_id, idempotency_key)
+  values (p_tenant, p_user, p_type, p_qty, p_project, p_key);
+  return query select true, v_used + p_qty, v_limit;
+end;
+$$;
+revoke all on function public.consume_usage(uuid, uuid, text, integer, uuid, text) from public;
+
+-- ───────────────────────── RLS ─────────────────────────
+
+alter table public.tenants                 enable row level security;
+alter table public.tenant_members          enable row level security;
+alter table public.platform_admins         enable row level security;
+alter table public.tenant_brands           enable row level security;
+alter table public.tenant_content_settings enable row level security;
+alter table public.tenant_sources          enable row level security;
+alter table public.projects                enable row level security;
+alter table public.project_images          enable row level security;
+alter table public.plans                   enable row level security;
+alter table public.subscriptions           enable row level security;
+alter table public.payments                enable row level security;
+alter table public.usage_ledger            enable row level security;
+alter table public.product_events          enable row level security;
+alter table public.user_consents           enable row level security;
+
+-- 테넌트: 소속 멤버만 조회, 관리자만 수정. 생성은 서버(온보딩 API)에서 service_role 로.
+create policy tenants_select on public.tenants for select using (public.is_member(id) or public.is_platform_admin());
+create policy tenants_update on public.tenants for update using (public.is_tenant_admin(id)) with check (public.is_tenant_admin(id));
+
+create policy members_select on public.tenant_members for select using (public.is_member(tenant_id) or public.is_platform_admin());
+-- 멤버 추가·삭제는 서버 API(초대 흐름)에서만.
+
+create policy platform_admins_self on public.platform_admins for select using (user_id = auth.uid());
+
+-- 학원 설정·출처·콘텐츠: 같은 테넌트 멤버만 읽고 쓴다.
+do $$
+declare t text;
+begin
+  foreach t in array array['tenant_brands', 'tenant_content_settings', 'tenant_sources', 'projects', 'project_images'] loop
+    execute format('create policy %1$s_select on public.%1$s for select using (public.is_member(tenant_id))', t);
+    execute format('create policy %1$s_insert on public.%1$s for insert with check (public.is_member(tenant_id))', t);
+    execute format('create policy %1$s_update on public.%1$s for update using (public.is_member(tenant_id)) with check (public.is_member(tenant_id))', t);
+    execute format('create policy %1$s_delete on public.%1$s for delete using (public.is_tenant_admin(tenant_id))', t);
+  end loop;
+end $$;
+
+-- 요금제는 누구나 조회(활성만), 수정은 service_role.
+create policy plans_select on public.plans for select using (active or public.is_platform_admin());
+
+-- 구독·결제·사용량: 멤버는 자기 학원 것만 조회. 쓰기 정책 없음 = 클라이언트 쓰기 불가.
+create policy subscriptions_select on public.subscriptions for select using (public.is_member(tenant_id) or public.is_platform_admin());
+create policy payments_select      on public.payments      for select using (public.is_tenant_admin(tenant_id) or public.is_platform_admin());
+create policy usage_select         on public.usage_ledger  for select using (public.is_member(tenant_id) or public.is_platform_admin());
+
+-- 이벤트: 본인 명의로 자기 학원 이벤트만 기록. 조회는 운영자만.
+create policy events_insert on public.product_events for insert
+  with check (user_id = auth.uid() and (tenant_id is null or public.is_member(tenant_id)));
+create policy events_select on public.product_events for select using (public.is_platform_admin());
+
+create policy consents_self on public.user_consents for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- ───────────────────────── 기본 데이터(예시값 · 관리자 화면에서 변경) ─────────────────────────
+
+insert into public.plans (id, name, price, content_limit, image_limit, period_days, is_trial, features)
+values ('trial', '무료 체험', 0, 3, 2, null, true, '{"edit": true, "download": true}')
+on conflict (id) do nothing;

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { PanelRight, Send } from "lucide-react";
-import { BRAND } from "@/config/brand";
 import { jumpTo } from "@/lib/locate";
 import type { Draft } from "@/lib/schemas";
-import type { DocRecord } from "@/lib/store";
+import type { Settings } from "@/lib/settings";
+import type { TenantProfile } from "@/lib/tenant";
+import type { DocRecord, Quality } from "@/lib/store";
 import DocEditor from "./DocEditor";
+import { ImageGallery, ImageLightbox, imageNumber, type ImageActions } from "./images";
 import ReviewPanel from "./ReviewPanel";
 import { PageHeader } from "./ui";
 
@@ -22,21 +24,39 @@ export function SaveLabel({ save }: { save: SaveState }) {
   return <>자동 저장</>;
 }
 
+type Tab = "review" | "images";
+
 export default function EditorView({
   doc,
+  quality,
+  settings,
+  tenant,
   save,
   aiEnabled,
+  imageActions,
+  openImage,
+  onCloseImage,
   onChange,
   onPublish,
 }: {
   doc: DocRecord;
+  quality: Quality;
+  settings: Settings;
+  tenant: TenantProfile | null;
   save: SaveState;
   aiEnabled: boolean;
+  imageActions: ImageActions;
+  openImage: string | null;
+  onCloseImage: () => void;
   onChange: (d: Draft) => void;
   onPublish: () => void;
 }) {
   const [panel, setPanel] = useState(false);
+  const [tab, setTab] = useState<Tab>("review");
   useEffect(() => setPanel(window.innerWidth >= 1280), []);
+
+  const images = doc.images ?? [];
+  const lightboxItem = openImage ? images.find((i) => i.id === openImage) : undefined;
 
   const outline = [
     { id: "blk-title", label: "제목" },
@@ -46,6 +66,14 @@ export default function EditorView({
     { id: "blk-tags", label: "태그" },
   ];
 
+  const openTab = (t: Tab) => {
+    if (panel && tab === t) setPanel(false);
+    else {
+      setTab(t);
+      setPanel(true);
+    }
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
@@ -54,8 +82,11 @@ export default function EditorView({
         status={<SaveLabel save={save} />}
         actions={
           <>
-            <button className="btn" onClick={() => setPanel((p) => !p)} aria-pressed={panel} title="검수 패널 열기/닫기">
+            <button className="btn" onClick={() => openTab("review")} aria-pressed={panel && tab === "review"}>
               <PanelRight size={16} /> 검수
+            </button>
+            <button className="btn" onClick={() => openTab("images")} aria-pressed={panel && tab === "images"}>
+              이미지 {images.length}
             </button>
             <button className="btn btn-primary" onClick={onPublish}>
               <Send size={15} /> 발행 준비
@@ -64,8 +95,8 @@ export default function EditorView({
         }
       />
       {doc.mock && (
-        <div className="border-b border-line bg-bg2 px-5 py-2 text-xs text-warn md:px-8">
-          샘플 데이터입니다. 실제 생성물이 아니므로 게시하지 마세요. API 키를 설정하면 실제 글이 생성됩니다.
+        <div className="border-b border-line bg-bg2 px-5 py-2 text-xs text-sub md:px-8">
+          샘플 데이터입니다. 실제 생성물이 아니므로 게시하지 마세요.
         </div>
       )}
       <div className="flex min-h-0 flex-1">
@@ -87,23 +118,53 @@ export default function EditorView({
         </nav>
 
         <div className="min-w-0 flex-1 overflow-y-auto bg-white">
-          <DocEditor draft={doc.draft} onChange={onChange} aiEnabled={aiEnabled} />
-          <p className="pb-10 text-center text-xs text-sub">{BRAND.name} 공식 블로그 · 작성자 {BRAND.author}</p>
+          <DocEditor
+            draft={doc.draft}
+            onChange={onChange}
+            aiEnabled={aiEnabled}
+            settings={settings}
+            tenant={tenant}
+            images={images}
+            imageActions={imageActions}
+          />
+          <p className="pb-10 text-center text-xs text-sub">
+            {settings.brand.name}
+            {settings.brand.author && settings.brand.author !== settings.brand.name ? ` · 작성자 ${settings.brand.author}` : ""}
+          </p>
         </div>
 
         {panel && (
           <aside
-            aria-label="검수 패널"
-            className="fixed inset-y-0 right-0 z-30 w-[320px] overflow-y-auto border-l border-line bg-white shadow-lg xl:static xl:z-auto xl:shadow-none"
+            aria-label="보조 패널"
+            className="fixed inset-y-0 right-0 z-30 flex w-[320px] flex-col border-l border-line bg-white shadow-lg xl:static xl:z-auto xl:shadow-none"
           >
-            <div className="flex items-center justify-between border-b border-line px-5 py-3 xl:hidden">
-              <span className="font-semibold">검수</span>
-              <button className="btn btn-sm" onClick={() => setPanel(false)}>닫기</button>
+            <div className="flex shrink-0 items-center border-b border-line">
+              {(["review", "images"] as Tab[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`h-11 flex-1 border-b-2 text-[13px] ${tab === t ? "border-brand font-semibold" : "border-transparent text-sub"}`}
+                >
+                  {t === "review" ? "검수" : `이미지 ${images.length}`}
+                </button>
+              ))}
+              <button className="btn btn-ghost btn-sm mx-1 xl:hidden" onClick={() => setPanel(false)}>
+                닫기
+              </button>
             </div>
-            <ReviewPanel doc={doc} onJump={jumpTo} />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {tab === "review" ? (
+                <ReviewPanel doc={doc} quality={quality} onJump={jumpTo} />
+              ) : (
+                <ImageGallery items={images} actions={imageActions} sectionCount={doc.draft.sections.length} />
+              )}
+            </div>
           </aside>
         )}
       </div>
+      {lightboxItem && (
+        <ImageLightbox item={lightboxItem} number={imageNumber(images, lightboxItem.id)} actions={imageActions} onClose={onCloseImage} />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, History, Palette, SquarePen } from "lucide-react";
+import { FileText, History, Settings2, SquarePen } from "lucide-react";
+import Logo from "./Logo";
 import type { Route } from "./Studio";
 
 export interface ApiState {
@@ -8,6 +9,7 @@ export interface ApiState {
   mock: boolean;
   model: string | null;
   ok: boolean;
+  illustration: boolean;
   message?: string;
 }
 
@@ -15,24 +17,28 @@ const ITEMS: { name: Route["name"]; label: string; icon: typeof FileText }[] = [
   { name: "compose", label: "새 콘텐츠 작성", icon: SquarePen },
   { name: "list", label: "콘텐츠 목록", icon: FileText },
   { name: "history", label: "생성 이력", icon: History },
-  { name: "brand", label: "브랜드 설정", icon: Palette },
+  { name: "settings", label: "블로그 설정", icon: Settings2 },
 ];
 
 export default function Sidebar({
   route,
   count,
   api,
+  tenantName,
+  locked,
   onNavigate,
   onRecheck,
 }: {
   route: Route;
   count: number;
   api: ApiState;
+  tenantName: string;
+  locked: boolean;
   onNavigate: (r: Route) => void;
   onRecheck: () => void;
 }) {
   // 편집/발행 화면에서는 '콘텐츠 목록'을 현재 위치로 표시
-  const current = route.name === "edit" || route.name === "publish" ? "list" : route.name;
+  const current = route.name === "edit" || route.name === "publish" ? "list" : route.name === "onboarding" ? "settings" : route.name;
 
   let apiLine = "확인 중…";
   let apiTone = "text-sub";
@@ -51,10 +57,9 @@ export default function Sidebar({
 
   return (
     <div className="flex h-full w-full flex-col bg-white">
-      <div className="border-b border-line px-5 py-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/eduwill-logo.png" alt="에듀윌 편입" className="h-6 w-auto" />
-        <p className="mt-2 text-[13px] font-semibold leading-tight">강남 블로그 스튜디오</p>
+      <div className="hidden border-b border-line px-5 py-4 lg:block">
+        <Logo />
+        {tenantName && <p className="mt-2 truncate text-xs text-sub" title={tenantName}>{tenantName}</p>}
       </div>
       <nav className="flex-1 space-y-0.5 p-3" aria-label="주 메뉴">
         {ITEMS.map(({ name, label, icon: Icon }) => (
@@ -62,6 +67,7 @@ export default function Sidebar({
             key={name}
             className="nav-item"
             aria-current={current === name ? "page" : undefined}
+            disabled={locked}
             onClick={() => onNavigate({ name } as Route)}
           >
             <Icon size={16} strokeWidth={1.75} />

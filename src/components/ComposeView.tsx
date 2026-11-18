@@ -1,22 +1,24 @@
 "use client";
 
 import { Check, ChevronRight, Circle, Loader2, X } from "lucide-react";
-import { BRAND, CONTENT_TYPES, type ContentType } from "@/config/brand";
+import type { Brand } from "@/lib/settings";
 import { formatTime, type DocRecord } from "@/lib/store";
 import { PageHeader } from "./ui";
 
 export type StageStatus = "idle" | "running" | "done" | "error";
-export type StageState = { analysis: StageStatus; plan: StageStatus; draft: StageStatus };
+export type StageState = { analysis: StageStatus; plan: StageStatus; draft: StageStatus; images: StageStatus };
 export interface Form {
   topic: string;
-  contentType: ContentType;
+  contentType: string;
   regionIndex: number | null;
+  images: boolean;
 }
 
 const STEPS: { key: keyof StageState; label: string }[] = [
   { key: "analysis", label: "주제 분석" },
   { key: "plan", label: "콘텐츠 기획" },
   { key: "draft", label: "본문 작성" },
+  { key: "images", label: "이미지 구성" },
 ];
 
 function StepIcon({ s }: { s: StageStatus }) {
@@ -29,6 +31,9 @@ function StepIcon({ s }: { s: StageStatus }) {
 export default function ComposeView({
   form,
   setForm,
+  brand,
+  contentTypes,
+  topicPlaceholder,
   busy,
   stages,
   error,
@@ -41,6 +46,9 @@ export default function ComposeView({
 }: {
   form: Form;
   setForm: (f: Form) => void;
+  brand: Brand;
+  contentTypes: string[];
+  topicPlaceholder: string;
   busy: boolean;
   stages: StageState;
   error: string | null;
@@ -83,7 +91,7 @@ export default function ComposeView({
               maxLength={200}
               disabled={busy}
               onChange={(e) => setForm({ ...form, topic: e.target.value })}
-              placeholder="예) 편입영어 빈칸 추론에서 보기 두 개가 헷갈릴 때"
+              placeholder={topicPlaceholder}
               autoFocus
             />
             <p className="mt-1.5 text-xs text-sub">주제만 입력해도 생성할 수 있습니다.</p>
@@ -96,13 +104,23 @@ export default function ComposeView({
               className="field h-9 py-0"
               value={form.contentType}
               disabled={busy}
-              onChange={(e) => setForm({ ...form, contentType: e.target.value as ContentType })}
+              onChange={(e) => setForm({ ...form, contentType: e.target.value })}
             >
-              {CONTENT_TYPES.map((t) => (
+              {contentTypes.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </div>
+
+          <label className="mb-6 flex items-center gap-2 text-[13px]">
+            <input
+              type="checkbox"
+              checked={form.images}
+              disabled={busy}
+              onChange={(e) => setForm({ ...form, images: e.target.checked })}
+            />
+            이미지 함께 만들기 <span className="text-sub">(썸네일 + 소주제별, 1:1)</span>
+          </label>
 
           <details className="group mb-8 border-t border-line pt-4">
             <summary className="flex cursor-pointer list-none items-center gap-1 text-[13px] text-sub hover:text-ink">
@@ -118,9 +136,9 @@ export default function ComposeView({
                 onChange={(e) => setForm({ ...form, regionIndex: e.target.value === "" ? null : Number(e.target.value) })}
               >
                 <option value="">자동 (주제별로 순환)</option>
-                {BRAND.regionHashtagGroups.map((g, i) => (
+                {brand.regionHashtagGroups.map((g, i) => (
                   <option key={i} value={i}>
-                    {g.slice(0, 3).map((t) => t.replace("편입학원", "")).join("·")} 외
+                    {g.slice(0, 3).join(" · ")} 외
                   </option>
                 ))}
               </select>
@@ -141,7 +159,7 @@ export default function ComposeView({
           {showProgress && (
             <section className="mt-8 border-t border-line pt-5" aria-live="polite">
               <ol className="flex flex-wrap gap-x-8 gap-y-2 text-[13px]">
-                {STEPS.map((s) => (
+                {STEPS.filter((s) => s.key !== "images" || form.images).map((s) => (
                   <li key={s.key} className={`flex items-center gap-2 ${stages[s.key] === "idle" ? "text-sub" : ""}`}>
                     <StepIcon s={stages[s.key]} /> {s.label}
                   </li>

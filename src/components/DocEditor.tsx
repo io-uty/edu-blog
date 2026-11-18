@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
-import { BRAND } from "@/config/brand";
 import { EXAMPLE_LABEL } from "@/lib/render";
 import type { Draft } from "@/lib/schemas";
+import type { Settings } from "@/lib/settings";
+import type { TenantProfile } from "@/lib/tenant";
+import { sortImages, type ImageItem } from "@/lib/store";
+import { ImageSlot, type ImageActions } from "./images";
 
 const join = (ps: string[]) => ps.join("\n\n");
 const split = (t: string) =>
@@ -106,11 +109,25 @@ export default function DocEditor({
   draft,
   onChange,
   aiEnabled,
+  settings,
+  tenant,
+  images,
+  imageActions,
 }: {
   draft: Draft;
   onChange: (d: Draft) => void;
   aiEnabled: boolean;
+  settings: Settings;
+  tenant: TenantProfile | null;
+  images: ImageItem[];
+  imageActions: ImageActions;
 }) {
+  const sorted = sortImages(images);
+  const thumb = sorted.find((i) => i.kind === "thumbnail");
+  const sectionImage = (i: number) => sorted.find((it) => it.kind === "section" && it.sectionIndex === i);
+  const numberOf = (it?: ImageItem) => (it ? sorted.indexOf(it) + 1 : 0);
+  const prefix = (i: number) =>
+    settings.format.headingPrefix === "number" ? `${i + 1}.` : settings.format.headingPrefix === "dash" ? "-" : "";
   const [sel, setSel] = useState<Sel | null>(null);
   const [refine, setRefine] = useState<Refine | null>(null);
   const reqId = useRef(0);
@@ -146,7 +163,7 @@ export default function DocEditor({
       const r = await fetch("/api/refine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, text: original }),
+        body: JSON.stringify({ action, text: original, brand: settings.brand, tenant }),
       });
       const j = await r.json().catch(() => ({}));
       if (id !== reqId.current) return;
@@ -267,7 +284,11 @@ export default function DocEditor({
         />
       </div>
 
-      <p className="doc-p mb-6 text-sub" title="브랜드 설정의 고정 인사말입니다">{BRAND.greeting}</p>
+      <ImageSlot target={{ kind: "thumbnail", sectionIndex: null }} item={thumb} number={numberOf(thumb)} actions={imageActions} />
+
+      {settings.brand.greeting && (
+        <p className="doc-p mb-6 text-sub" title="블로그 설정의 고정 인사말입니다">{settings.brand.greeting}</p>
+      )}
 
       <div id="blk-intro" className="mb-10">
         {renderBody("intro")}
@@ -276,11 +297,18 @@ export default function DocEditor({
       {draft.sections.map((s, i) => (
         <section id={`blk-s${i}`} key={i} className="mb-10 scroll-mt-4">
           <div className="mb-2 flex items-baseline gap-2">
-            <span className="doc-h2 text-brand">{i + 1}.</span>
+            {prefix(i) && <span className="doc-h2 text-brand">{prefix(i)}</span>}
             <div className="flex-1">
               <AutoArea value={s.heading} onChange={(v) => setSection(i, { heading: v.replace(/\n/g, " ") })} className="doc-h2" />
             </div>
           </div>
+
+          <ImageSlot
+            target={{ kind: "section", sectionIndex: i }}
+            item={sectionImage(i)}
+            number={numberOf(sectionImage(i))}
+            actions={imageActions}
+          />
 
           {renderBody(`s${i}`)}
 
@@ -406,7 +434,7 @@ export default function DocEditor({
       ))}
 
       <section id="blk-concl" className="mb-10">
-        <p className="doc-h2 mb-2">{BRAND.closingHeading}</p>
+        {settings.brand.closingHeading && <p className="doc-h2 mb-2">{settings.brand.closingHeading}</p>}
         {renderBody("concl")}
       </section>
 

@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 
 // 서버 전용. API 키는 환경변수로만 읽고 클라이언트로 내보내지 않는다.
@@ -31,14 +32,36 @@ export async function generateJson<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   if (IS_MOCK || !client) return opts.schema.parse(opts.mock());
+  // Claude Sonnet 5.5 는 사고(thinking)가 항상 켜져 있고 그 토큰도 max_tokens 에 포함된다.
+  // 한도가 낮으면 JSON이 중간에 잘리므로 넉넉히 잡는다(실제 과금은 사용량 기준).
+  const maxTokens = Math.max(opts.maxTokens ?? 0, 16000);
 
+  // 1) 구조화 출력: API가 스키마에 맞는 JSON만 내도록 강제한다(문법이 깨진 JSON 방지).
+  try {
+    const res = await client.messages.parse({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system: opts.system,
+      messages: [{ role: "user", content: opts.user }],
+      output_config: { format: zodOutputFormat(opts.schema as z.ZodType<T>) },
+    });
+    if (res.stop_reason === "refusal") throw new Error("모델이 요청을 거절했습니다.");
+    if (res.stop_reason === "max_tokens") throw new Error("응답이 길이 한도에서 잘렸습니다.");
+    if (res.parsed_output != null) return opts.schema.parse(res.parsed_output);
+  } catch (e) {
+    // 인증·한도·서버 오류는 그대로 올린다. 스키마 미지원(400)이나 검증 실패만 아래 방식으로 대체한다.
+    if (e instanceof Anthropic.APIError && e.status !== 400) throw e;
+    console.warn("[llm] 구조화 출력 실패, 텍스트 JSON 방식으로 재시도:", String(e).slice(0, 200));
+  }
+
+  // 2) 대체: 텍스트로 JSON을 받아 검증하고, 실패하면 오류를 알려 1회 재시도한다.
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: opts.user }];
   let lastErr: unknown;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await client.messages.create({
       model: MODEL,
-      max_tokens: opts.maxTokens ?? 4000,
+      max_tokens: maxTokens,
       system: opts.system,
       messages,
     });
