@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg2 px-4">
-      <div className="w-full max-w-[380px] border border-line bg-white p-8">
+      <div className="w-full max-w-[380px] rounded-3xl border border-line bg-white p-8 shadow-sm">
         <Logo />
         <p className="mt-2 text-xs text-sub">학원 블로그 콘텐츠 제작·관리</p>
         <div className="mt-6 flex border-b border-line text-[14px]">

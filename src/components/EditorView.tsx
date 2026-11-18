@@ -112,7 +112,7 @@ export default function EditorView({
       />
       <StepBar current={1} />
       {tip && (
-        <div className="flex items-start gap-3 border-b border-line bg-[#fffbea] px-5 py-3 text-[14px] leading-6 md:px-8">
+        <div className="mx-4 mt-3 flex items-start gap-3 rounded-2xl bg-[#fff7e0] px-5 py-3 text-[14px] leading-6 md:mx-6">
           <Lightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
           <div className="flex-1">
             <p>

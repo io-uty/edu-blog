@@ -218,7 +218,7 @@ export default function DocEditor({
         />
         {active && !refine && (
           <div
-            className="mt-1 flex flex-wrap items-center gap-1 border border-line bg-white p-1 shadow-sm"
+            className="mt-1 flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-sm"
             onMouseDown={(e) => e.preventDefault()}
             role="toolbar"
             aria-label="선택한 문장 편집"
@@ -238,7 +238,7 @@ export default function DocEditor({
           </div>
         )}
         {refine && refine.field === field && (
-          <div className="mt-1 border border-line bg-bg2 p-3 text-[14px]">
+          <div className="mt-1 rounded-2xl border border-line bg-bg2 p-4 text-[14px]">
             <div className="mb-2 flex items-center justify-between">
               <span className="font-medium">{ACTIONS.find((a) => a.key === refine.action)?.label} · 적용 전 미리보기</span>
               <button className="btn btn-ghost btn-sm" onClick={cancelRefine} aria-label="닫기">
@@ -424,7 +424,7 @@ export default function DocEditor({
           )}
 
           {s.example && (
-            <div className="my-4 border-l-2 border-brand bg-bg2 px-4 py-3">
+            <div className="my-4 rounded-2xl border-l-4 border-brand bg-bg2 px-4 py-3">
               <div className="mb-1 flex items-center justify-between text-xs text-sub">
                 <span>
                   {s.example.kind === "practice" ? "연습용 예문" : "예시"} ·{" "}

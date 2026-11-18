@@ -36,6 +36,8 @@ export const SettingsInputSchema = z.object({
     accent: HEX,
     point: HEX,
     footer: z.boolean(),
+    illustrationStyle: z.enum(["flat", "cute", "webtoon", "watercolor", "clay"]).default("cute"),
+    illustrationNote: z.string().max(200).default(""),
   }),
 });
 

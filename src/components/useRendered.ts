@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { idbGet } from "@/lib/idb";
-import { canvasToBlob, loadImage, renderImage } from "@/lib/imageRender";
+import { autoLayout, canvasToBlob, loadImage, renderImage, variantDesign } from "@/lib/imageRender";
 import type { ImageDesign } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 
@@ -43,8 +43,8 @@ export async function renderBlob(item: ImageItem, design: ImageDesign): Promise<
   const canvas = await renderImage({
     kind: item.kind,
     copy: item.copy,
-    design,
-    layout: item.layout ?? design.layout,
+    design: variantDesign(item.kind, item.sectionIndex, design),
+    layout: item.layout ?? autoLayout(item.kind, item.sectionIndex, design),
     illustration,
     logo,
   });

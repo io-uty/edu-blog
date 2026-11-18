@@ -82,8 +82,7 @@ begin
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, '1회차';
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, '같은 키 재시도가 중복 차감됨';
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-2'); assert r.used = 2;
-  select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-3'); assert r.used = 3;
-  select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-4'); assert not r.allowed, '무료 한도(3)를 넘어 차감됨';
+  select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-3'); assert not r.allowed, '무료 한도(2)를 넘어 차감됨';
   select * into r from consume_usage('bbbbbbbb-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, 'B 사용량이 A와 섞임';
   raise notice '사용량 차감 테스트 통과';
 end $$;

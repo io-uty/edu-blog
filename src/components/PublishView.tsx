@@ -20,7 +20,7 @@ function Thumb({ item, settings, items }: { item: ImageItem; settings: Settings;
     <li className="text-xs">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="aspect-square w-full border border-line" />
+        <img src={url} alt="" className="aspect-square w-full rounded-xl border border-line" />
       ) : (
         <div className="aspect-square w-full bg-bg2" />
       )}

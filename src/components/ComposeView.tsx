@@ -35,6 +35,7 @@ export default function ComposeView({
   contentTypes,
   topicPlaceholder,
   exampleTopics,
+  usageLabel,
   busy,
   stages,
   error,
@@ -51,6 +52,7 @@ export default function ComposeView({
   contentTypes: string[];
   topicPlaceholder: string;
   exampleTopics: string[];
+  usageLabel?: string;
   busy: boolean;
   stages: StageState;
   error: string | null;
@@ -67,7 +69,13 @@ export default function ComposeView({
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
         title="새 블로그 글 작성"
-        status="작성 전 · 생성하면 자동 저장됩니다"
+        status={
+          usageLabel ? (
+            <span className="rounded-full bg-brand-soft px-3 py-1 text-[13px] font-semibold text-brand-dark">{usageLabel}</span>
+          ) : (
+            "생성하면 자동 저장됩니다"
+          )
+        }
         actions={
           <button className="btn" onClick={onHistory}>
             작성 이력

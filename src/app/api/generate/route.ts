@@ -7,6 +7,8 @@ import { renderHtml, renderPlainText } from "@/lib/render";
 import { verticalOf } from "@/lib/prompt/verticals";
 import { getCtx } from "@/lib/requestCtx";
 import { docToRow } from "@/lib/tenantDb";
+import { consume, logEvent, refund } from "@/lib/usage";
+import { randomUUID } from "node:crypto";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { AnalysisSchema, PlanSchema } from "@/lib/schemas";
 
@@ -20,6 +22,7 @@ const BodySchema = z.object({
   regionIndex: z.number().int().min(0).nullable().optional(),
   brand: z.unknown().optional(),
   tenant: z.unknown().optional(),
+  requestId: z.string().uuid().optional(), // 같은 요청의 재전송은 한 번만 차감
 });
 
 // NDJSON 스트림으로 단계별 진행 상태를 내려준다.
@@ -29,6 +32,30 @@ export async function POST(req: Request) {
   const got = await getCtx(parsed.data);
   if (!got.ok) return got.res;
   const { ctx, session } = got;
+
+  // 사용량: 서버에서만 계산·차감한다. 실패하면 아래에서 되돌린다.
+  let chargedKey: string | null = null;
+  if (session?.tenantId && !IS_MOCK) {
+    const key = `gen:${parsed.data.requestId ?? randomUUID()}`;
+    try {
+      const r = await consume(session.tenantId, session.user.id, "content", key);
+      if (!r.allowed)
+        return Response.json(
+          {
+            code: "QUOTA_EXCEEDED",
+            error: "무료 체험이 완료되었습니다. 계속해서 학원 맞춤형 블로그 콘텐츠를 제작하려면 이용권을 선택해 주세요.",
+            used: r.used,
+            limit: r.usage_limit,
+          },
+          { status: 402 },
+        );
+      chargedKey = key;
+      await logEvent(session.tenantId, session.user.id, "content_generation_started", { type: parsed.data.contentType }, key);
+    } catch (e) {
+      console.error("[generate:usage]", e);
+      return Response.json({ error: "사용량을 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요." }, { status: 500 });
+    }
+  }
   const input = { ...parsed.data, ctx };
   const brand = ctx.brand;
   const settings = { ...DEFAULT_SETTINGS, brand };
@@ -94,6 +121,9 @@ export async function POST(req: Request) {
           else projectId = data.id;
         }
 
+        if (session?.tenantId && chargedKey)
+          await logEvent(session.tenantId, session.user.id, "content_generation_completed", { type: input.contentType }, chargedKey);
+
         send({
           type: "result",
           projectId,
@@ -107,6 +137,7 @@ export async function POST(req: Request) {
         });
       } catch (e) {
         console.error(`[generate:${stage}]`, e);
+        if (session?.tenantId && chargedKey) await refund(session.tenantId, session.user.id, "content", chargedKey);
         send({ type: "error", stage, message: toUserMessage(e) });
       } finally {
         ctrl.close();

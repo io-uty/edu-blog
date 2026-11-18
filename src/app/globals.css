@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-brand: #e04a2f;
-  --color-brand-dark: #c23b22;
-  --color-brand-soft: #fdf1ee;
+  --color-brand: #ee5a3c;
+  --color-brand-dark: #d64528;
+  --color-brand-soft: #fff0eb;
   --color-ink: #222222;
   --color-sub: #5f5f5f;
-  --color-line: #eaeaea;
-  --color-bg2: #f7f7f7;
+  --color-line: #ece8e4;
+  --color-bg2: #f8f5f2;
+  --radius-soft: 12px;
   --color-ok: #2f7d4f;
   --color-warn: #b86a14;
   --color-err: #c4001a;
@@ -31,32 +32,31 @@ body {
   /* 버튼: 높이 36px 직사각형(모서리 2px) 통일 */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    height: 40px; padding: 0 16px; border-radius: 4px; border: 1px solid #d9d9d9;
+    height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid #e2dcd6;
     background: #fff; color: var(--color-ink); font-size: 14px; font-weight: 500;
     white-space: nowrap; cursor: pointer; transition: background .12s, border-color .12s;
   }
   .btn:hover:not(:disabled) { background: var(--color-bg2); border-color: #d8d8d8; }
   .btn:disabled { opacity: .45; cursor: not-allowed; }
-  .btn:focus-visible, .field:focus-visible, .nav-item:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+  .btn:focus-visible, .field:focus-visible, .nav-item:focus-visible { outline: 3px solid #ffd2c4; outline-offset: 1px; }
   .btn-primary { background: var(--color-brand); border-color: var(--color-brand); color: #fff; }
   .btn-primary:hover:not(:disabled) { background: var(--color-brand-dark); border-color: var(--color-brand-dark); }
   .btn-sm { height: 34px; padding: 0 12px; font-size: 13px; }
   .btn-ghost { border-color: transparent; background: transparent; color: var(--color-sub); }
 
   .field {
-    width: 100%; border: 1px solid #d9d9d9; border-radius: 4px; background: #fff;
+    width: 100%; border: 1px solid #e2dcd6; border-radius: var(--radius-soft); background: #fff;
     padding: 9px 12px; font-size: 15px; outline: none;
   }
-  .field:focus { border-color: var(--color-ink); }
+  .field:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px #ffe5dc; }
   .label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
 
   .nav-item {
     display: flex; align-items: center; gap: 10px; width: 100%; height: 42px; padding: 0 12px;
-    border-radius: 4px; color: #444; font-size: 15px; cursor: pointer; text-align: left;
-    border-left: 2px solid transparent;
+    border-radius: var(--radius-soft); color: #444; font-size: 15px; cursor: pointer; text-align: left;
   }
   .nav-item:hover { background: var(--color-bg2); color: var(--color-ink); }
-  .nav-item[aria-current="page"] { color: var(--color-ink); font-weight: 600; background: var(--color-bg2); border-left-color: var(--color-brand); }
+  .nav-item[aria-current="page"] { color: var(--color-brand-dark); font-weight: 700; background: var(--color-brand-soft); }
 
   /* 블로그 문서 본문 */
   .doc-title { font-size: 26px; line-height: 1.4; font-weight: 600; letter-spacing: -0.01em; }
@@ -64,7 +64,7 @@ body {
   .doc-p { font-size: 15.5px; line-height: 1.95; color: #2b2b2b; }
   .doc-field {
     display: block; width: 100%; resize: none; overflow: hidden; background: transparent; border: 0;
-    outline: none; padding: 4px 8px; margin: 0 -8px; border-radius: 2px; font-family: inherit; color: inherit;
+    outline: none; padding: 4px 8px; margin: 0 -8px; border-radius: 8px; font-family: inherit; color: inherit;
     box-sizing: content-box; width: calc(100% - 0px);
   }
   .doc-field:hover { background: #fafafa; }
@@ -85,5 +85,5 @@ body {
 .blog-preview table { border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 14px; }
 .blog-preview th, .blog-preview td { border: 1px solid var(--color-line); padding: 6px 10px; }
 .blog-preview th { background: var(--color-bg2); }
-.blog-preview blockquote { margin: 12px 0; padding: 10px 16px; border-left: 2px solid var(--color-brand); background: var(--color-bg2); }
+.blog-preview blockquote { margin: 12px 0; padding: 12px 18px; border-left: 3px solid var(--color-brand); border-radius: 0 12px 12px 0; background: var(--color-bg2); }
 .blog-preview a { color: var(--color-sub); text-decoration: underline; }

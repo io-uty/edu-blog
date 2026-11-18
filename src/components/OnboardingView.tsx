@@ -263,7 +263,7 @@ export default function OnboardingView({
                 className={`flex h-11 items-center gap-2 border-b-2 ${i === step ? "border-brand font-semibold" : "border-transparent text-sub"}`}
                 onClick={() => (i <= step || canNext ? setStep(i) : undefined)}
               >
-                <span className={`flex h-5 w-5 items-center justify-center text-[11px] ${i < step ? "bg-ok text-white" : i === step ? "bg-ink text-white" : "bg-bg2"}`}>
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${i < step ? "bg-ok text-white" : i === step ? "bg-ink text-white" : "bg-bg2"}`}>
                   {i < step ? <Check size={12} /> : i + 1}
                 </span>
                 {s}
@@ -370,7 +370,7 @@ export default function OnboardingView({
                 <div className="space-y-2">
                   <input className="field" value={t.homepage} onChange={(e) => set({ homepage: e.target.value })} placeholder="https://" />
                   {t.homepage.trim() && (
-                    <div className="border border-line p-3">
+                    <div className="rounded-2xl border border-line p-4">
                       <label className="flex items-start gap-2 text-xs leading-5">
                         <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                         <span>
@@ -395,7 +395,7 @@ export default function OnboardingView({
                           {site.items.length === 0 && !site.error && <p>홈페이지에서 찾은 학원 정보가 없습니다.</p>}
                           {site.items.length > 0 && (
                             <>
-                              <ul className="divide-y divide-bg2 border border-line">
+                              <ul className="divide-y divide-bg2 overflow-hidden rounded-xl border border-line">
                                 {site.items.map((it, i) => (
                                   <li key={i} className="flex gap-2 p-2">
                                     <input
@@ -535,7 +535,7 @@ export default function OnboardingView({
                     {styleBusy && <Loader2 size={13} className="animate-spin" />} 문체 분석
                   </button>
                   {t.styleProfile && (
-                    <dl className="space-y-1 border border-line p-3 text-xs leading-5">
+                    <dl className="space-y-1 rounded-2xl border border-line p-4 text-xs leading-5">
                       <div><dt className="inline text-sub">말투 </dt><dd className="inline">{t.styleProfile.tone}</dd></div>
                       <div><dt className="inline text-sub">종결 표현 </dt><dd className="inline">{t.styleProfile.sentenceEndings.join(", ")}</dd></div>
                       <div><dt className="inline text-sub">도입부 </dt><dd className="inline">{t.styleProfile.introPattern}</dd></div>

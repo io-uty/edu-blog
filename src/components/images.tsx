@@ -6,6 +6,7 @@ import { targetKey, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
 import type { ImageDesign, ImageLayout } from "@/lib/settings";
 import { imageLabel, imagePosition, sortImages, type ImageItem } from "@/lib/store";
 import { useRendered } from "./useRendered";
+import { autoLayout } from "@/lib/imageRender";
 
 export const LAYOUT_LABEL: Record<ImageLayout, string> = {
   headline: "헤드라인형",
@@ -61,7 +62,7 @@ export function ImageSlot({
   const busy = actions.busy[copyBusyKey(target)];
   if (!item) {
     return (
-      <div className="my-3 flex items-center gap-2 border border-dashed border-line px-3 py-2 text-xs text-sub">
+      <div className="my-3 flex items-center gap-2 rounded-2xl border border-dashed border-line px-3 py-2 text-xs text-sub">
         <ImagePlus size={14} />
         <span className="flex-1">{target.kind === "thumbnail" ? "썸네일 이미지 없음" : "이 소주제 이미지 없음"}</span>
         <button className="btn btn-sm" disabled={busy} onClick={() => actions.regenerate(target)}>
@@ -73,7 +74,7 @@ export function ImageSlot({
   return (
     <figure className="my-5">
       <button
-        className="relative block w-full max-w-[360px] border border-line text-left hover:border-sub"
+        className="relative block w-full max-w-[360px] overflow-hidden rounded-2xl border border-line text-left hover:border-sub"
         onClick={() => actions.open(item.id)}
         title="크게 보기 · 수정"
       >
@@ -107,7 +108,7 @@ export function ImageGallery({ items, actions, sectionCount }: { items: ImageIte
           const busy = actions.busy[copyBusyKey(it)] || actions.busy[illBusyKey(it.id)];
           return (
             <li key={it.id} className="flex gap-3 border-b border-line px-5 py-3">
-              <button className="relative w-[88px] shrink-0 border border-line" onClick={() => actions.open(it.id)} title="크게 보기">
+              <button className="relative w-[88px] shrink-0 overflow-hidden rounded-xl border border-line" onClick={() => actions.open(it.id)} title="크게 보기">
                 <Preview item={it} design={actions.design} />
                 {busy && (
                   <span className="absolute inset-0 flex items-center justify-center bg-white/60">
@@ -121,7 +122,7 @@ export function ImageGallery({ items, actions, sectionCount }: { items: ImageIte
                 </p>
                 <p className="text-xs text-sub">{imagePosition(it)}</p>
                 <p className="text-xs text-sub">
-                  {LAYOUT_LABEL[it.layout ?? actions.design.layout]} · {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
+                  {LAYOUT_LABEL[it.layout ?? autoLayout(it.kind, it.sectionIndex, actions.design)]} · {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
                 </p>
                 <div className="mt-1.5 flex gap-1">
                   <IconBtn label="문구 다시 만들기" disabled={busy || !actions.aiEnabled} onClick={() => actions.regenerate(it)}>
@@ -190,7 +191,7 @@ export function ImageLightbox({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-label="이미지 보기" className="flex max-h-full w-full max-w-[1040px] flex-col overflow-hidden bg-white md:flex-row">
+      <div role="dialog" aria-label="이미지 보기" className="flex max-h-full w-full max-w-[1040px] flex-col overflow-hidden rounded-3xl bg-white md:flex-row">
         <div className="relative shrink-0 bg-bg2 md:w-[58%]">
           <Preview item={item} design={actions.design} />
           {busy && (
@@ -216,7 +217,7 @@ export function ImageLightbox({
               <label className="label">레이아웃</label>
               <select
                 className="field h-9 py-0"
-                value={item.layout ?? actions.design.layout}
+                value={item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design)}
                 onChange={(e) => actions.update(item.id, { layout: e.target.value as ImageLayout })}
               >
                 {Object.entries(LAYOUT_LABEL).map(([k, v]) => (

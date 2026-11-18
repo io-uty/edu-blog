@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { shrinkImage } from "@/lib/imageRender";
-import { DEFAULT_SETTINGS, NAVER_FONT_SIZES, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 import { displayName, type TenantProfile } from "@/lib/tenant";
 import { LAYOUT_LABEL } from "./images";
@@ -98,7 +98,7 @@ function DesignPreview({ design, layout }: { design: ImageDesign; layout: ImageL
   const url = useRendered(item, design);
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt={`${LAYOUT_LABEL[layout]} 미리보기`} className="aspect-square w-full border border-line" />
+    <img src={url} alt={`${LAYOUT_LABEL[layout]} 미리보기`} className="aspect-square w-full rounded-2xl border border-line" />
   ) : (
     <div className="aspect-square w-full bg-bg2" />
   );
@@ -252,7 +252,7 @@ export default function SettingsView({
               </div>
             </Field>
             <Field label="미리보기">
-              <div className="border border-line px-5 py-4" style={{ textAlign: f.align }}>
+              <div className="rounded-2xl border border-line px-5 py-4" style={{ textAlign: f.align }}>
                 <p style={{ fontSize: f.headingSize, color: f.headingColor, fontWeight: f.headingBold ? 700 : 400, lineHeight: 1.5 }}>
                   {f.headingPrefix === "number" ? "1. " : f.headingPrefix === "dash" ? "- " : ""}보기를 보기 전에 빈칸의 역할부터 정합니다
                 </p>
@@ -324,6 +324,26 @@ export default function SettingsView({
                 </Field>
                 <Field label="포인트색" hint="요약 문구">
                   <ColorInput value={im.point} onChange={(v) => setImage({ point: v })} />
+                </Field>
+                <Field label="일러스트 그림체" hint="이미지 API 연결 후 그림에 적용됩니다">
+                  <div className="flex flex-wrap gap-1">
+                    {(Object.keys(ILLUSTRATION_STYLES) as IllustrationStyle[]).map((k) => (
+                      <button
+                        key={k}
+                        className={`btn btn-sm ${im.illustrationStyle === k ? "border-brand bg-brand-soft font-semibold text-brand-dark" : ""}`}
+                        onClick={() => setImage({ illustrationStyle: k })}
+                      >
+                        {ILLUSTRATION_STYLES[k].label}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="field mt-2"
+                    placeholder="추가 요청(선택) 예) 학생은 교복 차림, 밝은 교실 분위기"
+                    value={im.illustrationNote}
+                    onChange={(e) => setImage({ illustrationNote: e.target.value })}
+                  />
+                  <p className="mt-1 text-xs text-sub">학원 색은 그림 전체가 아니라 포인트로만 쓰고, 실제 학원 시설이나 실제 건물처럼 보이게 그리지 않습니다.</p>
                 </Field>
                 <Field label="하단 띠">
                   <label className="flex items-center gap-1.5 pt-2">

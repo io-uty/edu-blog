@@ -232,6 +232,75 @@ function titleBlock(
   return y;
 }
 
+// ---------- 이미지마다 달라지는 요소 ----------
+
+/** 주제(제목)에 따라 다른 작은 무늬(점·별·고리·반짝이)를 가장자리에 흩뿌린다 */
+function decorate(ctx: Ctx, r: RenderInput, maxY: number) {
+  const d = r.design;
+  const rnd = seeded(hashStr(r.copy.title.join("|") + r.kind + (r.copy.eyebrow ?? "")));
+  const motif = Math.floor(rnd() * 4);
+  const colors = [d.primary, d.point, d.accent];
+  ctx.save();
+  for (let i = 0; i < 9; i++) {
+    // 글자가 많은 왼쪽 위를 피해 오른쪽·아래쪽 가장자리에 둔다
+    const edge = rnd();
+    const x = edge < 0.5 ? SIZE * (0.62 + rnd() * 0.34) : SIZE * (0.05 + rnd() * 0.9);
+    const y = edge < 0.5 ? maxY * (0.08 + rnd() * 0.85) : maxY * (0.86 + rnd() * 0.12);
+    const s = 10 + rnd() * 18;
+    ctx.globalAlpha = 0.35 + rnd() * 0.3;
+    ctx.fillStyle = ctx.strokeStyle = colors[i % colors.length];
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    if (motif === 0) {
+      ctx.arc(x, y, s * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (motif === 1) {
+      for (let k = 0; k < 10; k++) {
+        const a = (Math.PI / 5) * k - Math.PI / 2;
+        const rr2 = k % 2 ? s * 0.45 : s;
+        ctx.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else if (motif === 2) {
+      ctx.arc(x, y, s * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.moveTo(x - s, y);
+      ctx.quadraticCurveTo(x, y, x, y - s);
+      ctx.quadraticCurveTo(x, y, x + s, y);
+      ctx.quadraticCurveTo(x, y, x, y + s);
+      ctx.quadraticCurveTo(x, y, x - s, y);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function mix(a: string, b: string, t: number) {
+  const pa = a.replace("#", "").match(/.{2}/g)?.map((v) => parseInt(v, 16)) ?? [255, 255, 255];
+  const pb = b.replace("#", "").match(/.{2}/g)?.map((v) => parseInt(v, 16)) ?? [255, 255, 255];
+  return "#" + [0, 1, 2].map((i) => Math.round(pa[i] + (pb[i] - pa[i]) * t).toString(16).padStart(2, "0")).join("");
+}
+
+const LAYOUT_ORDER: ImageLayout[] = ["headline", "notice", "checklist"];
+
+/** 레이아웃을 직접 고르지 않았으면 썸네일은 기본 레이아웃, 소주제는 돌아가며 다른 레이아웃 */
+export function autoLayout(kind: ImageKind, sectionIndex: number | null, design: ImageDesign): ImageLayout {
+  if (kind === "thumbnail") return design.layout;
+  const base = LAYOUT_ORDER.indexOf(design.layout);
+  return LAYOUT_ORDER[(base + 1 + (sectionIndex ?? 0)) % LAYOUT_ORDER.length];
+}
+
+/** 학원 색 안에서 이미지마다 배경 톤을 바꾼다(썸네일은 원래 색) */
+export function variantDesign(kind: ImageKind, sectionIndex: number | null, d: ImageDesign): ImageDesign {
+  if (kind === "thumbnail") return d;
+  const v = (sectionIndex ?? 0) % 3;
+  if (v === 0) return { ...d, bg: mix(d.bg, "#ffffff", 0.55) };
+  if (v === 1) return { ...d, bg: mix(d.primary, "#ffffff", 0.9) };
+  return { ...d, bg: mix(d.accent, "#ffffff", 0.3) };
+}
+
 // ---------- 레이아웃 ----------
 
 function layoutHeadline(ctx: Ctx, r: RenderInput) {
@@ -244,15 +313,23 @@ function layoutHeadline(ctx: Ctx, r: RenderInput) {
   if (r.illustration) {
     drawFaded(ctx, r.illustration, Math.round(SIZE * 0.3), Math.round(SIZE * 0.16), Math.round(SIZE * 0.7), Math.round(H - SIZE * 0.16), "left-top");
   } else {
-    // 일러스트가 없을 때의 단순 장식
+    // 일러스트가 없을 때: 주제마다 다른 큰 도형 + 작은 무늬
+    const rnd = seeded(hashStr(c.title.join("") + c.eyebrow));
+    const spots = [
+      [SIZE - 120, H - 60],
+      [SIZE - 80, 260],
+      [140, H - 40],
+    ];
+    const [cx, cy] = spots[Math.floor(rnd() * spots.length)];
     ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = d.primary;
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = rnd() > 0.5 ? d.primary : d.point;
     ctx.beginPath();
-    ctx.arc(SIZE - 120, H - 60, 330, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 260 + rnd() * 120, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
+  decorate(ctx, r, H);
   // 강조선(삐침)
   ctx.save();
   ctx.strokeStyle = d.primary;
@@ -342,6 +419,7 @@ function layoutNotice(ctx: Ctx, r: RenderInput) {
   ctx.fillStyle = d.bg;
   ctx.fill();
 
+  decorate(ctx, r, SIZE * 0.55);
   if (r.illustration) {
     drawFaded(ctx, r.illustration, Math.round(SIZE * 0.5), 20, Math.round(SIZE * 0.5), Math.round(SIZE * 0.62), "left");
   }
@@ -420,6 +498,7 @@ function layoutChecklist(ctx: Ctx, r: RenderInput) {
   ctx.fillRect(0, 0, SIZE, SIZE);
   const bandH = d.footer ? 130 : 0;
 
+  decorate(ctx, r, SIZE - bandH);
   if (r.illustration) {
     drawFaded(ctx, r.illustration, Math.round(SIZE * 0.6), 0, Math.round(SIZE * 0.4), Math.round(SIZE * 0.42), "left");
   }

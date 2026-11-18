@@ -35,6 +35,16 @@ export interface FormatTemplate {
 
 export type ImageLayout = "headline" | "notice" | "checklist";
 
+/** 일러스트 그림체(이미지 생성 API 연결 시 사용) */
+export const ILLUSTRATION_STYLES = {
+  flat: { label: "깔끔한 플랫", prompt: "clean flat vector illustration, simple shapes, soft shadows, friendly and modern" },
+  cute: { label: "동글동글 귀여운", prompt: "cute rounded kawaii-style illustration, chubby proportions, pastel tones, soft outlines" },
+  webtoon: { label: "웹툰풍", prompt: "Korean webtoon style illustration, clean line art, soft cel shading, expressive characters" },
+  watercolor: { label: "따뜻한 수채화", prompt: "warm watercolor illustration, gentle textures, soft edges, calm atmosphere" },
+  clay: { label: "3D 클레이", prompt: "3D clay render style, rounded soft forms, playful, studio lighting" },
+} as const;
+export type IllustrationStyle = keyof typeof ILLUSTRATION_STYLES;
+
 export interface ImageDesign {
   layout: ImageLayout;
   label: string; // 이미지 안에 들어가는 학원·블로그 표기
@@ -44,6 +54,8 @@ export interface ImageDesign {
   accent: string; // 강조 박스·하이라이트
   point: string; // 포인트 단어
   footer: boolean; // 하단 로고 띠
+  illustrationStyle: IllustrationStyle;
+  illustrationNote: string; // 추가 요청(예: 학생은 교복 차림)
 }
 
 export interface Settings {
@@ -86,6 +98,8 @@ export const DEFAULT_SETTINGS: Settings = {
     accent: "#FFD84D",
     point: "#E04A2F",
     footer: true,
+    illustrationStyle: "cute",
+    illustrationNote: "",
   },
 };
 

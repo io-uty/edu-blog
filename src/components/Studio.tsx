@@ -20,6 +20,8 @@ import {
   type ImageItem,
 } from "@/lib/store";
 import OnboardingView from "./OnboardingView";
+import Paywall from "./Paywall";
+import { contentLeft, type PlanInfo, type UsageInfo } from "@/lib/billingTypes";
 import ComposeView, { type Form, type StageState } from "./ComposeView";
 import EditorView, { type SaveState } from "./EditorView";
 import { imageFileName, saveBlob } from "./exporter";
@@ -108,6 +110,17 @@ export default function Studio() {
   const persisted = useRef(new Map<string, DocRecord>()); // 서버에 마지막으로 저장한 문서
   const settingsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const [billing, setBilling] = useState<{ usage: UsageInfo | null; plans: PlanInfo[] } | null>(null);
+  const [quotaHit, setQuotaHit] = useState(false);
+  const loadUsage = useCallback(async () => {
+    const r = await fetch("/api/usage", { cache: "no-store" }).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    if (j?.mode === "cloud") {
+      setBilling({ usage: j.usage ?? null, plans: j.plans ?? [] });
+      setQuotaHit(false);
+    }
+  }, []);
+
   const loadCloudDocs = useCallback(async (tenantId: string) => {
     const r = await fetch("/api/projects", { cache: "no-store" });
     const j = await r.json().catch(() => ({}));
@@ -137,7 +150,7 @@ export default function Studio() {
         if (me.tenant && me.tenantId) {
           setTenant(me.tenant);
           setSettings(me.settings ?? DEFAULT_SETTINGS);
-          await loadCloudDocs(me.tenantId);
+          await Promise.all([loadCloudDocs(me.tenantId), loadUsage()]);
         } else {
           // 첫 로그인: 이 브라우저에 쓰던 학원 정보·설정이 있으면 온보딩 초안으로 쓴다
           setLocalSeed(localTenantRepository.load());
@@ -150,7 +163,7 @@ export default function Studio() {
       }
       setReady(true);
     })();
-  }, [loadCloudDocs]);
+  }, [loadCloudDocs, loadUsage]);
 
   const mutateDocs = useCallback((fn: (d: DocRecord[]) => DocRecord[]) => {
     dirty.current = true;
@@ -325,7 +338,12 @@ export default function Studio() {
         const r = await fetch("/api/images/illustration", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scene: item.copy.scene || item.copy.title.join(" ") }),
+          body: JSON.stringify({
+            scene: item.copy.scene || item.copy.title.join(" "),
+            style: settings.image.illustrationStyle,
+            note: settings.image.illustrationNote,
+            colors: [settings.image.primary, settings.image.accent].filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)),
+          }),
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.dataUrl) return notify(j.error || "일러스트를 만들지 못했습니다.");
@@ -337,7 +355,7 @@ export default function Studio() {
         setBusyKey(`ill:${itemId}`, false);
       }
     },
-    [notify, patchImages],
+    [notify, patchImages, settings.image],
   );
 
   const makeActions = (doc: DocRecord): ImageActions => ({
@@ -393,8 +411,15 @@ export default function Studio() {
           brand: settings.brand,
           tenant,
           resume: resume ? cache.current : undefined,
+          requestId: newId(), // 시도마다 새 키: 같은 시도의 재전송만 중복 차감되지 않는다
         }),
       });
+      if (res.status === 402) {
+        setBusy(false);
+        setQuotaHit(true);
+        loadUsage();
+        return;
+      }
       if (!res.ok || !res.body) {
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || "요청을 처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
@@ -474,6 +499,7 @@ export default function Studio() {
       }
       setBusy(false);
       addHistory({ topic: input.topic, contentType: input.contentType, mock: wasMock, outcome: "success", docId: doc.id });
+      if (cloud) loadUsage();
       setForm((f) => ({ ...f, topic: "" }));
       cache.current = {};
       setStages(IDLE);
@@ -483,6 +509,7 @@ export default function Studio() {
       if (failedMsg) {
         setGenError(failedMsg);
         addHistory({ topic: input.topic, contentType: input.contentType, mock: wasMock, outcome: "error", message: failedMsg });
+        if (cloud) loadUsage(); // 실패한 생성은 서버가 차감을 되돌린다
       }
     }
   }
@@ -561,7 +588,7 @@ export default function Studio() {
       setSettings(nextSettings);
       if (!cloud.tenantId) {
         setCloud({ ...cloud, tenantId: j.tenantId });
-        await loadCloudDocs(j.tenantId);
+        await Promise.all([loadCloudDocs(j.tenantId), loadUsage()]);
       }
     } else {
       if (!localTenantRepository.save(t)) return notify("학원 정보를 저장하지 못했습니다. 브라우저 저장공간을 확인해 주세요.");
@@ -576,6 +603,22 @@ export default function Studio() {
     if (!tenant) return;
     const blob = new Blob([JSON.stringify({ tenant, settings }, null, 2)], { type: "application/json" });
     saveBlob(blob, `${displayName(tenant) || "학원"}-설정.json`);
+  }
+
+  const track = useCallback((type: string, plan?: string) => {
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, plan }) }).catch(() => undefined);
+  }, []);
+
+  async function buyPlan(planId: string) {
+    track("purchase_clicked", planId);
+    const r = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId }),
+    }).catch(() => null);
+    const j = await r?.json().catch(() => ({}));
+    if (!r?.ok || !j.checkoutUrl) return notify(j?.error || "결제를 시작하지 못했습니다.");
+    window.location.href = j.checkoutUrl;
   }
 
   /** 사용자가 직접 확인한 발행 표시(네이버 공식 연동이 아니므로 자동 판정하지 않음) */
@@ -625,9 +668,22 @@ export default function Studio() {
         notify={notify}
       />
     );
+  } else if (route.name === "compose" && cloud && !busy && (quotaHit || (billing && contentLeft(billing.usage) === 0))) {
+    view = <Paywall usage={billing?.usage ?? null} plans={billing?.plans ?? []} onBuy={buyPlan} onSeen={() => track("pricing_viewed")} />;
   } else if (route.name === "compose") {
+    const u = billing?.usage;
+    const left = contentLeft(u ?? null);
     view = (
       <ComposeView
+        usageLabel={
+          cloud && u?.plan
+            ? u.plan.isTrial
+              ? `무료 체험 ${left}회 남음`
+              : u.content.limit === null
+                ? `${u.plan.name} 이용 중`
+                : `${u.plan.name} · ${left}편 남음`
+            : undefined
+        }
         form={form}
         setForm={setForm}
         brand={settings.brand}
@@ -747,7 +803,7 @@ export default function Studio() {
       </main>
 
       {toast && (
-        <div role="status" className="fixed bottom-6 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 bg-ink px-4 py-2 text-[14px] text-white">
+        <div role="status" className="fixed bottom-6 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 rounded-full bg-ink px-5 py-2.5 text-[14px] text-white shadow-lg">
           {toast}
         </div>
       )}
