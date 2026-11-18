@@ -1,0 +1,84 @@
+"use client";
+
+import { FileText, History, Palette, SquarePen } from "lucide-react";
+import type { Route } from "./Studio";
+
+export interface ApiState {
+  checked: boolean;
+  mock: boolean;
+  model: string | null;
+  ok: boolean;
+  message?: string;
+}
+
+const ITEMS: { name: Route["name"]; label: string; icon: typeof FileText }[] = [
+  { name: "compose", label: "새 콘텐츠 작성", icon: SquarePen },
+  { name: "list", label: "콘텐츠 목록", icon: FileText },
+  { name: "history", label: "생성 이력", icon: History },
+  { name: "brand", label: "브랜드 설정", icon: Palette },
+];
+
+export default function Sidebar({
+  route,
+  count,
+  api,
+  onNavigate,
+  onRecheck,
+}: {
+  route: Route;
+  count: number;
+  api: ApiState;
+  onNavigate: (r: Route) => void;
+  onRecheck: () => void;
+}) {
+  // 편집/발행 화면에서는 '콘텐츠 목록'을 현재 위치로 표시
+  const current = route.name === "edit" || route.name === "publish" ? "list" : route.name;
+
+  let apiLine = "확인 중…";
+  let apiTone = "text-sub";
+  if (api.checked) {
+    if (api.mock) {
+      apiLine = "API 키 미설정 · 샘플 모드";
+      apiTone = "text-warn";
+    } else if (api.ok) {
+      apiLine = `API 연결됨 · ${api.model}`;
+      apiTone = "text-ok";
+    } else {
+      apiLine = "API 연결 실패";
+      apiTone = "text-err";
+    }
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col bg-white">
+      <div className="border-b border-line px-5 py-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/eduwill-logo.png" alt="에듀윌 편입" className="h-6 w-auto" />
+        <p className="mt-2 text-[13px] font-semibold leading-tight">강남 블로그 스튜디오</p>
+      </div>
+      <nav className="flex-1 space-y-0.5 p-3" aria-label="주 메뉴">
+        {ITEMS.map(({ name, label, icon: Icon }) => (
+          <button
+            key={name}
+            className="nav-item"
+            aria-current={current === name ? "page" : undefined}
+            onClick={() => onNavigate({ name } as Route)}
+          >
+            <Icon size={16} strokeWidth={1.75} />
+            <span className="flex-1">{label}</span>
+            {name === "list" && count > 0 && <span className="text-xs text-sub">{count}</span>}
+          </button>
+        ))}
+      </nav>
+      <div className="border-t border-line px-5 py-3 text-xs">
+        <p className={apiTone}>{apiLine}</p>
+        {api.checked && !api.ok && api.message && <p className="mt-1 leading-5 text-sub">{api.message}</p>}
+        {api.checked && (api.mock || !api.ok) && (
+          <button className="mt-1 underline underline-offset-2 text-sub hover:text-ink" onClick={onRecheck}>
+            다시 확인
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
