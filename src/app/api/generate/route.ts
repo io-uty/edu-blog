@@ -5,7 +5,8 @@ import { runAnalysis, runDraft, runPlan, type StageName } from "@/lib/pipeline";
 import { checkQuality } from "@/lib/quality";
 import { renderHtml, renderPlainText } from "@/lib/render";
 import { verticalOf } from "@/lib/prompt/verticals";
-import { NO_TENANT, readCtx } from "@/lib/requestCtx";
+import { getCtx } from "@/lib/requestCtx";
+import { docToRow } from "@/lib/tenantDb";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 import { AnalysisSchema, PlanSchema } from "@/lib/schemas";
 
@@ -25,8 +26,9 @@ const BodySchema = z.object({
 export async function POST(req: Request) {
   const parsed = BodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "주제(2~200자)와 콘텐츠 유형을 확인해 주세요." }, { status: 400 });
-  const ctx = readCtx(parsed.data);
-  if (!ctx) return NO_TENANT();
+  const got = await getCtx(parsed.data);
+  if (!got.ok) return got.res;
+  const { ctx, session } = got;
   const input = { ...parsed.data, ctx };
   const brand = ctx.brand;
   const settings = { ...DEFAULT_SETTINGS, brand };
@@ -74,8 +76,27 @@ export async function POST(req: Request) {
           });
         }
 
+        // 로그인 사용 시 생성 결과를 바로 학원 콘텐츠로 저장한다(저장 실패해도 결과는 보낸다)
+        let projectId: string | null = null;
+        if (session?.tenantId) {
+          const { data, error } = await session.db
+            .from("projects")
+            .insert(
+              docToRow(
+                { title: draft.title, topic: input.topic, contentType: input.contentType, mock: IS_MOCK, plan, regionIndex, draft, images: [] },
+                session.tenantId,
+                session.user.id,
+              ),
+            )
+            .select("id")
+            .single();
+          if (error) console.error("[generate:save]", error.message);
+          else projectId = data.id;
+        }
+
         send({
           type: "result",
+          projectId,
           mock: IS_MOCK,
           draft,
           plan,

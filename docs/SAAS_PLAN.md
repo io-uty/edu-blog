@@ -1,6 +1,6 @@
 # bbolog 범용 학원 콘텐츠 SaaS 전환 계획
 
-작성일 2026-11-19 · 상태: **Phase 1 진행 중** (DB 미연결 부분 구현 완료, Supabase 연결 대기)
+작성일 2026-11-19 · 상태: **Phase 1 완료** (Supabase 연결·검증 완료)
 
 ---
 
@@ -155,7 +155,15 @@ src/lib/prompt/
 - 기존 글 문체 분석 `/api/tenant/analyze-style`
 - 검증: 학원 정보 없는 생성 요청 400 / 내부망·동의 없는 분석 거부 / example.com 에서 지어낸 정보 0건 / 편입학원 데모와 영어학원으로 같은 주제 생성 시 업종·학원명·태그가 서로 섞이지 않음(영어학원 결과에 “편입” 0건) / 화면에서 온보딩 → 생성까지 확인
 
-남은 Phase 1 (Supabase 키 필요):
-- 가입·로그인, 테넌트 생성 API, `requireTenant()` 로 서버가 DB에서 학원 정보를 읽기(현재는 브라우저가 보낸 학원 정보를 검증해서 사용 — `src/lib/requestCtx.ts` TODO)
-- localStorage 문서·학원 정보 → DB 가져오기
-- RLS 테스트를 실제 Supabase 에서 재실행
+### 2026-11-20 · Phase 1 (Supabase 연결)
+완료·검증:
+- Supabase 이메일 로그인(가입 시 확인 메일), 세션 미들웨어, 로그아웃
+- 서버가 로그인 사용자 → tenant_members → DB 에서 학원 정보를 읽음(요청 본문의 학원 정보 무시) — `src/lib/requestCtx.ts`
+- 학원 생성은 서버 함수 `create_tenant_for_user`(소유자·브랜드·콘텐츠 설정·무료 체험 구독을 한 번에)
+- 학원 정보·블로그 설정·콘텐츠를 DB 에 저장(자동 저장), 로그인 전 브라우저 글 가져오기
+- 마이그레이션 4개 적용(`supabase/migrations`), 새 프로젝트용 `supabase/setup_all.sql`, 적용 스크립트 `scripts/db-migrate.sh`
+- 실제 Supabase 격리 테스트 `scripts/test-supabase-isolation.mjs` 14개 항목 통과(다른 학원 조회·수정·생성 차단, 사용량·구독 조작 차단, 비로그인 거부)
+- 화면: 로그인 → 학원 등록 → 글 생성 → 편집 자동 저장이 DB 에 반영됨을 확인
+- 발견·수정: 최근 Supabase 는 SQL 로 만든 테이블에 권한을 자동 부여하지 않음 → 테이블별 최소 권한 마이그레이션 추가
+
+참고: 공유용 Vercel 배포(https://edu-blog-studio.vercel.app)는 Supabase 없이 로컬 모드 + 접속 비밀번호로 운영 중

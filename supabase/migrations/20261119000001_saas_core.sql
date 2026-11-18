@@ -283,7 +283,7 @@ begin
   return query select true, v_used + p_qty, v_limit;
 end;
 $$;
-revoke all on function public.consume_usage(uuid, uuid, text, integer, uuid, text) from public;
+revoke all on function public.consume_usage(uuid, uuid, text, integer, uuid, text) from public, anon, authenticated;
 
 -- ───────────────────────── RLS ─────────────────────────
 

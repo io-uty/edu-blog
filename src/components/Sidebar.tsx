@@ -26,6 +26,7 @@ export default function Sidebar({
   api,
   tenantName,
   locked,
+  email,
   onNavigate,
   onRecheck,
 }: {
@@ -34,6 +35,7 @@ export default function Sidebar({
   api: ApiState;
   tenantName: string;
   locked: boolean;
+  email: string | null;
   onNavigate: (r: Route) => void;
   onRecheck: () => void;
 }) {
@@ -76,6 +78,12 @@ export default function Sidebar({
           </button>
         ))}
       </nav>
+      {email && (
+        <form action="/auth/signout" method="post" className="flex items-center gap-2 border-t border-line px-5 py-3 text-xs">
+          <span className="flex-1 truncate text-sub" title={email}>{email}</span>
+          <button className="text-sub underline underline-offset-2 hover:text-ink">로그아웃</button>
+        </form>
+      )}
       <div className="border-t border-line px-5 py-3 text-xs">
         <p className={apiTone}>{apiLine}</p>
         {api.checked && !api.ok && api.message && <p className="mt-1 leading-5 text-sub">{api.message}</p>}

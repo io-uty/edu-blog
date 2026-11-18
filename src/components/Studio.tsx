@@ -101,13 +101,56 @@ export default function Studio() {
   }, []);
 
   // ---------- 저장소 ----------
-  useEffect(() => {
-    setDocs(loadDocs());
-    setHistory(loadHistory());
-    setSettings(loadSettings());
-    setTenant(localTenantRepository.load());
-    setReady(true);
+  // cloud: 로그인 + Supabase(서버 DB, 학원별 분리) / null: Supabase 미설정 로컬 모드(브라우저 저장)
+  const [cloud, setCloud] = useState<{ email: string; tenantId: string | null } | null>(null);
+  const [localSeed, setLocalSeed] = useState<TenantProfile | null>(null);
+  const [localImport, setLocalImport] = useState<DocRecord[]>([]);
+  const persisted = useRef(new Map<string, DocRecord>()); // 서버에 마지막으로 저장한 문서
+  const settingsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const loadCloudDocs = useCallback(async (tenantId: string) => {
+    const r = await fetch("/api/projects", { cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    const list: DocRecord[] = j.docs ?? [];
+    persisted.current = new Map(list.map((d) => [d.id, d]));
+    setDocs(list);
+    const local = loadDocs();
+    if (local.length && localStorage.getItem(`ebs:imported:${tenantId}`) !== "1") setLocalImport(local);
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      setHistory(loadHistory());
+      let me: { mode?: string; user?: { email: string }; tenantId?: string; tenant?: TenantProfile | null; settings?: Settings | null } | null = null;
+      try {
+        const r = await fetch("/api/me", { cache: "no-store" });
+        if (r.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+        me = await r.json();
+      } catch {
+        me = null;
+      }
+      if (me?.mode === "cloud" && me.user) {
+        setCloud({ email: me.user.email, tenantId: me.tenantId ?? null });
+        if (me.tenant && me.tenantId) {
+          setTenant(me.tenant);
+          setSettings(me.settings ?? DEFAULT_SETTINGS);
+          await loadCloudDocs(me.tenantId);
+        } else {
+          // 첫 로그인: 이 브라우저에 쓰던 학원 정보·설정이 있으면 온보딩 초안으로 쓴다
+          setLocalSeed(localTenantRepository.load());
+          setSettings(loadSettings());
+        }
+      } else {
+        setDocs(loadDocs());
+        setSettings(loadSettings());
+        setTenant(localTenantRepository.load());
+      }
+      setReady(true);
+    })();
+  }, [loadCloudDocs]);
 
   const mutateDocs = useCallback((fn: (d: DocRecord[]) => DocRecord[]) => {
     dirty.current = true;
@@ -117,21 +160,82 @@ export default function Studio() {
 
   useEffect(() => {
     if (!ready || !dirty.current) return;
-    const t = setTimeout(() => {
-      const ok = saveDocs(docs);
+    const t = setTimeout(async () => {
       dirty.current = false;
-      setSave(ok ? { state: "saved", at: Date.now() } : { state: "error" });
-    }, 400);
+      if (!cloud) {
+        const ok = saveDocs(docs);
+        setSave(ok ? { state: "saved", at: Date.now() } : { state: "error" });
+        return;
+      }
+      const changed = docs.filter((d) => persisted.current.get(d.id) !== d && persisted.current.has(d.id));
+      try {
+        await Promise.all(
+          changed.map(async (d) => {
+            const r = await fetch(`/api/projects/${d.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: d.draft.title, draft: d.draft, plan: d.plan, images: d.images ?? [] }),
+            });
+            if (!r.ok) throw new Error(String(r.status));
+            persisted.current.set(d.id, d);
+          }),
+        );
+        setSave({ state: "saved", at: Date.now() });
+      } catch {
+        dirty.current = true; // 다음 변경 때 다시 시도
+        setSave({ state: "error" });
+      }
+    }, 800);
     return () => clearTimeout(t);
-  }, [docs, ready]);
+  }, [docs, ready, cloud]);
 
   const updateSettings = useCallback(
     (s: Settings) => {
       setSettings(s);
-      if (!saveSettings(s)) notify("설정을 저장하지 못했습니다. 로고 파일 크기를 줄여 보세요.");
+      if (!cloud) {
+        if (!saveSettings(s)) notify("설정을 저장하지 못했습니다. 로고 파일 크기를 줄여 보세요.");
+        return;
+      }
+      clearTimeout(settingsTimer.current);
+      settingsTimer.current = setTimeout(async () => {
+        const r = await fetch("/api/tenant", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ settings: s }),
+        }).catch(() => null);
+        if (!r?.ok) notify("설정을 저장하지 못했습니다. 연결을 확인해 주세요.");
+      }, 600);
     },
-    [notify],
+    [notify, cloud],
   );
+
+  async function importLocal() {
+    if (!cloud?.tenantId) return;
+    const r = await fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        docs: localImport.map((d) => ({
+          title: d.draft.title,
+          topic: d.topic,
+          contentType: d.contentType,
+          mock: d.mock,
+          plan: d.plan,
+          regionIndex: d.regionIndex ?? null,
+          draft: d.draft,
+          images: d.images ?? [],
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+        })),
+      }),
+    }).catch(() => null);
+    const j = await r?.json().catch(() => ({}));
+    if (!r?.ok) return notify(j?.error || "가져오지 못했습니다.");
+    localStorage.setItem(`ebs:imported:${cloud.tenantId}`, "1");
+    setLocalImport([]);
+    await loadCloudDocs(cloud.tenantId);
+    notify(`${(j.docs ?? []).length}개 글을 내 학원으로 가져왔습니다. 이 브라우저의 원본은 그대로 남아 있습니다.`);
+  }
 
   const addHistory = useCallback((e: Omit<HistoryEntry, "id" | "at">) => {
     setHistory((prev) => {
@@ -316,7 +420,7 @@ export default function Studio() {
           if (ev.type === "result") {
             const now = Date.now();
             created = {
-              id: newId(),
+              id: ev.projectId ?? newId(),
               title: ev.draft.title,
               topic: input.topic,
               contentType: input.contentType,
@@ -329,6 +433,7 @@ export default function Studio() {
               updatedAt: now,
             };
             const doc = created;
+            if (cloud && ev.projectId) persisted.current.set(doc.id, doc); // 서버가 이미 저장함
             mutateDocs((d) => [doc, ...d]);
           }
           if (ev.type === "error") {
@@ -342,7 +447,23 @@ export default function Studio() {
       failedMsg = e instanceof Error ? e.message : "서버에 연결하지 못했습니다.";
     }
 
-    const doc = created as DocRecord | null;
+    let doc = created as DocRecord | null;
+    if (doc && cloud && !persisted.current.has(doc.id)) {
+      // 서버 저장이 실패했으면 한 번 더 저장을 시도한다(실패해도 글은 화면에 남는다)
+      const local = doc;
+      const r = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docs: [{ ...local, id: undefined, title: local.draft.title, regionIndex: local.regionIndex ?? null }] }),
+      }).catch(() => null);
+      const j = await r?.json().catch(() => ({}));
+      const saved: DocRecord | undefined = j?.docs?.[0];
+      if (r?.ok && saved) {
+        persisted.current.set(saved.id, saved);
+        setDocs((ds) => ds.map((x) => (x.id === local.id ? saved : x)));
+        doc = saved;
+      } else notify("글을 서버에 저장하지 못했습니다. 화면을 닫기 전에 다시 시도해 주세요.");
+    }
     if (doc) {
       // 이미지 문구는 글이 저장된 뒤 만든다. 실패해도 글은 그대로 남는다.
       if (input.images) {
@@ -396,8 +517,7 @@ export default function Studio() {
   }, [vertical, form.contentType]);
   const needsOnboarding = ready && !tenant?.onboardedAt;
 
-  function completeOnboarding(t: TenantProfile, patch: { logo: string | null; phone: string; importedSettings?: Partial<Settings> }) {
-    if (!localTenantRepository.save(t)) return notify("학원 정보를 저장하지 못했습니다. 브라우저 저장공간을 확인해 주세요.");
+  async function completeOnboarding(t: TenantProfile, patch: { logo: string | null; phone: string; importedSettings?: Partial<Settings> }) {
     const imp = patch.importedSettings;
     const base: Settings = imp
       ? {
@@ -411,7 +531,7 @@ export default function Studio() {
     const b = base.brand;
     // 비어 있거나 예전 학원명으로 자동 생성된 값만 새 학원명으로 채운다(사용자가 직접 바꾼 값은 유지)
     const auto = (cur: string, make: (n: string) => string) => (!cur || (oldName && cur === make(oldName)) ? make(name) : cur);
-    updateSettings({
+    const nextSettings: Settings = {
       ...base,
       brand: {
         ...b,
@@ -429,7 +549,24 @@ export default function Studio() {
         logo: patch.logo,
         primary: t.primaryColor && base.image.primary === DEFAULT_SETTINGS.image.primary ? t.primaryColor : base.image.primary,
       },
-    });
+    };
+    if (cloud) {
+      const r = await fetch("/api/tenant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant: t, settings: nextSettings }),
+      }).catch(() => null);
+      const j = await r?.json().catch(() => ({}));
+      if (!r?.ok) return notify(j?.error || "학원 정보를 저장하지 못했습니다.");
+      setSettings(nextSettings);
+      if (!cloud.tenantId) {
+        setCloud({ ...cloud, tenantId: j.tenantId });
+        await loadCloudDocs(j.tenantId);
+      }
+    } else {
+      if (!localTenantRepository.save(t)) return notify("학원 정보를 저장하지 못했습니다. 브라우저 저장공간을 확인해 주세요.");
+      updateSettings(nextSettings);
+    }
     setTenant(t);
     notify(tenant?.onboardedAt ? "학원 정보를 저장했습니다" : "학원 정보를 등록했습니다. 첫 글을 만들어 보세요.");
     go({ name: "compose" });
@@ -441,7 +578,12 @@ export default function Studio() {
     saveBlob(blob, `${displayName(tenant) || "학원"}-설정.json`);
   }
 
-  function deleteDoc(id: string) {
+  async function deleteDoc(id: string) {
+    if (cloud) {
+      const r = await fetch(`/api/projects/${id}`, { method: "DELETE" }).catch(() => null);
+      if (!r?.ok) return notify("삭제하지 못했습니다.");
+      persisted.current.delete(id);
+    }
     const d = docs.find((x) => x.id === id);
     d?.images?.forEach((i) => idbDel(illustrationKey(i.id)));
     mutateDocs((ds) => ds.filter((x) => x.id !== id));
@@ -456,7 +598,7 @@ export default function Studio() {
     view = (
       <OnboardingView
         key={tenant?.onboardedAt ?? "new"}
-        initial={tenant ?? { ...EMPTY_TENANT, name: settings.brand.name }}
+        initial={tenant ?? (localSeed ? { ...localSeed, onboardedAt: null } : { ...EMPTY_TENANT, name: settings.brand.name })}
         settings={settings}
         editing={!!tenant?.onboardedAt}
         onComplete={completeOnboarding}
@@ -559,11 +701,29 @@ export default function Studio() {
           api={api}
           tenantName={tenant?.onboardedAt ? displayName(tenant) : ""}
           locked={needsOnboarding}
+          email={cloud?.email ?? null}
           onNavigate={go}
           onRecheck={checkApi}
         />
       </aside>
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">{view}</main>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {localImport.length > 0 && !needsOnboarding && route.name !== "onboarding" && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-line bg-bg2 px-5 py-2 text-[13px] md:px-8">
+            <span className="flex-1">이 브라우저에 로그인 전에 만든 글 {localImport.length}개가 있습니다.</span>
+            <button className="btn btn-sm" onClick={importLocal}>내 학원으로 가져오기</button>
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                if (cloud?.tenantId) localStorage.setItem(`ebs:imported:${cloud.tenantId}`, "1");
+                setLocalImport([]);
+              }}
+            >
+              가져오지 않기
+            </button>
+          </div>
+        )}
+        {view}
+      </main>
 
       {toast && (
         <div role="status" className="fixed bottom-6 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 bg-ink px-4 py-2 text-[13px] text-white">

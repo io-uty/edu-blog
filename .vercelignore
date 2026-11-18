@@ -1,0 +1,9 @@
+# 배포에 올리지 않는 파일(비밀 키·로컬 산출물·런타임에 필요 없는 자료). 앞의 / 는 최상위 폴더만 뜻한다.
+.env*
+!.env.example
+/node_modules
+/.next
+*.tsbuildinfo
+/supabase
+/extension
+/docs

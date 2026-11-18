@@ -16,7 +16,7 @@ export type SaveState = { state: "idle" | "saving" | "saved" | "error"; at?: num
 
 export function SaveLabel({ save }: { save: SaveState }) {
   if (save.state === "saving") return <>저장 중…</>;
-  if (save.state === "error") return <span className="text-err">저장 실패 · 브라우저 저장공간을 확인하세요</span>;
+  if (save.state === "error") return <span className="text-err">저장 실패 · 연결을 확인하세요(다음 수정 때 다시 저장)</span>;
   if (save.state === "saved" && save.at) {
     const d = new Date(save.at);
     return <>자동 저장됨 {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</>;

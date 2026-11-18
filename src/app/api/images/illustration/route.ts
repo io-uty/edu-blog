@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requireUser } from "@/lib/requestCtx";
 import { IMAGE_STYLE } from "@/config/imageStyle";
 
 export const runtime = "nodejs";
@@ -12,6 +13,8 @@ const MODEL = process.env.IMAGE_MODEL || "gpt-image-1";
 const Body = z.object({ scene: z.string().trim().min(3).max(600) });
 
 export async function POST(req: Request) {
+  const denied = await requireUser();
+  if (denied) return denied;
   if (!KEY) return Response.json({ error: "일러스트 생성 API가 설정되지 않았습니다." }, { status: 501 });
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "일러스트 설명을 확인해 주세요." }, { status: 400 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requireUser } from "@/lib/requestCtx";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { StyleProfileSchema } from "@/lib/tenant";
 
@@ -11,6 +12,8 @@ const Body = z.object({
 
 /** 학원이 올린 기존 블로그 글에서 문체·구성 습관을 뽑는다(내용·사실은 가져오지 않음). */
 export async function POST(req: Request) {
+  const denied = await requireUser();
+  if (denied) return denied;
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "글을 1~3개, 각각 200자 이상 올려 주세요." }, { status: 400 });
   const excerpts = p.data.samples.slice(0, 2).map((s) => s.text.slice(0, 2500));

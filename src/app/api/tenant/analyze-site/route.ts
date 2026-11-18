@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { requireUser } from "@/lib/requestCtx";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { assertPublicUrl, evidenceIn, readRobots, readSite } from "@/lib/siteReader";
 
@@ -24,6 +25,8 @@ const Out = z.object({
  * - 근거 문장이 실제 페이지 원문에 없으면 버린다(AI 추측 차단)
  */
 export async function POST(req: Request) {
+  const denied = await requireUser();
+  if (denied) return denied;
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "홈페이지 주소와 수집 동의를 확인해 주세요." }, { status: 400 });
 

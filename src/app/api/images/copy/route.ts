@@ -3,7 +3,7 @@ import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { ImageCopySchema, fallbackCopy, type ImageTarget } from "@/lib/imageCopy";
 import { systemPrompt } from "@/lib/prompts";
 import { DraftSchema } from "@/lib/schemas";
-import { NO_TENANT, readCtx } from "@/lib/requestCtx";
+import { getCtx } from "@/lib/requestCtx";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -23,8 +23,9 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "이미지 요청 형식을 확인해 주세요." }, { status: 400 });
   const { draft, topic, contentType } = p.data;
-  const ctx = readCtx(p.data);
-  if (!ctx) return NO_TENANT();
+  const got = await getCtx(p.data);
+  if (!got.ok) return got.res;
+  const { ctx } = got;
   const targets: ImageTarget[] = p.data.targets ?? [
     { kind: "thumbnail", sectionIndex: null },
     ...draft.sections.map((_, i) => ({ kind: "section" as const, sectionIndex: i })),

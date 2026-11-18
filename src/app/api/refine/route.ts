@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BANNED_PHRASES } from "@/config/rules";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { systemPrompt } from "@/lib/prompts";
-import { NO_TENANT, readCtx } from "@/lib/requestCtx";
+import { getCtx } from "@/lib/requestCtx";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -27,8 +27,9 @@ export async function POST(req: Request) {
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "선택한 문장을 확인해 주세요." }, { status: 400 });
   const { action, text } = p.data;
-  const ctx = readCtx(p.data);
-  if (!ctx) return NO_TENANT();
+  const got = await getCtx(p.data);
+  if (!got.ok) return got.res;
+  const { ctx } = got;
   if (IS_MOCK) return Response.json({ mock: true, text });
   try {
     const out = await generateJson({

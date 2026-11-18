@@ -1,7 +1,6 @@
 -- 학원 간 데이터 격리 테스트. 실패하면 예외로 중단된다.
 -- 실행: psql -v ON_ERROR_STOP=1 -f _local_auth_stub.sql -f ../migrations/*.sql -f rls_isolation.sql
-grant select, insert, update, delete on all tables in schema public to authenticated;
-grant execute on function public.is_member(uuid), public.is_tenant_admin(uuid), public.is_platform_admin() to authenticated;
+-- 권한은 마이그레이션(20261120000003_table_grants.sql)에 있는 것만 사용한다.
 
 -- 준비: 학원 A, B / 사용자 a(A 소속), b(B 소속)
 insert into auth.users values ('00000000-0000-0000-0000-00000000000a'), ('00000000-0000-0000-0000-00000000000b');
@@ -88,3 +87,29 @@ begin
   select * into r from consume_usage('bbbbbbbb-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, 'B 사용량이 A와 섞임';
   raise notice '사용량 차감 테스트 통과';
 end $$;
+
+-- ── 추가 마이그레이션(앱 필드·테넌트 생성 함수) ──
+do $$
+declare v uuid; v2 uuid; n int;
+begin
+  insert into auth.users values ('00000000-0000-0000-0000-00000000000c');
+  v  := create_tenant_for_user('00000000-0000-0000-0000-00000000000c', 'C학원', '수학학원');
+  v2 := create_tenant_for_user('00000000-0000-0000-0000-00000000000c', 'C학원 중복', '수학학원');
+  assert v = v2, '같은 사용자에게 학원이 두 번 만들어짐';
+  select count(*) into n from tenant_members where user_id = '00000000-0000-0000-0000-00000000000c'; assert n = 1;
+  select count(*) into n from tenant_brands where tenant_id = v; assert n = 1, '브랜드 행 없음';
+  select count(*) into n from subscriptions where tenant_id = v and status = 'trial'; assert n = 1, '체험 구독 없음';
+  raise notice '테넌트 생성 함수 테스트 통과';
+end $$;
+
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$
+declare ok boolean := false;
+begin
+  begin perform create_tenant_for_user('00000000-0000-0000-0000-00000000000a', 'x', 'x');
+  exception when insufficient_privilege then ok := true; end;
+  assert ok, '클라이언트가 테넌트 생성 함수를 직접 호출함';
+  raise notice '테넌트 생성 함수 권한 테스트 통과';
+end $$;
+reset role;
