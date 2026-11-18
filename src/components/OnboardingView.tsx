@@ -85,7 +85,7 @@ function Row({ label, required, hint, children }: { label: string; required?: bo
   return (
     <div className="grid gap-1.5 py-3 md:grid-cols-[170px_1fr] md:gap-6">
       <div className="pt-2">
-        <p className="text-[13px]">
+        <p className="text-[14px]">
           {label}
           {required && <span className="ml-1 text-brand">*</span>}
         </p>
@@ -256,7 +256,7 @@ export default function OnboardingView({
         }
       />
       <div className="border-b border-line px-5 md:px-8">
-        <ol className="mx-auto flex max-w-[860px] gap-6 text-[13px]">
+        <ol className="mx-auto flex max-w-[860px] gap-6 text-[14px]">
           {STEPS.map((s, i) => (
             <li key={s}>
               <button
@@ -274,7 +274,7 @@ export default function OnboardingView({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[860px] divide-y divide-bg2 px-5 py-4 text-[13px] md:px-8">
+        <div className="mx-auto max-w-[860px] divide-y divide-bg2 px-5 py-4 text-[14px] md:px-8">
           {step === 0 && (
             <>
               <Row label="학원 유형" required>

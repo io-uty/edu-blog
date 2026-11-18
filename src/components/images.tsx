@@ -101,7 +101,7 @@ export function ImageGallery({ items, actions, sectionCount }: { items: ImageIte
       .map((i) => ({ kind: "section" as const, sectionIndex: i })),
   ];
   return (
-    <div className="text-[13px]">
+    <div className="text-[14px]">
       <ul>
         {sorted.map((it, idx) => {
           const busy = actions.busy[copyBusyKey(it)] || actions.busy[illBusyKey(it.id)];
@@ -211,7 +211,7 @@ export function ImageLightbox({
               <X size={15} />
             </button>
           </div>
-          <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 text-[13px]">
+          <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 text-[14px]">
             <div>
               <label className="label">레이아웃</label>
               <select

@@ -208,6 +208,8 @@ export function rowToDoc(r: any): DocRecord {
     regionIndex: r.region_index ?? 0,
     draft: r.draft,
     images: r.image_items ?? [],
+    status: r.status === "published_confirmed" ? "published_confirmed" : "draft",
+    publishedAt: ms(r.published_confirmed_at),
     createdAt: ms(r.created_at) ?? Date.now(),
     updatedAt: ms(r.updated_at) ?? Date.now(),
   };

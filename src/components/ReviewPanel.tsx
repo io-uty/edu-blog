@@ -16,9 +16,9 @@ export default function ReviewPanel({
 }) {
   const rows = buildChecks(quality);
   return (
-    <div className="text-[13px]">
+    <div className="text-[14px]">
       <section className="border-b border-line px-5 py-4">
-        <p className="label">검수 항목</p>
+        <p className="label">검토 항목</p>
         <ul>
           {rows.map((r) => {
             const head = (

@@ -60,9 +60,20 @@ function AutoArea({
     el.style.height = el.scrollHeight + "px";
   }, []);
   useLayoutEffect(fit, [value, fit]);
+  // 패널을 여닫거나 글꼴이 늦게 로드되어 칸 폭·글자 폭이 바뀌어도 높이를 다시 맞춘다
   useEffect(() => {
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    const el = ref.current;
+    if (!el) return;
+    let w = el.clientWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.clientWidth !== w) {
+        w = el.clientWidth;
+        fit();
+      }
+    });
+    ro.observe(el);
+    document.fonts?.ready.then(fit).catch(() => undefined);
+    return () => ro.disconnect();
   }, [fit]);
   return (
     <textarea
@@ -227,7 +238,7 @@ export default function DocEditor({
           </div>
         )}
         {refine && refine.field === field && (
-          <div className="mt-1 border border-line bg-bg2 p-3 text-[13px]">
+          <div className="mt-1 border border-line bg-bg2 p-3 text-[14px]">
             <div className="mb-2 flex items-center justify-between">
               <span className="font-medium">{ACTIONS.find((a) => a.key === refine.action)?.label} · 적용 전 미리보기</span>
               <button className="btn btn-ghost btn-sm" onClick={cancelRefine} aria-label="닫기">

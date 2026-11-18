@@ -11,7 +11,7 @@ export interface CheckRow {
 
 const pick = (q: Quality, codes: string[]) => q.issues.filter((i) => codes.includes(i.code));
 
-/** 규칙 기반 검사 결과를 검수 항목으로 묶는다(경고 표시 없이 차분하게 보여준다). */
+/** 규칙 기반 검사 결과를 검토 항목으로 묶는다(경고 표시 없이 차분하게 보여준다). */
 export function buildChecks(q: Quality): CheckRow[] {
   const src = pick(q, ["FACT_NEEDS_SOURCE", "SOURCES_REQUIRED"]);
   const style = pick(q, ["BANNED_PHRASE", "UNSUPPORTED_CLAIM", "PROMO_IN_BODY", "EXAMPLE_REAL_CASE"]);

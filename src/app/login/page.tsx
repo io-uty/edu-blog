@@ -53,7 +53,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[380px] border border-line bg-white p-8">
         <Logo />
         <p className="mt-2 text-xs text-sub">학원 블로그 콘텐츠 제작·관리</p>
-        <div className="mt-6 flex border-b border-line text-[13px]">
+        <div className="mt-6 flex border-b border-line text-[14px]">
           {(["signin", "signup"] as const).map((m) => (
             <button
               key={m}
@@ -90,7 +90,7 @@ export default function LoginPage() {
             {mode === "signin" ? "로그인" : "가입하고 확인 메일 받기"}
           </button>
         </form>
-        {msg && <p className={`mt-4 text-[13px] leading-6 ${msg.ok ? "text-ink" : "text-err"}`}>{msg.text}</p>}
+        {msg && <p className={`mt-4 text-[14px] leading-6 ${msg.ok ? "text-ink" : "text-err"}`}>{msg.text}</p>}
       </div>
     </div>
   );

@@ -30,6 +30,8 @@ export interface DocRecord {
   regionIndex: number;
   draft: Draft;
   images?: ImageItem[];
+  status?: "draft" | "published_confirmed"; // 발행 완료는 사용자가 직접 확인한 표시(공식 연동 아님)
+  publishedAt?: number | null;
   // 아래 3개는 이전 버전 호환용(현재는 화면에서 바로 계산)
   plainText?: string;
   html?: string;

@@ -578,6 +578,25 @@ export default function Studio() {
     saveBlob(blob, `${displayName(tenant) || "학원"}-설정.json`);
   }
 
+  /** 사용자가 직접 확인한 발행 표시(네이버 공식 연동이 아니므로 자동 판정하지 않음) */
+  async function confirmPublished(id: string, on: boolean) {
+    const status = on ? "published_confirmed" : "draft";
+    if (cloud) {
+      const r = await fetch(`/api/projects/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }).catch(() => null);
+      if (!r?.ok) return notify("발행 표시를 저장하지 못했습니다.");
+      const { doc: saved } = await r.json();
+      persisted.current.set(id, saved);
+      setDocs((ds) => ds.map((d) => (d.id === id ? saved : d)));
+    } else {
+      mutateDocs((ds) => ds.map((d) => (d.id === id ? { ...d, status, publishedAt: on ? Date.now() : null } : d)));
+    }
+    notify(on ? "발행 완료로 표시했습니다" : "발행 표시를 취소했습니다");
+  }
+
   async function deleteDoc(id: string) {
     if (cloud) {
       const r = await fetch(`/api/projects/${id}`, { method: "DELETE" }).catch(() => null);
@@ -613,7 +632,8 @@ export default function Studio() {
         setForm={setForm}
         brand={settings.brand}
         contentTypes={vertical.contentTypes}
-        topicPlaceholder={`예) ${vertical.titleExamples[0].split("｜")[0]}`}
+        topicPlaceholder={`예) ${vertical.exampleTopics[0]}`}
+        exampleTopics={vertical.exampleTopics}
         busy={busy}
         stages={stages}
         error={genError}
@@ -681,6 +701,7 @@ export default function Studio() {
         html={derived.html}
         plainText={derived.plainText}
         onBack={() => go({ name: "edit", id: doc.id })}
+        onConfirmPublished={(on) => confirmPublished(doc.id, on)}
         notify={notify}
       />
     );
@@ -708,7 +729,7 @@ export default function Studio() {
       </aside>
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         {localImport.length > 0 && !needsOnboarding && route.name !== "onboarding" && (
-          <div className="flex flex-wrap items-center gap-3 border-b border-line bg-bg2 px-5 py-2 text-[13px] md:px-8">
+          <div className="flex flex-wrap items-center gap-3 border-b border-line bg-bg2 px-5 py-2 text-[14px] md:px-8">
             <span className="flex-1">이 브라우저에 로그인 전에 만든 글 {localImport.length}개가 있습니다.</span>
             <button className="btn btn-sm" onClick={importLocal}>내 학원으로 가져오기</button>
             <button
@@ -726,7 +747,7 @@ export default function Studio() {
       </main>
 
       {toast && (
-        <div role="status" className="fixed bottom-6 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 bg-ink px-4 py-2 text-[13px] text-white">
+        <div role="status" className="fixed bottom-6 left-1/2 z-[60] max-w-[90vw] -translate-x-1/2 bg-ink px-4 py-2 text-[14px] text-white">
           {toast}
         </div>
       )}

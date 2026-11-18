@@ -14,6 +14,7 @@ export interface Vertical {
   exampleRule: string; // 예문·예시 규칙
   seoPatterns: string[]; // 지역·과목 키워드 조합 예
   defaultTopics: string[]; // 온보딩 '콘텐츠 주제' 추천
+  exampleTopics: string[]; // 작성 화면 예시 주제(클릭하면 입력)
   hashtagExample: string[];
 }
 
@@ -37,6 +38,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "영어 예문은 문법적으로 자연스럽고 정답이 하나로 정해져야 한다. 수학 식은 정확해야 한다. 실제 기출이라고 하지 않는다.",
     seoPatterns: ["{지역} 편입학원", "편입영어 {세부영역}", "{대학} 편입"],
     defaultTopics: ["편입영어 어휘·문법·독해", "편입수학 개념", "대학별 전형 정리", "편입 학습 계획", "오답 관리"],
+    exampleTopics: ["편입영어 빈칸 추론에서 보기 두 개가 헷갈릴 때", "편입수학 미적분 개념을 3개월 안에 정리하는 순서", "편입 준비 첫 달에 세워야 할 학습 계획"],
     hashtagExample: ["편입영어", "편입영어빈칸추론", "편입영어독해"],
   },
   영어학원: {
@@ -55,6 +57,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "영어 예문은 학년 수준에 맞고 문법적으로 정확해야 한다. 실제 학교 시험 문제라고 하지 않는다.",
     seoPatterns: ["{지역} 영어학원", "{학년} 영어 내신", "중등 영어 문법"],
     defaultTopics: ["학년별 내신 대비", "영어 문법", "영어 독해", "수능 영어", "학부모 상담 가이드"],
+    exampleTopics: ["중2 영어 내신 서술형에서 감점되는 문법 실수", "고1 영어 모의고사 빈칸 문제 푸는 순서", "초등 고학년 영어 단어 외우는 습관 만들기"],
     hashtagExample: ["영어내신", "중등영어문법", "영어학원"],
   },
   수학학원: {
@@ -73,6 +76,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "수학 예제는 직접 만든 문제로, 식과 답이 정확해야 한다. 실제 시험 문제라고 하지 않는다.",
     seoPatterns: ["{지역} 수학학원", "{학년} 수학 내신", "고등 수학 선행"],
     defaultTopics: ["단원별 개념", "내신 대비", "수능 수학", "선행·복습", "오답 관리"],
+    exampleTopics: ["중3 이차방정식 근의 공식에서 자주 하는 실수", "고1 수학 내신 대비 오답 노트 정리법", "초등 5학년 분수 계산 실수 줄이는 방법"],
     hashtagExample: ["수학내신", "중등수학", "수학학원"],
   },
   입시학원: {
@@ -90,6 +94,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "학생 사례는 가상의 예시로만 쓰고 실제 합격 사례처럼 쓰지 않는다.",
     seoPatterns: ["{지역} 입시학원", "수시 컨설팅", "{학년} 입시 준비"],
     defaultTopics: ["수시·정시 전략", "학생부 관리", "논술·면접", "학년별 입시 준비"],
+    exampleTopics: ["고2 겨울방학에 학생부 점검하는 순서", "수시 원서 쓰기 전에 확인할 5가지", "정시 지원 전략을 세우기 전에 정리할 것"],
     hashtagExample: ["대입준비", "수시전략", "입시학원"],
   },
   국어학원: {
@@ -107,6 +112,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "예시 지문은 직접 만든 짧은 글로 쓰고, 실제 작품·기출을 길게 인용하지 않는다.",
     seoPatterns: ["{지역} 국어학원", "중등 국어 내신", "수능 국어 비문학"],
     defaultTopics: ["비문학 독해", "문학 감상", "국어 문법", "내신 대비"],
+    exampleTopics: ["비문학 독해에서 문단 핵심 문장 찾는 법", "중학교 국어 문법 품사 헷갈릴 때 정리법", "수능 국어 시간 배분 연습하는 방법"],
     hashtagExample: ["국어내신", "비문학독해", "국어학원"],
   },
   과학학원: {
@@ -124,6 +130,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "과학 개념·단위·공식은 정확해야 하며, 확실하지 않은 수치는 쓰지 않는다.",
     seoPatterns: ["{지역} 과학학원", "중등 과학 내신", "고등 물리 개념"],
     defaultTopics: ["단원별 개념", "실험·탐구", "내신 대비", "수능 과탐"],
+    exampleTopics: ["중2 과학 전기회로 옴의 법칙 그래프 읽는 법", "고1 통합과학 개념을 그림으로 정리하는 방법", "과학 서술형 답안 쓰는 순서"],
     hashtagExample: ["과학내신", "중등과학", "과학학원"],
   },
   어학원: {
@@ -138,6 +145,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "외국어 예문은 자연스럽고 정확해야 한다. 공인시험 실제 문제라고 하지 않는다.",
     seoPatterns: ["{지역} 어학원", "{언어} 회화", "{시험명} 준비"],
     defaultTopics: ["회화 표현", "공인시험 대비", "학습 루틴"],
+    exampleTopics: ["영어 회화 첫 문장을 자연스럽게 시작하는 표현", "토익 리스닝 파트 2 오답 줄이는 방법", "매일 20분 외국어 공부 루틴 만들기"],
     hashtagExample: ["영어회화", "어학원", "회화표현"],
   },
   "기타 교육기관": {
@@ -152,6 +160,7 @@ export const VERTICALS: Record<AcademyType, Vertical> = {
     exampleRule: "예시는 가상의 예시로 표시하고 실제 사례처럼 쓰지 않는다.",
     seoPatterns: ["{지역} {분야} 학원"],
     defaultTopics: ["학습 방법", "과정 안내", "학습 습관"],
+    exampleTopics: ["처음 시작하는 수강생을 위한 첫 달 학습 순서", "수업 전에 준비하면 좋은 것", "꾸준히 공부하는 습관 만드는 방법"],
     hashtagExample: ["공부법", "학습습관", "학원"],
   },
 };

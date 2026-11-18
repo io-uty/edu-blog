@@ -36,12 +36,12 @@ export function ListView({
         {docs.length === 0 ? (
           <Empty text="저장된 콘텐츠가 없습니다." action={<button className="btn btn-primary" onClick={onNew}>첫 글 작성하기</button>} />
         ) : (
-          <table className="w-full min-w-[720px] text-left text-[13px]">
+          <table className="w-full min-w-[720px] text-left text-[14px]">
             <thead className="sticky top-0 bg-white text-xs text-sub">
               <tr className="border-b border-line">
                 <th className="px-5 py-2.5 font-medium md:px-8">제목</th>
                 <th className="px-3 py-2.5 font-medium">유형</th>
-                <th className="px-3 py-2.5 font-medium">이미지</th>
+                <th className="px-3 py-2.5 font-medium">상태</th>
                 <th className="px-3 py-2.5 font-medium">수정일</th>
                 <th className="px-5 py-2.5 md:px-8" />
               </tr>
@@ -56,7 +56,9 @@ export function ListView({
                     <span className="block truncate text-xs text-sub">{d.topic}</span>
                   </td>
                   <td className="px-3 py-3 text-sub">{d.contentType}</td>
-                  <td className="px-3 py-3 text-sub">{d.mock ? "샘플" : `${d.images?.length ?? 0}장`}</td>
+                  <td className="px-3 py-3">
+                    {d.mock ? <span className="text-sub">샘플</span> : d.status === "published_confirmed" ? <span className="text-ok">발행 완료</span> : <span className="text-sub">작성 중</span>}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-3 text-sub">{formatTime(d.updatedAt)}</td>
                   <td className="px-5 py-3 md:px-8">
                     <div className="flex justify-end gap-2">
@@ -97,7 +99,7 @@ export function HistoryView({ history, onOpen, hasDoc }: { history: HistoryEntry
         {history.length === 0 ? (
           <Empty text="아직 생성 이력이 없습니다." />
         ) : (
-          <table className="w-full min-w-[680px] text-left text-[13px]">
+          <table className="w-full min-w-[680px] text-left text-[14px]">
             <thead className="sticky top-0 bg-white text-xs text-sub">
               <tr className="border-b border-line">
                 <th className="px-5 py-2.5 font-medium md:px-8">일시</th>

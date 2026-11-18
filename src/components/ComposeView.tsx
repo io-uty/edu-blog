@@ -3,7 +3,7 @@
 import { Check, ChevronRight, Circle, Loader2, X } from "lucide-react";
 import type { Brand } from "@/lib/settings";
 import { formatTime, type DocRecord } from "@/lib/store";
-import { PageHeader } from "./ui";
+import { PageHeader, StepBar } from "./ui";
 
 export type StageStatus = "idle" | "running" | "done" | "error";
 export type StageState = { analysis: StageStatus; plan: StageStatus; draft: StageStatus; images: StageStatus };
@@ -34,6 +34,7 @@ export default function ComposeView({
   brand,
   contentTypes,
   topicPlaceholder,
+  exampleTopics,
   busy,
   stages,
   error,
@@ -49,6 +50,7 @@ export default function ComposeView({
   brand: Brand;
   contentTypes: string[];
   topicPlaceholder: string;
+  exampleTopics: string[];
   busy: boolean;
   stages: StageState;
   error: string | null;
@@ -72,6 +74,7 @@ export default function ComposeView({
           </button>
         }
       />
+      <StepBar current={0} />
       <div className="flex-1 overflow-y-auto">
         <form
           className="mx-auto max-w-[720px] px-5 py-8 md:px-8"
@@ -83,7 +86,7 @@ export default function ComposeView({
           }}
         >
           <div className="mb-6">
-            <label htmlFor="topic" className="label">주제</label>
+            <label htmlFor="topic" className="mb-2 block text-[17px] font-semibold">어떤 글을 쓸까요?</label>
             <input
               id="topic"
               className="field h-11 text-[15px]"
@@ -94,7 +97,23 @@ export default function ComposeView({
               placeholder={topicPlaceholder}
               autoFocus
             />
-            <p className="mt-1.5 text-xs text-sub">주제만 입력해도 생성할 수 있습니다.</p>
+            <p className="mt-1.5 text-xs text-sub">주제 한 줄만 적으면 됩니다. 나머지 설정은 그대로 두셔도 됩니다.</p>
+            {!form.topic.trim() && exampleTopics.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-sub">예시 주제</span>
+                {exampleTopics.map((x) => (
+                  <button
+                    key={x}
+                    type="button"
+                    className="btn btn-sm font-normal"
+                    disabled={busy}
+                    onClick={() => setForm({ ...form, topic: x })}
+                  >
+                    {x}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mb-6 sm:w-[320px]">
@@ -112,7 +131,7 @@ export default function ComposeView({
             </select>
           </div>
 
-          <label className="mb-6 flex items-center gap-2 text-[13px]">
+          <label className="mb-6 flex items-center gap-2 text-[14px]">
             <input
               type="checkbox"
               checked={form.images}
@@ -123,7 +142,7 @@ export default function ComposeView({
           </label>
 
           <details className="group mb-8 border-t border-line pt-4">
-            <summary className="flex cursor-pointer list-none items-center gap-1 text-[13px] text-sub hover:text-ink">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-[14px] text-sub hover:text-ink">
               <ChevronRight size={14} className="transition-transform group-open:rotate-90" /> 고급 설정
             </summary>
             <div className="mt-4 sm:w-[320px]">
@@ -158,7 +177,7 @@ export default function ComposeView({
 
           {showProgress && (
             <section className="mt-8 border-t border-line pt-5" aria-live="polite">
-              <ol className="flex flex-wrap gap-x-8 gap-y-2 text-[13px]">
+              <ol className="flex flex-wrap gap-x-8 gap-y-2 text-[14px]">
                 {STEPS.filter((s) => s.key !== "images" || form.images).map((s) => (
                   <li key={s.key} className={`flex items-center gap-2 ${stages[s.key] === "idle" ? "text-sub" : ""}`}>
                     <StepIcon s={stages[s.key]} /> {s.label}
@@ -167,7 +186,7 @@ export default function ComposeView({
               </ol>
               {busy && <p className="mt-3 text-xs text-sub">보통 1~2분 걸립니다. 이 화면을 벗어나지 말아 주세요.</p>}
               {error && (
-                <p className="mt-3 border-l-2 border-err bg-bg2 px-3 py-2 text-[13px] leading-6">
+                <p className="mt-3 border-l-2 border-err bg-bg2 px-3 py-2 text-[14px] leading-6">
                   {error}
                   {canResume && <span className="text-sub"> 완료된 단계는 보존되어 있습니다.</span>}
                 </p>
@@ -181,7 +200,7 @@ export default function ComposeView({
             <p className="label">최근 작성한 콘텐츠</p>
             <ul>
               {recent.map((d) => (
-                <li key={d.id} className="flex items-baseline gap-3 border-b border-bg2 py-2 text-[13px]">
+                <li key={d.id} className="flex items-baseline gap-3 border-b border-bg2 py-2 text-[14px]">
                   <button className="min-w-0 flex-1 truncate text-left hover:underline" onClick={() => onOpen(d.id)}>
                     {d.title}
                   </button>

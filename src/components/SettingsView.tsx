@@ -50,7 +50,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   return (
     <div className="grid gap-1 py-3 md:grid-cols-[180px_1fr] md:gap-6">
       <div>
-        <p className="pt-2 text-[13px]">{label}</p>
+        <p className="pt-2 text-[14px]">{label}</p>
         {hint && <p className="text-xs leading-5 text-sub">{hint}</p>}
       </div>
       <div className="min-w-0">{children}</div>
@@ -58,10 +58,10 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function Section({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
+function Section({ id, title, desc, children }: { id: string; title: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="border-b border-line py-6">
-      <h2 className="text-[15px] font-semibold">{title}</h2>
+    <section id={id} className="scroll-mt-16 border-b border-line py-6">
+      <h2 className="text-[17px] font-semibold">{title}</h2>
       {desc && <p className="mt-1 text-xs leading-5 text-sub">{desc}</p>}
       <div className="mt-2 divide-y divide-bg2">{children}</div>
     </section>
@@ -142,9 +142,26 @@ export default function SettingsView({
           </button>
         }
       />
+      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-line px-5 py-2 md:px-8" aria-label="설정 항목">
+        {[
+          ["set-academy", "학원 정보"],
+          ["set-format", "글 서식"],
+          ["set-image", "이미지 디자인"],
+          ["set-brand", "인사말·예약 링크"],
+          ["set-tags", "제목·해시태그"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            className="btn btn-sm btn-ghost whitespace-nowrap text-ink"
+            onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[900px] px-5 pb-16 text-[13px] md:px-8">
-          <Section title="학원 정보" desc="AI가 글을 쓸 때 쓰는 학원 유형·브랜드·문체입니다. 등록한 값만 쓰이고, 다른 학원과 섞이지 않습니다.">
+        <div className="mx-auto max-w-[900px] px-5 pb-16 text-[14px] md:px-8">
+          <Section id="set-academy" title="학원 정보" desc="AI가 글을 쓸 때 쓰는 학원 유형·브랜드·문체입니다. 등록한 값만 쓰이고, 다른 학원과 섞이지 않습니다.">
             <Field label="학원">
               <div className="flex flex-wrap items-center gap-2 pt-1.5">
                 <span className="font-medium">{tenant ? displayName(tenant) : "미등록"}</span>
@@ -174,7 +191,7 @@ export default function SettingsView({
             )}
           </Section>
 
-          <Section title="서식 템플릿" desc="본문 복사·자동 붙여넣기 때 네이버 에디터에 그대로 적용되는 서식입니다.">
+          <Section id="set-format" title="글 서식" desc="본문 복사·자동 붙여넣기 때 네이버 에디터에 그대로 적용되는 서식입니다.">
             <Field label="전체 정렬">
               <div className="flex gap-1">
                 {(
@@ -250,7 +267,7 @@ export default function SettingsView({
             </Field>
           </Section>
 
-          <Section title="이미지 디자인" desc="썸네일과 소주제 이미지(1:1, 1080px)에 공통으로 쓰이는 디자인입니다. 글자·로고는 코드로 그려 정확하게 들어갑니다.">
+          <Section id="set-image" title="이미지 디자인" desc="썸네일과 소주제 이미지(1:1, 1080px)에 공통으로 쓰이는 디자인입니다. 글자·로고는 코드로 그려 정확하게 들어갑니다.">
             <div className="grid gap-6 py-3 md:grid-cols-[1fr_320px]">
               <div className="divide-y divide-bg2">
                 <Field label="기본 레이아웃">
@@ -322,7 +339,7 @@ export default function SettingsView({
             </div>
           </Section>
 
-          <Section title="블로그 표기" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
+          <Section id="set-brand" title="인사말·예약 링크" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
             <Field label="이름(학원·블로그)">
               <input className="field" value={b.name} onChange={(e) => setBrand({ name: e.target.value })} />
             </Field>
@@ -347,7 +364,7 @@ export default function SettingsView({
             </Field>
           </Section>
 
-          <Section title="제목·해시태그 규칙" desc="코드가 자동으로 붙이는 값입니다.">
+          <Section id="set-tags" title="제목·해시태그 규칙" desc="코드가 자동으로 붙이는 값입니다.">
             <Field label="제목 끝 지역 표기" hint="쉼표로 구분 · 글마다 하나씩 순환">
               <ParsedInput
                 value={b.titleSuffixes}

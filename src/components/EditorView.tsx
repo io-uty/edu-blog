@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PanelRight, Send } from "lucide-react";
+import { Lightbulb, PanelRight, Send, X } from "lucide-react";
 import { jumpTo } from "@/lib/locate";
 import type { Draft } from "@/lib/schemas";
 import type { Settings } from "@/lib/settings";
@@ -10,7 +10,7 @@ import type { DocRecord, Quality } from "@/lib/store";
 import DocEditor from "./DocEditor";
 import { ImageGallery, ImageLightbox, imageNumber, type ImageActions } from "./images";
 import ReviewPanel from "./ReviewPanel";
-import { PageHeader } from "./ui";
+import { PageHeader, StepBar } from "./ui";
 
 export type SaveState = { state: "idle" | "saving" | "saved" | "error"; at?: number };
 
@@ -53,7 +53,23 @@ export default function EditorView({
 }) {
   const [panel, setPanel] = useState(false);
   const [tab, setTab] = useState<Tab>("review");
-  useEffect(() => setPanel(window.innerWidth >= 1280), []);
+  const [tip, setTip] = useState(false);
+  useEffect(() => {
+    setPanel(window.innerWidth >= 1280);
+    try {
+      setTip(localStorage.getItem("ebs:tip:editor") !== "1");
+    } catch {
+      setTip(true);
+    }
+  }, []);
+  const closeTip = () => {
+    setTip(false);
+    try {
+      localStorage.setItem("ebs:tip:editor", "1");
+    } catch {
+      /* 무시 */
+    }
+  };
 
   const images = doc.images ?? [];
   const lightboxItem = openImage ? images.find((i) => i.id === openImage) : undefined;
@@ -83,17 +99,32 @@ export default function EditorView({
         actions={
           <>
             <button className="btn" onClick={() => openTab("review")} aria-pressed={panel && tab === "review"}>
-              <PanelRight size={16} /> 검수
+              <PanelRight size={16} /> 검토
             </button>
             <button className="btn" onClick={() => openTab("images")} aria-pressed={panel && tab === "images"}>
               이미지 {images.length}
             </button>
             <button className="btn btn-primary" onClick={onPublish}>
-              <Send size={15} /> 발행 준비
+              <Send size={15} /> 발행 준비 →
             </button>
           </>
         }
       />
+      <StepBar current={1} />
+      {tip && (
+        <div className="flex items-start gap-3 border-b border-line bg-[#fffbea] px-5 py-3 text-[14px] leading-6 md:px-8">
+          <Lightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
+          <div className="flex-1">
+            <p>
+              <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 마우스로 드래그하면 <b>문장 다듬기·길이 줄이기</b> 같은 도구가 나타납니다.
+            </p>
+            <p className="text-sub">이미지를 누르면 크게 보고 문구를 바꿀 수 있고, 수정한 내용은 자동으로 저장됩니다. 다 확인했으면 오른쪽 위 <b>발행 준비</b>를 누르세요.</p>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={closeTip} aria-label="안내 닫기">
+            <X size={15} />
+          </button>
+        </div>
+      )}
       {doc.mock && (
         <div className="border-b border-line bg-bg2 px-5 py-2 text-xs text-sub md:px-8">
           샘플 데이터입니다. 실제 생성물이 아니므로 게시하지 마세요.
@@ -106,7 +137,7 @@ export default function EditorView({
             {outline.map((o) => (
               <li key={o.id}>
                 <button
-                  className="block w-full truncate px-2 py-1.5 text-left text-[13px] text-sub hover:bg-bg2 hover:text-ink"
+                  className="block w-full truncate px-2 py-1.5 text-left text-[14px] text-sub hover:bg-bg2 hover:text-ink"
                   onClick={() => jumpTo(o.id)}
                   title={o.label}
                 >
@@ -143,9 +174,9 @@ export default function EditorView({
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`h-11 flex-1 border-b-2 text-[13px] ${tab === t ? "border-brand font-semibold" : "border-transparent text-sub"}`}
+                  className={`h-11 flex-1 border-b-2 text-[14px] ${tab === t ? "border-brand font-semibold" : "border-transparent text-sub"}`}
                 >
-                  {t === "review" ? "검수" : `이미지 ${images.length}`}
+                  {t === "review" ? "검토" : `이미지 ${images.length}`}
                 </button>
               ))}
               <button className="btn btn-ghost btn-sm mx-1 xl:hidden" onClick={() => setPanel(false)}>

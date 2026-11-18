@@ -46,13 +46,13 @@ export default function Sidebar({
   let apiTone = "text-sub";
   if (api.checked) {
     if (api.mock) {
-      apiLine = "API 키 미설정 · 샘플 모드";
+      apiLine = "샘플 모드(AI 미연결)";
       apiTone = "text-warn";
     } else if (api.ok) {
-      apiLine = `API 연결됨 · ${api.model}`;
+      apiLine = "AI 연결됨";
       apiTone = "text-ok";
     } else {
-      apiLine = "API 연결 실패";
+      apiLine = "AI 연결 안 됨";
       apiTone = "text-err";
     }
   }
