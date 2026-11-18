@@ -83,7 +83,10 @@ try {
   failed++;
 } finally {
   // 정리: 테스트 학원·사용자 삭제
-  for (const t of tenants) await admin.from("tenants").delete().eq("id", t);
+  for (const t of tenants) {
+    const { error } = await admin.from("tenants").delete().eq("id", t);
+    if (error) console.error("학원 삭제 실패:", error.message);
+  }
   for (const u of users) await admin.auth.admin.deleteUser(u.id);
   console.log(`정리 완료(학원 ${tenants.length}곳, 사용자 ${users.length}명 삭제)`);
 }
