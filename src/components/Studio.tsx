@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Menu } from "lucide-react";
+import { LogIn, LogOut, Menu } from "lucide-react";
 import { derive } from "@/lib/derive";
 import { idbDel, idbSet } from "@/lib/idb";
 import { targetKey, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
 import type { Analysis, Draft, Plan } from "@/lib/schemas";
 import { verticalOf } from "@/lib/prompt/verticals";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type ImageLayout, type Settings } from "@/lib/settings";
 import { EMPTY_TENANT, displayName, localTenantRepository, type TenantProfile } from "@/lib/tenant";
 import {
   loadDocs,
@@ -21,7 +21,7 @@ import {
 } from "@/lib/store";
 import OnboardingView from "./OnboardingView";
 import Paywall from "./Paywall";
-import { contentLeft, type PlanInfo, type UsageInfo } from "@/lib/billingTypes";
+import { contentLeft, type PaymentInfo, type PlanInfo, type UsageInfo } from "@/lib/billingTypes";
 import ComposeView, { type Form, type StageState } from "./ComposeView";
 import EditorView, { type SaveState } from "./EditorView";
 import { imageFileName, saveBlob } from "./exporter";
@@ -32,6 +32,7 @@ import PublishView from "./PublishView";
 import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
 import { illustrationKey, renderBlob } from "./useRendered";
+import { autoLayout } from "@/lib/imageRender";
 
 export type Route =
   | { name: "compose" }
@@ -50,6 +51,13 @@ function parseHash(h: string): Route {
   return { name: "compose" };
 }
 const toHash = (r: Route) => "#/" + ("id" in r ? `${r.name}/${r.id}` : r.name);
+
+/** 레이아웃별로 사진에서 비워 둘 자리 */
+function compositionFor(layout: ImageLayout): "poster" | "side" | "plain" {
+  if (layout === "poster" || layout === "scene") return "poster";
+  if (layout === "bold" || layout === "summary") return "plain";
+  return "side";
+}
 
 const IDLE: StageState = { analysis: "idle", plan: "idle", draft: "idle", images: "idle" };
 
@@ -83,10 +91,10 @@ export default function Studio() {
   docsRef.current = docs;
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const notify = useCallback((m: string) => {
+  const notify = useCallback((m: string, ms = Math.max(2600, Math.min(9000, m.length * 110))) => {
     setToast(m);
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 2600);
+    toastTimer.current = setTimeout(() => setToast(""), ms); // 긴 안내는 읽을 시간만큼 더 오래 보여준다
   }, []);
 
   // ---------- 라우팅 ----------
@@ -110,13 +118,13 @@ export default function Studio() {
   const persisted = useRef(new Map<string, DocRecord>()); // 서버에 마지막으로 저장한 문서
   const settingsTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const [billing, setBilling] = useState<{ usage: UsageInfo | null; plans: PlanInfo[] } | null>(null);
+  const [billing, setBilling] = useState<{ usage: UsageInfo | null; plans: PlanInfo[]; payment?: PaymentInfo } | null>(null);
   const [quotaHit, setQuotaHit] = useState(false);
   const loadUsage = useCallback(async () => {
     const r = await fetch("/api/usage", { cache: "no-store" }).catch(() => null);
     const j = await r?.json().catch(() => null);
     if (j?.mode === "cloud") {
-      setBilling({ usage: j.usage ?? null, plans: j.plans ?? [] });
+      setBilling({ usage: j.usage ?? null, plans: j.plans ?? [], payment: j.payment });
       setQuotaHit(false);
     }
   }, []);
@@ -342,6 +350,7 @@ export default function Studio() {
             scene: item.copy.scene || item.copy.title.join(" "),
             style: settings.image.illustrationStyle,
             note: settings.image.illustrationNote,
+            composition: compositionFor(item.layout ?? autoLayout(item.kind, item.sectionIndex, settings.image, item.copy)),
             colors: [settings.image.primary, settings.image.accent].filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)),
           }),
         });
@@ -584,7 +593,10 @@ export default function Studio() {
         body: JSON.stringify({ tenant: t, settings: nextSettings }),
       }).catch(() => null);
       const j = await r?.json().catch(() => ({}));
-      if (!r?.ok) return notify(j?.error || "학원 정보를 저장하지 못했습니다.");
+      if (!r?.ok) {
+        notify(j?.error || "학원 정보를 저장하지 못했습니다.");
+        return;
+      }
       setSettings(nextSettings);
       if (!cloud.tenantId) {
         setCloud({ ...cloud, tenantId: j.tenantId });
@@ -605,8 +617,8 @@ export default function Studio() {
     saveBlob(blob, `${displayName(tenant) || "학원"}-설정.json`);
   }
 
-  const track = useCallback((type: string, plan?: string) => {
-    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, plan }) }).catch(() => undefined);
+  const track = useCallback((type: string, plan?: string, kind?: string) => {
+    fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, plan, kind }) }).catch(() => undefined);
   }, []);
 
   async function buyPlan(planId: string) {
@@ -669,7 +681,7 @@ export default function Studio() {
       />
     );
   } else if (route.name === "compose" && cloud && !busy && (quotaHit || (billing && contentLeft(billing.usage) === 0))) {
-    view = <Paywall usage={billing?.usage ?? null} plans={billing?.plans ?? []} onBuy={buyPlan} onSeen={() => track("pricing_viewed")} />;
+    view = <Paywall usage={billing?.usage ?? null} plans={billing?.plans ?? []} payment={billing?.payment} onBuy={buyPlan} onSeen={() => track("pricing_viewed")} />;
   } else if (route.name === "compose") {
     const u = billing?.usage;
     const left = contentLeft(u ?? null);
@@ -758,6 +770,7 @@ export default function Studio() {
         plainText={derived.plainText}
         onBack={() => go({ name: "edit", id: doc.id })}
         onConfirmPublished={(on) => confirmPublished(doc.id, on)}
+        track={cloud ? (type, kind) => track(type, undefined, kind) : undefined}
         notify={notify}
       />
     );
@@ -770,6 +783,17 @@ export default function Studio() {
           <Menu size={16} />
         </button>
         <Logo />
+        {cloud ? (
+          <form action="/auth/signout" method="post" className="ml-auto">
+            <button className="btn btn-sm gap-1.5" aria-label="로그아웃">
+              <LogOut size={14} /> 로그아웃
+            </button>
+          </form>
+        ) : (
+          <a className="btn btn-sm btn-primary ml-auto gap-1.5" href="/login">
+            <LogIn size={14} /> 로그인
+          </a>
+        )}
       </div>
       <aside className={`${menu ? "block" : "hidden"} absolute inset-x-0 top-12 z-40 border-b border-line shadow-md lg:static lg:block lg:w-[220px] lg:shrink-0 lg:border-b-0 lg:border-r lg:shadow-none`}>
         <Sidebar

@@ -5,6 +5,12 @@ import { Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
+/** 로그인 뒤 이동할 곳. 같은 사이트 안의 경로(/로 시작, //·\\ 제외)만 허용해 외부 주소로 보내지 않는다. */
+function nextPath() {
+  const n = new URLSearchParams(window.location.search).get("next") ?? "";
+  return /^\/(?![/\\])/.test(n) ? n : "/";
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -29,7 +35,7 @@ export default function LoginPage() {
             ok: false,
             text: /confirm/i.test(error.message) ? "메일 확인이 아직 완료되지 않았습니다. 받은편지함의 확인 메일을 눌러 주세요." : "이메일 또는 비밀번호가 올바르지 않습니다.",
           });
-        window.location.href = "/";
+        window.location.href = nextPath();
       } else {
         if (password.length < 8) return setMsg({ ok: false, text: "비밀번호는 8자 이상으로 정해 주세요." });
         const { data, error } = await sb.auth.signUp({
@@ -38,7 +44,7 @@ export default function LoginPage() {
           options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (error) return setMsg({ ok: false, text: /registered|exists/i.test(error.message) ? "이미 가입된 이메일입니다. 로그인해 주세요." : "가입하지 못했습니다. 잠시 뒤 다시 시도해 주세요." });
-        if (data.session) window.location.href = "/";
+        if (data.session) window.location.href = nextPath();
         else setMsg({ ok: true, text: `${email} 로 확인 메일을 보냈습니다. 메일의 링크를 누르면 학원 정보 등록으로 이어집니다.` });
       }
     } catch {

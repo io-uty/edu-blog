@@ -76,6 +76,34 @@ try {
   // 로그인하지 않은 요청은 테이블 권한 자체가 없어 거부(42501)되거나 0건이어야 한다
   const denied = (r) => (r.error ? r.error.code === "42501" : r.data.length === 0);
   check(denied(r12), `로그인하지 않으면 학원을 볼 수 없다${r12.error ? ` (${r12.error.code})` : ""}`);
+  // ── 학원 중복 등록 방지 ──
+  // 같은 계정이 학원을 또 만들려 해도 기존 학원을 돌려준다(두 번째 학원이 생기지 않는다)
+  const again = await admin.rpc("create_tenant_for_user", { p_user: users[0].id, p_name: "또다른학원", p_type: "영어학원", p_branch: "" });
+  check(!again.error && again.data === ta, "같은 계정이 학원을 다시 만들면 기존 학원이 그대로 쓰인다");
+  const { count: ownedCount } = await admin.from("tenant_members").select("id", { count: "exact", head: true }).eq("user_id", users[0].id);
+  check(ownedCount === 1, "한 계정에는 학원이 하나만 있다");
+  // 동시에 여러 번 보내도 하나만 생긴다
+  const email3 = `bbolog-isolation-c-${stamp}@example.com`;
+  const { data: u3 } = await admin.auth.admin.createUser({ email: email3, password: `T-${stamp}-c-pw!`, email_confirm: true });
+  users.push({ id: u3.user.id, email: email3, password: "" });
+  const burst = await Promise.all(Array.from({ length: 6 }, () => admin.rpc("create_tenant_for_user", { p_user: u3.user.id, p_name: `동시등록${stamp}`, p_type: "수학학원", p_branch: "" })));
+  const ids = new Set(burst.map((b) => b.data).filter(Boolean));
+  tenants.push(...ids);
+  check(ids.size === 1 && burst.every((b) => !b.error), "같은 계정이 동시에 6번 등록 요청해도 학원은 1곳만 생긴다");
+  // 같은 이름(공백·대소문자만 다름)을 다른 계정이 등록하면 거부
+  const email4 = `bbolog-isolation-d-${stamp}@example.com`;
+  const { data: u4 } = await admin.auth.admin.createUser({ email: email4, password: `T-${stamp}-d-pw!`, email_confirm: true });
+  users.push({ id: u4.user.id, email: email4, password: "" });
+  const dup = await admin.rpc("create_tenant_for_user", { p_user: u4.user.id, p_name: ` 동시 등록${stamp} `.toUpperCase(), p_type: "수학학원", p_branch: "" });
+  check(dup.error?.code === "23505", `같은 학원명을 다른 계정이 등록하면 거부된다${dup.error ? ` (${dup.error.code})` : ""}`);
+  // 같은 이름이라도 지점명이 다르면 허용
+  const branch = await admin.rpc("create_tenant_for_user", { p_user: u4.user.id, p_name: `동시등록${stamp}`, p_type: "수학학원", p_branch: "강남점" });
+  if (branch.data) tenants.push(branch.data);
+  check(!branch.error && !!branch.data, "같은 이름이라도 지점명이 다르면 등록된다");
+  // 일반 사용자가 member 행을 직접 추가해 두 번째 학원에 들어가려는 시도는 거부(권한 + 유일 제약)
+  const joinTry = await A.from("tenant_members").insert({ tenant_id: tb, user_id: users[0].id, role: "owner" });
+  check(!!joinTry.error, "일반 사용자는 다른 학원의 멤버가 될 수 없다");
+
   const r13 = await anonClient().from("projects").select("id");
   check(denied(r13), `로그인하지 않으면 콘텐츠를 볼 수 없다${r13.error ? ` (${r13.error.code})` : ""}`);
 } catch (e) {

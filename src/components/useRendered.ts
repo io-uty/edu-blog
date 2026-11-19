@@ -44,7 +44,7 @@ export async function renderBlob(item: ImageItem, design: ImageDesign): Promise<
     kind: item.kind,
     copy: item.copy,
     design: variantDesign(item.kind, item.sectionIndex, design),
-    layout: item.layout ?? autoLayout(item.kind, item.sectionIndex, design),
+    layout: item.layout ?? autoLayout(item.kind, item.sectionIndex, design, item.copy),
     illustration,
     logo,
   });

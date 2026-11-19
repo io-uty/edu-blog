@@ -2,16 +2,20 @@
 
 import { useEffect } from "react";
 import { ChevronRight, Download, ImagePlus, Loader2, RefreshCw, Trash2, Wand2, X } from "lucide-react";
-import { targetKey, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
+import { itemsToText, targetKey, textToItems, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
 import type { ImageDesign, ImageLayout } from "@/lib/settings";
 import { imageLabel, imagePosition, sortImages, type ImageItem } from "@/lib/store";
 import { useRendered } from "./useRendered";
 import { autoLayout } from "@/lib/imageRender";
 
 export const LAYOUT_LABEL: Record<ImageLayout, string> = {
+  poster: "포스터형(사진)",
+  bold: "강조 타이포형",
   headline: "헤드라인형",
   notice: "공지형",
   checklist: "체크리스트형",
+  summary: "내용정리형",
+  scene: "사진형",
 };
 
 export interface ImageActions {
@@ -122,7 +126,7 @@ export function ImageGallery({ items, actions, sectionCount }: { items: ImageIte
                 </p>
                 <p className="text-xs text-sub">{imagePosition(it)}</p>
                 <p className="text-xs text-sub">
-                  {LAYOUT_LABEL[it.layout ?? autoLayout(it.kind, it.sectionIndex, actions.design)]} · {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
+                  {LAYOUT_LABEL[it.layout ?? autoLayout(it.kind, it.sectionIndex, actions.design, it.copy)]} · {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
                 </p>
                 <div className="mt-1.5 flex gap-1">
                   <IconBtn label="문구 다시 만들기" disabled={busy || !actions.aiEnabled} onClick={() => actions.regenerate(it)}>
@@ -217,7 +221,7 @@ export function ImageLightbox({
               <label className="label">레이아웃</label>
               <select
                 className="field h-9 py-0"
-                value={item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design)}
+                value={item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design, item.copy)}
                 onChange={(e) => actions.update(item.id, { layout: e.target.value as ImageLayout })}
               >
                 {Object.entries(LAYOUT_LABEL).map(([k, v]) => (
@@ -253,6 +257,16 @@ export function ImageLightbox({
             <div>
               <label className="label">한 줄 요약</label>
               <input className="field" value={item.copy.sub} onChange={(e) => setCopy({ sub: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">내용 정리 (한 줄에 하나, “항목: 설명” 형식, 최대 4줄)</label>
+              <textarea
+                className="field resize-none"
+                rows={4}
+                placeholder={"예) 시간 배분: 지문마다 2분씩 정해 두기"}
+                value={itemsToText(item.copy.items)}
+                onChange={(e) => setCopy({ items: textToItems(e.target.value) })}
+              />
             </div>
             <div>
               <label className="label">체크 항목 (한 줄에 하나)</label>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { BrandSchema, DEFAULT_SETTINGS, type Settings } from "./settings";
+import { BrandSchema, DEFAULT_SETTINGS, migrateImage, type Settings } from "./settings";
 import type { DocRecord } from "./store";
 import { EMPTY_TENANT, StyleProfileSchema, TenantProfileSchema, type Source, type TenantProfile } from "./tenant";
 
@@ -27,7 +27,7 @@ export const SettingsInputSchema = z.object({
     imageMarkers: z.boolean(),
   }),
   image: z.object({
-    layout: z.enum(["headline", "notice", "checklist"]),
+    layout: z.enum(["poster", "bold", "headline", "notice", "checklist", "summary", "scene"]),
     label: z.string().max(60),
     // 로고는 축소된 dataURL 만 허용(약 300KB 이하)
     logo: z.string().max(400_000).regex(/^data:image\/(png|jpeg|webp|svg\+xml);base64,/).nullable(),
@@ -36,8 +36,10 @@ export const SettingsInputSchema = z.object({
     accent: HEX,
     point: HEX,
     footer: z.boolean(),
-    illustrationStyle: z.enum(["flat", "cute", "webtoon", "watercolor", "clay"]).default("cute"),
+    illustrationStyle: z.enum(["photo", "render3d", "flat", "cute", "webtoon", "watercolor", "clay"]).default("photo"),
     illustrationNote: z.string().max(200).default(""),
+    contact: z.string().max(60).default(""),
+    rev: z.number().int().min(0).max(100).optional(),
   }),
 });
 
@@ -95,7 +97,11 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
   const settings: Settings = {
     brand: { ...DEFAULT_SETTINGS.brand, ...(br.brand_guidelines ?? {}) },
     format: { ...DEFAULT_SETTINGS.format, ...(br.format_template ?? {}) },
-    image: { ...DEFAULT_SETTINGS.image, ...(br.image_design ?? {}) },
+    image: migrateImage(
+      { ...DEFAULT_SETTINGS.image, ...(br.image_design ?? {}) },
+      (br.image_design as { rev?: number } | null)?.rev,
+      String((br.brand_guidelines as { placePhone?: string } | null)?.placePhone ?? ""),
+    ),
   };
   return { tenant, settings };
 }

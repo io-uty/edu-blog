@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, History, Settings2, SquarePen } from "lucide-react";
+import { FileText, History, LogIn, LogOut, Settings2, SquarePen } from "lucide-react";
 import Logo from "./Logo";
 import type { Route } from "./Studio";
 
@@ -78,12 +78,20 @@ export default function Sidebar({
           </button>
         ))}
       </nav>
-      {email && (
-        <form action="/auth/signout" method="post" className="flex items-center gap-2 border-t border-line px-5 py-3 text-xs">
-          <span className="flex-1 truncate text-sub" title={email}>{email}</span>
-          <button className="text-sub underline underline-offset-2 hover:text-ink">로그아웃</button>
-        </form>
-      )}
+      <div className="border-t border-line px-4 py-3">
+        {email ? (
+          <form action="/auth/signout" method="post" className="space-y-2">
+            <p className="truncate px-1 text-xs text-sub" title={email}>{email}</p>
+            <button className="btn h-10 w-full justify-center gap-2 text-[14px]">
+              <LogOut size={15} /> 로그아웃
+            </button>
+          </form>
+        ) : (
+          <a className="btn btn-primary h-10 w-full justify-center gap-2 text-[14px]" href="/login">
+            <LogIn size={15} /> 로그인
+          </a>
+        )}
+      </div>
       <div className="border-t border-line px-5 py-3 text-xs">
         <p className={apiTone}>{apiLine}</p>
         {api.checked && !api.ok && api.message && <p className="mt-1 leading-5 text-sub">{api.message}</p>}

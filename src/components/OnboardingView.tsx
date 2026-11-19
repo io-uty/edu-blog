@@ -107,7 +107,7 @@ export default function OnboardingView({
   initial: TenantProfile;
   settings: Settings;
   editing: boolean;
-  onComplete: (t: TenantProfile, patch: { logo: string | null; phone: string; importedSettings?: Partial<Settings> }) => void;
+  onComplete: (t: TenantProfile, patch: { logo: string | null; phone: string; importedSettings?: Partial<Settings> }) => void | Promise<void>;
   onCancel: () => void;
   notify: (m: string) => void;
 }) {
@@ -233,13 +233,20 @@ export default function OnboardingView({
     }
   }
 
-  function finish() {
+  const [saving, setSaving] = useState(false);
+  async function finish() {
+    if (saving) return;
     const r = TenantProfileSchema.safeParse({ ...t, onboardedAt: t.onboardedAt ?? Date.now() });
     if (!r.success) {
       setStep(0);
       return notify("학원 유형과 학원명을 확인해 주세요.");
     }
-    onComplete(r.data, { logo, phone, importedSettings: imported });
+    setSaving(true); // 저장 중 중복 클릭 방지(학원이 두 번 만들어지지 않게)
+    try {
+      await onComplete(r.data, { logo, phone, importedSettings: imported });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -570,7 +577,7 @@ export default function OnboardingView({
             {step === 0 ? "* 표시만 필수입니다. 나머지는 나중에 채워도 됩니다." : "입력하지 않은 항목은 글에 쓰이지 않습니다."}
           </span>
           {step < 2 && step > 0 && (
-            <button className="btn" onClick={finish}>
+            <button className="btn" disabled={saving} onClick={finish}>
               여기까지 저장
             </button>
           )}
@@ -579,8 +586,8 @@ export default function OnboardingView({
               다음
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={finish}>
-              {editing ? "저장" : "완료하고 시작하기"}
+            <button className="btn btn-primary" disabled={saving} onClick={finish}>
+              {saving ? "저장 중…" : editing ? "저장" : "완료하고 시작하기"}
             </button>
           )}
         </div>

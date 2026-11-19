@@ -15,6 +15,11 @@ export interface PlanInfo {
   period_days: number | null;
   features: { summary?: string; note?: string };
 }
+export interface PaymentInfo {
+  available: boolean;
+  test: boolean;
+  method?: "bank" | "card";
+}
 export const PAYWALL_MESSAGE =
   "무료 체험이 완료되었습니다. 계속해서 학원 맞춤형 블로그 콘텐츠를 제작하려면 이용권을 선택해 주세요.";
 

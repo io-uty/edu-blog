@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSession, NO_TENANT_YET, UNAUTHORIZED } from "@/lib/supabase/server";
 import { rowToDoc } from "@/lib/tenantDb";
+import { logEvent } from "@/lib/usage";
 
 const Patch = z.object({
   title: z.string().max(300).optional(),
@@ -38,6 +39,7 @@ export async function PUT(req: Request, { params }: Params) {
     .maybeSingle();
   if (error) return Response.json({ error: "저장하지 못했습니다." }, { status: 500 });
   if (!data) return Response.json({ error: "콘텐츠를 찾을 수 없습니다." }, { status: 404 });
+  if (d.status === "published_confirmed") await logEvent(s.tenantId, s.user.id, "publish_confirmed", { self_reported: true }, `pub:${id}`);
   return Response.json({ doc: rowToDoc(data) });
 }
 

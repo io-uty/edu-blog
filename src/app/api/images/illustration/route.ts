@@ -4,20 +4,24 @@ import { getSession, SUPABASE_ENABLED } from "@/lib/supabase/server";
 import { consume, refund } from "@/lib/usage";
 import { randomUUID } from "node:crypto";
 import { IMAGE_STYLE } from "@/config/imageStyle";
-import { ILLUSTRATION_STYLES } from "@/lib/settings";
+import { ILLUSTRATION_STYLES, type IllustrationStyle } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 // 글자 없는 일러스트만 생성한다(제목·로고·숫자는 브라우저에서 코드로 얹음).
-// OPENAI_API_KEY 가 있을 때만 동작한다. 모델은 IMAGE_MODEL(기본 gpt-image-1).
+// OPENAI_API_KEY 가 있을 때만 동작한다. 모델은 IMAGE_MODEL(기본 gpt-image-2).
 const KEY = process.env.OPENAI_API_KEY;
-const MODEL = process.env.IMAGE_MODEL || "gpt-image-1";
+const MODEL = process.env.IMAGE_MODEL || "gpt-image-2";
+// 블로그 대표 이미지라 기본은 고품질. 비용을 줄이려면 IMAGE_QUALITY=medium
+const QUALITY = process.env.IMAGE_QUALITY || "high";
 
 const Body = z.object({
   scene: z.string().trim().min(3).max(600),
-  style: z.enum(["flat", "cute", "webtoon", "watercolor", "clay"]).default("cute"),
+  style: z.enum(Object.keys(ILLUSTRATION_STYLES) as [IllustrationStyle, ...IllustrationStyle[]]).default("photo"),
   note: z.string().max(200).default(""),
+  // side: 오른쪽에 그림, 왼쪽 위는 글자 자리 / poster: 전체를 채우는 장면, 위쪽은 제목 자리 / plain: 글자 없이 그대로
+  composition: z.enum(["side", "scene", "poster", "plain"]).default("poster"),
   colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(3).default([]),
 });
 
@@ -40,14 +44,25 @@ export async function POST(req: Request) {
     if (session?.tenantId) await refund(session.tenantId, session.user.id, "image", key);
   };
 
+  const realistic = p.data.style === "photo" || p.data.style === "render3d";
+  const composition = {
+    poster:
+      "full-bleed square composition. The main subject sits in the lower 55-60% of the frame; the upper 40% is calm, softly lit, out-of-focus background (wall, window light, bokeh) with no objects, so a large headline can be placed there",
+    scene:
+      "full-bleed square composition. The main subject sits in the lower 55-60% of the frame; the upper 40% is calm, softly lit, out-of-focus background with no objects, so a headline can be placed there",
+    side: "main subject placed in the right half and lower part of the canvas; keep the upper-left area as a simple, uncluttered background for text overlay",
+    plain: "balanced square composition with a clear focal point",
+  }[p.data.composition];
   const prompt = [
     p.data.scene,
     ILLUSTRATION_STYLES[p.data.style].prompt,
-    p.data.colors.length ? `use ${p.data.colors.join(", ")} only as small accent colors, keep the rest neutral` : "",
+    realistic
+      ? "Korean setting and Korean people in their late teens to twenties, natural candid expressions, tidy premium private-academy study environment (generic, not a real place), photographic realism, no plastic AI look, no distorted hands"
+      : "educational illustration for a private academy blog, a generic study space (not a real academy or real building)",
+    p.data.colors.length ? `subtle accents of ${p.data.colors.join(", ")} in props or clothing only; overall palette warm and natural` : "",
     p.data.note ? `additional request: ${p.data.note}` : "",
-    "educational illustration for a private academy blog, a generic study space (not a real academy or real building)",
-    "main subject placed in the right half and lower part of the canvas; keep the upper-left area as a simple flat background for text overlay",
-    "square 1:1",
+    composition,
+    "square 1:1, high detail, professional quality",
     IMAGE_STYLE.negativePrompt,
   ]
     .filter(Boolean)
@@ -57,7 +72,7 @@ export async function POST(req: Request) {
     const r = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: MODEL, prompt, size: "1024x1024", n: 1 }),
+      body: JSON.stringify({ model: MODEL, prompt, size: "1024x1024", quality: QUALITY, n: 1 }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {

@@ -87,6 +87,12 @@ const SAMPLE: ImageItem = {
     highlight: 1,
     sub: "헷갈리는 부분부터 확인",
     points: ["개념 정리", "예제 확인", "오답 기록"],
+    visual: "card",
+    items: [
+      { label: "개념 정리", detail: "핵심 정의를 한 줄로 쓰기" },
+      { label: "예제 확인", detail: "대표 유형 2개 먼저 풀기" },
+      { label: "오답 기록", detail: "틀린 이유를 바로 적어 두기" },
+    ],
     scene: "",
   },
   illustration: "none",
@@ -281,6 +287,9 @@ export default function SettingsView({
                 </Field>
                 <Field label="이미지 표기" hint="로고 옆에 들어가는 이름">
                   <input className="field" value={im.label} onChange={(e) => setImage({ label: e.target.value })} />
+                </Field>
+                <Field label="상담 문구" hint="강조 타이포형 상단 띠에 표시">
+                  <input className="field" placeholder="예) 무료상담 02-000-0000" value={im.contact ?? ""} onChange={(e) => setImage({ contact: e.target.value })} />
                 </Field>
                 <Field label="로고" hint="PNG 권장(투명 배경)">
                   <div className="flex items-center gap-3">

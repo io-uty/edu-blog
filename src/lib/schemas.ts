@@ -9,6 +9,8 @@ export const AnalysisSchema = z.object({
   main_keyword: z.string(),
   sub_keywords: z.array(z.string()).min(1).max(4),
   core_message: z.string(),
+  // 혼자 준비할 때 막히는 지점 ↔ 관리·진단이 푸는 방식(이전에 저장된 글에는 없음)
+  academy_angle: z.string().optional(),
   // 사실 확인이 필요한 정보(전형·일정·인원·합격선·수업료·이벤트 등)
   facts_needed: z.array(z.string()),
   // 근거 자료 없이 작성 가능한지

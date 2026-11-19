@@ -40,6 +40,10 @@ export async function middleware(req: NextRequest) {
     },
   });
   await supabase.auth.getUser();
+  if (req.nextUrl.pathname.startsWith("/admin") || req.nextUrl.pathname.startsWith("/api/admin")) {
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    res.headers.set("Cache-Control", "no-store");
+  }
   return res;
 }
 

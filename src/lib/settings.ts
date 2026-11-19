@@ -33,10 +33,20 @@ export interface FormatTemplate {
   imageMarkers: boolean;
 }
 
-export type ImageLayout = "headline" | "notice" | "checklist";
+export type ImageLayout = "poster" | "bold" | "headline" | "notice" | "checklist" | "summary" | "scene";
 
 /** 일러스트 그림체(이미지 생성 API 연결 시 사용) */
 export const ILLUSTRATION_STYLES = {
+  photo: {
+    label: "실사 사진",
+    prompt:
+      "high-end editorial photograph, shot on a full-frame camera with a 35mm lens, natural soft window light, shallow depth of field, realistic skin and fabric texture, clean modern Korean study space, warm neutral color grading, magazine-quality composition, sharp focus on the subject",
+  },
+  render3d: {
+    label: "3D 캐릭터",
+    prompt:
+      "high-quality 3D animated film style render, soft global illumination, warm cozy lighting, detailed props and materials, appealing stylized Korean student character with natural proportions, cinematic depth of field, polished and premium look",
+  },
   flat: { label: "깔끔한 플랫", prompt: "clean flat vector illustration, simple shapes, soft shadows, friendly and modern" },
   cute: { label: "동글동글 귀여운", prompt: "cute rounded kawaii-style illustration, chubby proportions, pastel tones, soft outlines" },
   webtoon: { label: "웹툰풍", prompt: "Korean webtoon style illustration, clean line art, soft cel shading, expressive characters" },
@@ -54,9 +64,14 @@ export interface ImageDesign {
   accent: string; // 강조 박스·하이라이트
   point: string; // 포인트 단어
   footer: boolean; // 하단 로고 띠
+  contact: string; // 썸네일 상단 띠 문구(예: 무료상담 02-000-0000)
+  rev?: number; // 기본값 개편 버전(이전 저장값 이관용)
   illustrationStyle: IllustrationStyle;
   illustrationNote: string; // 추가 요청(예: 학생은 교복 차림)
 }
+
+/** 이미지 기본값을 바꿀 때 올린다. 이전 버전으로 저장된 레이아웃·그림체는 새 기본값으로 옮긴다. */
+const IMAGE_REV = 2;
 
 export interface Settings {
   brand: Brand;
@@ -90,7 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
     imageMarkers: true,
   },
   image: {
-    layout: "headline",
+    layout: "poster",
     label: "",
     logo: null,
     bg: "#F4EFE6",
@@ -98,7 +113,9 @@ export const DEFAULT_SETTINGS: Settings = {
     accent: "#FFD84D",
     point: "#E04A2F",
     footer: true,
-    illustrationStyle: "cute",
+    contact: "",
+    rev: IMAGE_REV,
+    illustrationStyle: "photo",
     illustrationNote: "",
   },
 };
@@ -115,11 +132,18 @@ export function loadSettings(): Settings {
     return {
       brand: brand.success ? brand.data : DEFAULT_SETTINGS.brand,
       format: { ...DEFAULT_SETTINGS.format, ...s.format },
-      image: { ...DEFAULT_SETTINGS.image, ...s.image },
+      image: migrateImage({ ...DEFAULT_SETTINGS.image, ...s.image }, s.image?.rev, brand.success ? brand.data.placePhone : ""),
     };
   } catch {
     return DEFAULT_SETTINGS;
   }
+}
+
+export function migrateImage(im: ImageDesign, rev: number | undefined, phone: string): ImageDesign {
+  if ((rev ?? 1) >= IMAGE_REV) return im;
+  // 2: 실사 사진 + 포스터형 썸네일이 기본, 상담 문구는 등록된 전화번호로 채움
+  const contact = im.contact || (phone.trim() ? `무료상담 ${phone.trim()}` : "");
+  return { ...im, layout: "poster", illustrationStyle: "photo", contact, rev: IMAGE_REV };
 }
 
 export function saveSettings(s: Settings): boolean {

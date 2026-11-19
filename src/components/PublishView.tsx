@@ -80,6 +80,7 @@ export default function PublishView({
   onBack,
   onConfirmPublished,
   notify,
+  track = () => undefined,
 }: {
   doc: DocRecord;
   settings: Settings;
@@ -89,6 +90,7 @@ export default function PublishView({
   onBack: () => void;
   onConfirmPublished: (published: boolean) => void;
   notify: (m: string) => void;
+  track?: (type: string, kind?: string) => void;
 }) {
   const tags = renderHashtags(doc.draft.hashtags);
   const checks = buildChecks(quality);
@@ -123,6 +125,7 @@ export default function PublishView({
       await navigator.clipboard.writeText(text);
       notify(`${label}을(를) 복사했습니다. 네이버 글쓰기 화면에 붙여넣으세요(⌘V)`);
       mark(key);
+      track("content_copied", key);
     } catch {
       notify("복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.");
     }
@@ -134,6 +137,7 @@ export default function PublishView({
       const { blob, name } = await buildZip(doc, settings, kind === "all" ? { plainText, html, tags } : null);
       saveBlob(blob, name);
       if (kind === "images") mark("images");
+      track(kind === "images" ? "image_downloaded" : "package_downloaded", kind === "images" ? "all" : "package");
     } catch {
       notify("파일을 만들지 못했습니다. 다시 시도해 주세요.");
     } finally {
@@ -175,7 +179,10 @@ export default function PublishView({
                 href={NAVER_WRITE_URL}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => mark("open")}
+                onClick={() => {
+                  mark("open");
+                  track("naver_write_opened");
+                }}
               >
                 <ExternalLink size={15} /> 네이버 글쓰기 열기
               </a>
@@ -192,6 +199,7 @@ export default function PublishView({
                   if (await copyBody()) {
                     notify("본문을 복사했습니다. 네이버 본문 칸에 붙여넣으세요(⌘V)");
                     mark("body");
+                    track("content_copied", "body");
                   } else notify("복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.");
                 }}
               >

@@ -1,3 +1,5 @@
+import { bankConfig } from "@/lib/bank";
+import { paymentConfig } from "@/lib/payments";
 import { SUPABASE_ENABLED, getSession, supabaseAdmin } from "@/lib/supabase/server";
 import { summary } from "@/lib/usage";
 
@@ -13,5 +15,6 @@ export async function GET() {
     summary(s.tenantId),
     supabaseAdmin().from("plans").select("id, name, price, content_limit, image_limit, period_days, features").eq("active", true).eq("is_trial", false).order("price"),
   ]);
-  return Response.json({ mode: "cloud", usage, plans: plans.data ?? [] });
+  const cfg = paymentConfig();
+  return Response.json({ mode: "cloud", usage, plans: plans.data ?? [], payment: bankConfig() ? { available: true, test: false, method: "bank" } : { available: !!cfg, test: cfg?.mode === "test", method: "card" } });
 }

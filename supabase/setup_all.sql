@@ -451,7 +451,99 @@ $$;
 revoke all on function public.activate_subscription(text, text, jsonb) from public, anon, authenticated;
 grant execute on function public.activate_subscription(text, text, jsonb) to service_role;
 
+-- 같은 사용자가 학원 등록을 동시에 두 번 보내도 학원이 하나만 생기게 한다(사용자 단위 잠금)
+create or replace function public.create_tenant_for_user(p_user uuid, p_name text, p_type text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext('create_tenant:' || p_user::text));
+  select tenant_id into v_id from tenant_members where user_id = p_user order by created_at limit 1;
+  if v_id is not null then return v_id; end if;
+  insert into tenants (name, academy_type) values (p_name, p_type) returning id into v_id;
+  insert into tenant_members (tenant_id, user_id, role) values (v_id, p_user, 'owner');
+  insert into tenant_brands (tenant_id) values (v_id);
+  insert into tenant_content_settings (tenant_id) values (v_id);
+  insert into subscriptions (tenant_id, plan_id, status) values (v_id, 'trial', 'trial');
+  return v_id;
+end;
+$$;
+revoke all on function public.create_tenant_for_user(uuid, text, text) from public, anon, authenticated;
+grant execute on function public.create_tenant_for_user(uuid, text, text) to service_role;
+
+-- 1) 학원 중복 등록을 DB 에서 막는다(서버 코드가 놓쳐도 저장되지 않게)
+--    - 한 계정은 학원 하나만 소속된다
+--    - 같은 학원명(+지점명)은 한 번만 등록된다(공백·대소문자 무시)
+
+create unique index if not exists tenant_members_one_per_user on public.tenant_members (user_id);
+
+alter table public.tenants
+  add column if not exists name_key text generated always as (
+    lower(regexp_replace(name, '\s', '', 'g')) || '|' || lower(regexp_replace(coalesce(branch_name, ''), '\s', '', 'g'))
+  ) stored;
+create unique index if not exists tenants_name_key_unique on public.tenants (name_key);
+
+-- 학원 생성은 지점명도 함께 받는다(이름만 먼저 만들면 같은 이름·다른 지점이 서로 충돌하므로)
+drop function if exists public.create_tenant_for_user(uuid, text, text);
+create or replace function public.create_tenant_for_user(p_user uuid, p_name text, p_type text, p_branch text default '')
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext('create_tenant:' || p_user::text));
+  select tenant_id into v_id from tenant_members where user_id = p_user order by created_at limit 1;
+  if v_id is not null then return v_id; end if;   -- 이미 학원이 있으면 새로 만들지 않고 기존 학원을 돌려준다
+  insert into tenants (name, academy_type, branch_name) values (p_name, p_type, nullif(trim(p_branch), '')) returning id into v_id;
+  insert into tenant_members (tenant_id, user_id, role) values (v_id, p_user, 'owner');
+  insert into tenant_brands (tenant_id) values (v_id);
+  insert into tenant_content_settings (tenant_id) values (v_id);
+  insert into subscriptions (tenant_id, plan_id, status) values (v_id, 'trial', 'trial');
+  return v_id;
+end;
+$$;
+revoke all on function public.create_tenant_for_user(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function public.create_tenant_for_user(uuid, text, text, text) to service_role;
+
+-- 2) 운영자 작업 기록(삭제·초기화). 데이터 초기화로도 지워지지 않고, 서버(service_role)만 읽고 쓴다.
+create table if not exists public.admin_audit (
+  id          uuid primary key default gen_random_uuid(),
+  admin_email text,
+  action      text not null,
+  target      text,
+  detail      jsonb not null default '{}',
+  created_at  timestamptz not null default now()
+);
+alter table public.admin_audit enable row level security;
+revoke all on public.admin_audit from anon, authenticated;
+grant all on public.admin_audit to service_role;
+
+-- 계좌이체(개인 계좌 직접 입금) 결제 지원
+-- 주문에 입금자명·만료·확인 주체를 붙이고, 들어온 입금 알림을 기록한다(중복 처리 방지·추적용).
+
+alter table public.payments
+  add column if not exists depositor_name text,
+  add column if not exists expires_at timestamptz,
+  add column if not exists confirmed_by text,     -- 'auto:<거래번호>' | 'admin:<이메일>'
+  add column if not exists deposit_tx_id text;    -- 이 주문을 확인한 입금 거래번호
+create unique index if not exists payments_deposit_tx_unique on public.payments (deposit_tx_id) where deposit_tx_id is not null;
+
+create table if not exists public.deposit_events (
+  id             uuid primary key default gen_random_uuid(),
+  tx_id          text not null unique,            -- 같은 입금 알림이 두 번 와도 한 번만 처리
+  amount         integer not null check (amount > 0),
+  depositor_name text not null,
+  occurred_at    timestamptz,
+  status         text not null check (status in ('matched', 'unmatched', 'ambiguous', 'resolved')),
+  order_id       text,
+  source         text not null default 'webhook',
+  created_at     timestamptz not null default now()
+);
+create index if not exists deposit_events_status_idx on public.deposit_events (status, created_at desc);
+alter table public.deposit_events enable row level security;
+revoke all on public.deposit_events from anon, authenticated;
+grant all on public.deposit_events to service_role;
+
+update public.plans set image_limit = 6 where id = 'trial';  -- 20261123000001_trial_image_limit
+
 create table if not exists public._bbolog_migrations (name text primary key, applied_at timestamptz not null default now());
 alter table public._bbolog_migrations enable row level security;
-insert into public._bbolog_migrations (name) values ('20261119000001_saas_core.sql'), ('20261120000001_app_fields.sql'), ('20261120000002_service_role_grants.sql'), ('20261120000003_table_grants.sql'), ('20261120000004_billing.sql') on conflict do nothing;
+insert into public._bbolog_migrations (name) values ('20261119000001_saas_core.sql'), ('20261120000001_app_fields.sql'), ('20261120000002_service_role_grants.sql'), ('20261120000003_table_grants.sql'), ('20261120000004_billing.sql'), ('20261120000005_tenant_create_lock.sql'), ('20261121000001_unique_tenant_and_audit.sql'), ('20261122000001_bank_transfer.sql'), ('20261123000001_trial_image_limit.sql') on conflict do nothing;
 commit;

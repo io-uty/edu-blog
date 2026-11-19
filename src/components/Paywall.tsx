@@ -10,11 +10,13 @@ export default function Paywall({
   plans,
   onBuy,
   onSeen,
+  payment,
 }: {
   usage: UsageInfo | null;
   plans: PlanInfo[];
   onBuy: (planId: string) => Promise<void>;
   onSeen: () => void;
+  payment?: { available: boolean; test: boolean; method?: "bank" | "card" };
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const seen = useRef(false);
@@ -59,7 +61,7 @@ export default function Paywall({
               </ul>
               <button
                 className="btn btn-primary mt-4 w-full"
-                disabled={!!busy}
+                disabled={!!busy || payment?.available === false}
                 onClick={async () => {
                   setBusy(p.id);
                   try {
@@ -69,14 +71,14 @@ export default function Paywall({
                   }
                 }}
               >
-                {busy === p.id && <Loader2 size={15} className="animate-spin" />} 이용권 구매
+                {busy === p.id && <Loader2 size={15} className="animate-spin" />} {payment?.available === false ? "결제 준비 중" : payment?.method === "bank" ? "계좌이체로 구매" : "이용권 구매"}
               </button>
             </li>
           ))}
         </ul>
         {plans.length === 0 && <p className="mt-6 text-[14px] text-sub">구매할 수 있는 이용권이 아직 없습니다. 관리자에게 문의해 주세요.</p>}
         <p className="mt-5 text-xs leading-5 text-sub">
-          지금까지 만든 글은 그대로 보고 편집·다운로드할 수 있어요. 현재 결제는 <b>테스트 모드</b>라 실제 돈이 나가지 않습니다.
+          지금까지 만든 글은 그대로 보고 편집·다운로드할 수 있어요.{payment?.test ? " (결제 테스트 중이라 실제로 결제되지 않습니다.)" : ""}
         </p>
       </div>
     </div>

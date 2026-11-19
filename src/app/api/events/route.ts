@@ -9,8 +9,8 @@ export async function POST(req: Request) {
   if (!SUPABASE_ENABLED) return Response.json({ ok: true });
   const s = await getSession();
   if (!s) return Response.json({ ok: false }, { status: 401 });
-  const p = z.object({ type: z.enum(ALLOWED), plan: z.string().max(40).optional() }).safeParse(await req.json().catch(() => null));
+  const p = z.object({ type: z.enum(ALLOWED), plan: z.string().max(40).optional(), kind: z.enum(["title", "body", "tags", "single", "all", "package"]).optional() }).safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ ok: false }, { status: 400 });
-  await logEvent(s.tenantId, s.user.id, p.data.type, p.data.plan ? { plan: p.data.plan } : {});
+  await logEvent(s.tenantId, s.user.id, p.data.type, { ...(p.data.plan ? { plan: p.data.plan } : {}), ...(p.data.kind ? { kind: p.data.kind } : {}) });
   return Response.json({ ok: true });
 }

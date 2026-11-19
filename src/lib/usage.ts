@@ -65,7 +65,7 @@ export async function summary(tenantId: string): Promise<UsageSummary> {
 }
 
 /** 서버가 남기는 제품 이벤트(본문·개인정보는 넣지 않음) */
-export async function logEvent(tenantId: string | null, userId: string, type: string, metadata: Record<string, string | number | boolean> = {}, dedupeKey?: string) {
+export async function logEvent(tenantId: string | null, userId: string | null, type: string, metadata: Record<string, string | number | boolean> = {}, dedupeKey?: string) {
   const { error } = await supabaseAdmin()
     .from("product_events")
     .insert({ tenant_id: tenantId, user_id: userId, event_type: type, metadata, dedupe_key: dedupeKey ?? null });
