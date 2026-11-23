@@ -167,7 +167,7 @@ export default function PublishView({
           </div>
         </div>
 
-        <aside className="w-full shrink-0 border-t border-line lg:w-[380px] lg:overflow-y-auto lg:border-l lg:border-t-0">
+        <aside className="order-first w-full shrink-0 border-b border-line lg:order-none lg:w-[380px] lg:overflow-y-auto lg:border-b-0 lg:border-l">
           <div className="border-b border-line px-5 py-4">
             <p className="text-[15px] font-semibold">이 순서대로 옮기세요</p>
             <p className="mt-0.5 text-[13px] text-sub">버튼을 누른 단계에는 완료 표시가 붙습니다.</p>
@@ -245,7 +245,7 @@ export default function PublishView({
               desc={
                 <>
                   네이버에서 임시저장 → 최종 확인 → 발행하세요.
-                  {settings.brand.placeName ? ` 에디터 상단 '장소'에서 "${settings.brand.placeName}"을 추가할 수 있습니다.` : ""}
+                  {settings.brand.name ? ` 에디터 상단 '장소'에서 "${settings.brand.name}"을 추가할 수 있습니다.` : ""}
                 </>
               }
             >
@@ -261,7 +261,7 @@ export default function PublishView({
                   <Check size={15} /> 네이버에 발행했어요
                 </button>
               )}
-              <p className="text-xs text-sub">bbolog 는 네이버에 직접 게시하지 않습니다. 발행 여부는 직접 눌러 표시해 주세요.</p>
+              <p className="text-xs text-sub">딸깍은 네이버에 직접 게시하지 않습니다. 발행 여부는 직접 눌러 표시해 주세요.</p>
             </Step>
           </ol>
 

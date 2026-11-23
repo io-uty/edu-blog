@@ -12,6 +12,7 @@ export const IMAGE_STYLE = {
     "no real person likeness",
     "no photorealistic depiction of a specific real academy interior",
     "no exam paper with readable sentences or formulas",
+    "no signage, no book titles, no screen text (blank or blurred covers and screens only)",
   ].join(", "),
   renderAsCode: ["제목·문구", "수식", "체크리스트 항목", "표", "날짜·장소", "로고"],
 } as const;

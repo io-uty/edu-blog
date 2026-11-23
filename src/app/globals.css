@@ -19,6 +19,10 @@
 }
 
 html, body { height: 100%; }
+/* 브라우저 기본 표면도 브랜드 색으로: 체크박스·라디오, 글자 선택, 입력 커서 */
+:root { accent-color: var(--color-brand); }
+::selection { background: #ffe0d8; color: var(--color-ink); }
+input, textarea { caret-color: var(--color-brand); }
 body {
   background: #fff;
   color: var(--color-ink);
@@ -29,7 +33,7 @@ body {
 }
 
 @layer components {
-  /* 버튼: 높이 36px 직사각형(모서리 2px) 통일 */
+  /* 버튼: 높이 40px 알약형 통일(작은 버튼 34px) */
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid #e2dcd6;
@@ -68,7 +72,7 @@ body {
     box-sizing: content-box; width: calc(100% - 0px);
   }
   .doc-field:hover { background: #fafafa; }
-  .doc-field:focus { background: #fafafa; box-shadow: inset 2px 0 0 var(--color-brand); }
+  .doc-field:focus { background: #fafafa; box-shadow: 0 0 0 2px #ffe0d8; }
   .doc-field::selection { background: #ffe0d8; }
 
   .spinner {
@@ -85,5 +89,5 @@ body {
 .blog-preview table { border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 14px; }
 .blog-preview th, .blog-preview td { border: 1px solid var(--color-line); padding: 6px 10px; }
 .blog-preview th { background: var(--color-bg2); }
-.blog-preview blockquote { margin: 12px 0; padding: 12px 18px; border-left: 3px solid var(--color-brand); border-radius: 0 12px 12px 0; background: var(--color-bg2); }
+.blog-preview blockquote { margin: 12px 0; padding: 12px 18px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-bg2); }
 .blog-preview a { color: var(--color-sub); text-decoration: underline; }

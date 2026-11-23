@@ -1,9 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { BrandSchema, DEFAULT_SETTINGS, migrateImage, type Settings } from "./settings";
+import { BrandSchema, DEFAULT_SETTINGS, migrateSettings, type Settings } from "./settings";
 import type { DocRecord } from "./store";
-import { EMPTY_TENANT, StyleProfileSchema, TenantProfileSchema, type Source, type TenantProfile } from "./tenant";
+import { EMPTY_TENANT, StyleProfileSchema, displayName, TenantProfileSchema, type Source, type TenantProfile } from "./tenant";
 
 // 앱의 TenantProfile·Settings·DocRecord 와 DB 행 사이의 변환. 모든 쿼리는 사용자 권한(RLS) 클라이언트로 실행한다.
 
@@ -63,11 +63,7 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
     academyTypeCustom: tr.academy_type_custom ?? "",
     name: tr.name,
     branch: tr.branch_name ?? "",
-    representativeInstructor: br.representative_instructor ?? "",
-    mainSubjects: br.main_subjects ?? [],
     homepage: br.official_website ?? "",
-    blogUrl: br.blog_url ?? "",
-    primaryColor: br.primary_color ?? "",
     description: br.academy_description ?? "",
     location: br.location ?? "",
     sns: br.sns_urls ?? [],
@@ -78,7 +74,6 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
     courses: cr.courses ?? [],
     topics: cr.subjects ?? [],
     seoKeywords: cr.seo_keywords ?? [],
-    promoPhrases: cr.official_promo_phrases ?? [],
     prohibited: cr.prohibited_expressions ?? [],
     styleProfile: style.success ? style.data : null,
     styleExcerpts: cr.style_excerpts ?? [],
@@ -94,15 +89,17 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
     ),
     onboardedAt: ms(tr.onboarded_at),
   });
-  const settings: Settings = {
-    brand: { ...DEFAULT_SETTINGS.brand, ...(br.brand_guidelines ?? {}) },
-    format: { ...DEFAULT_SETTINGS.format, ...(br.format_template ?? {}) },
-    image: migrateImage(
-      { ...DEFAULT_SETTINGS.image, ...(br.image_design ?? {}) },
-      (br.image_design as { rev?: number } | null)?.rev,
-      String((br.brand_guidelines as { placePhone?: string } | null)?.placePhone ?? ""),
-    ),
-  };
+  const brand = { ...DEFAULT_SETTINGS.brand, ...(br.brand_guidelines ?? {}) };
+  // 이름이 비어 있으면 등록된 학원명을 쓴다(인사말·마무리 소제목의 {학원명} 자리)
+  if (!String(brand.name ?? "").trim()) brand.name = displayName(tenant);
+  const settings: Settings = migrateSettings(
+    {
+      brand,
+      format: { ...DEFAULT_SETTINGS.format, ...(br.format_template ?? {}) },
+      image: { ...DEFAULT_SETTINGS.image, ...(br.image_design ?? {}) },
+    },
+    (br.image_design as { rev?: number } | null)?.rev,
+  );
   return { tenant, settings };
 }
 
@@ -128,16 +125,12 @@ export async function saveTenantProfile(db: SupabaseClient, tenantId: string, t:
     await db
       .from("tenant_brands")
       .update({
-        primary_color: t.primaryColor || null,
         academy_description: t.description || null,
         official_website: t.homepage || null,
-        blog_url: t.blogUrl || null,
         location: t.location || null,
         sns_urls: t.sns,
         features: t.features,
         instructors: t.instructors,
-        representative_instructor: t.representativeInstructor || null,
-        main_subjects: t.mainSubjects,
         updated_at: new Date().toISOString(),
       })
       .eq("tenant_id", tenantId),
@@ -151,7 +144,6 @@ export async function saveTenantProfile(db: SupabaseClient, tenantId: string, t:
         courses: t.courses,
         subjects: t.topics,
         seo_keywords: t.seoKeywords,
-        official_promo_phrases: t.promoPhrases,
         prohibited_expressions: t.prohibited,
         style_profile: t.styleProfile ?? {},
         style_excerpts: t.styleExcerpts,

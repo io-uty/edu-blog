@@ -42,29 +42,21 @@ export const SourceSchema = z.object({
 export type Source = z.infer<typeof SourceSchema>;
 
 export const TenantProfileSchema = z.object({
-  // STEP 1
   academyType: z.enum(ACADEMY_TYPES),
   academyTypeCustom: str(40),
   name: str(60).min(1),
   branch: str(40),
-  representativeInstructor: str(40),
-  mainSubjects: list(10, 30),
   homepage: str(300),
-  blogUrl: str(300),
-  // STEP 2
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).or(z.literal("")),
   description: str(600),
   location: str(200),
-  sns: list(6, 300),
+  sns: list(6, 300), // 블로그·SNS 주소
   features: list(10, 120),
   instructors: list(10, 120),
-  // STEP 3
   tone: str(200),
   targetAudience: str(200),
   courses: list(15, 60),
   topics: list(15, 60),
   seoKeywords: list(20, 40),
-  promoPhrases: list(5, 200),
   prohibited: list(30, 60),
   styleProfile: StyleProfileSchema.nullable(),
   styleExcerpts: z.array(z.string().max(2500)).max(2),
@@ -78,11 +70,7 @@ export const EMPTY_TENANT: TenantProfile = {
   academyTypeCustom: "",
   name: "",
   branch: "",
-  representativeInstructor: "",
-  mainSubjects: [],
   homepage: "",
-  blogUrl: "",
-  primaryColor: "",
   description: "",
   location: "",
   sns: [],
@@ -93,7 +81,6 @@ export const EMPTY_TENANT: TenantProfile = {
   courses: [],
   topics: [],
   seoKeywords: [],
-  promoPhrases: [],
   prohibited: [],
   styleProfile: null,
   styleExcerpts: [],

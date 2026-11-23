@@ -67,6 +67,7 @@ function BankTransfer({ order, onChange }: { order: Order; onChange: (o: Partial
   }, [order.depositorName, order.status, order.orderId, onChange]);
 
   async function save() {
+    if (saving) return;
     setSaving(true);
     setErr("");
     const r = await fetch("/api/checkout/depositor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId, depositorName: name }) }).catch(() => null);
@@ -196,7 +197,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-bg2 px-4">
-      <div className="w-full max-w-[420px] rounded-3xl border border-line bg-white p-8 shadow-sm">
+      <div className="w-full max-w-[420px] rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
         <Logo />
         {!order && !err && (
           <p className="mt-6 flex items-center gap-2 text-sub">

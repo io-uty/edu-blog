@@ -18,7 +18,7 @@ function passwordGate(req: NextRequest): NextResponse | null {
   }
   return new NextResponse("접속 비밀번호가 필요합니다.", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="bbolog", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8" },
+    headers: { "WWW-Authenticate": 'Basic realm="딸깍", charset="UTF-8"', "Content-Type": "text/plain; charset=utf-8" },
   });
 }
 

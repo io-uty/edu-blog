@@ -116,9 +116,9 @@ export default function EditorView({
           <Lightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
           <div className="flex-1">
             <p>
-              <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 마우스로 드래그하면 <b>문장 다듬기·길이 줄이기</b> 같은 도구가 나타납니다.
+              <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 선택하면 <b>문장 다듬기·길이 줄이기</b> 같은 도구가 나타납니다.
             </p>
-            <p className="text-sub">이미지를 누르면 크게 보고 문구를 바꿀 수 있고, 수정한 내용은 자동으로 저장됩니다. 다 확인했으면 오른쪽 위 <b>발행 준비</b>를 누르세요.</p>
+            <p className="text-sub">이미지를 누르면 크게 보고 문구를 바꿀 수 있고, 수정한 내용은 자동으로 저장됩니다. 다 확인했으면 위쪽 <b>발행 준비</b>를 누르세요.</p>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={closeTip} aria-label="안내 닫기">
             <X size={15} />

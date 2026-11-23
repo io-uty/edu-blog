@@ -9,14 +9,32 @@ export const BrandSchema = z.object({
   greeting: z.string().max(200),
   closingHeading: z.string().max(80),
   bookingUrl: z.string().max(300),
-  placeName: z.string().max(80),
-  placeAddress: z.string().max(200),
   placePhone: z.string().max(40),
   titleSuffixes: z.array(z.string().max(40)).max(10),
   fixedHashtags: z.array(z.string().max(40)).max(10),
   regionHashtagGroups: z.array(z.array(z.string().max(40)).max(10)).max(10),
 });
 export type Brand = z.infer<typeof BrandSchema>;
+
+/** 인사말·마무리 소제목에 넣으면 그때그때 학원 이름으로 바뀌는 자리 */
+export const NAME_TOKEN = "{학원명}";
+export const AUTO_GREETING = `안녕하세요! ${NAME_TOKEN}입니다 😊`;
+export const AUTO_CLOSING = `${NAME_TOKEN} 상담 안내`;
+
+/** {학원명} 자리를 현재 학원 이름으로 채운 브랜드 값(출력·미리보기용) */
+export function resolveBrand(b: Brand, fallbackName = ""): Brand {
+  const name = b.name.trim() || fallbackName.trim();
+  const fill = (t: string) => (name ? t.split(NAME_TOKEN).join(name) : t.split(NAME_TOKEN).join("").replace(/^안녕하세요!\s*입니다\s*/, "안녕하세요! ").trim());
+  return { ...b, greeting: fill(b.greeting), closingHeading: fill(b.closingHeading) };
+}
+
+/** 예전에 학원명을 박아 자동으로 만든 문구(또는 빈 값)를 {학원명} 템플릿으로 바꾼다 */
+function migrateBrand(b: Brand): Brand {
+  const name = b.name.trim();
+  const isAutoGreeting = !b.greeting.trim() || (!!name && [`안녕하세요! ${name}입니다.`, `안녕하세요! ${name}입니다 😊`, `안녕하세요! ${name}입니다`].includes(b.greeting.trim()));
+  const isAutoClosing = !b.closingHeading.trim() || (!!name && b.closingHeading.trim() === `${name} 상담 안내`);
+  return { ...b, greeting: isAutoGreeting ? AUTO_GREETING : b.greeting, closingHeading: isAutoClosing ? AUTO_CLOSING : b.closingHeading };
+}
 
 /** 네이버 스마트에디터 글자 크기 목록 */
 export const NAVER_FONT_SIZES = [11, 13, 15, 16, 19, 24, 28, 30, 34, 38] as const;
@@ -40,7 +58,7 @@ export const ILLUSTRATION_STYLES = {
   photo: {
     label: "실사 사진",
     prompt:
-      "high-end editorial photograph, shot on a full-frame camera with a 35mm lens, natural soft window light, shallow depth of field, realistic skin and fabric texture, clean modern Korean study space, warm neutral color grading, magazine-quality composition, sharp focus on the subject",
+      "candid documentary snapshot taken on a 35mm film camera, bright soft daylight from a window, well-exposed and airy with clean whites (never dim or gloomy), natural imperfect framing slightly off-center, realistic skin with visible pores and no retouching, everyday lived-in clutter (sticky notes, worn textbooks, a water bottle), muted natural colors, subtle film grain, moderate depth of field rather than heavy bokeh",
   },
   render3d: {
     label: "3D 캐릭터",
@@ -71,7 +89,7 @@ export interface ImageDesign {
 }
 
 /** 이미지 기본값을 바꿀 때 올린다. 이전 버전으로 저장된 레이아웃·그림체는 새 기본값으로 옮긴다. */
-const IMAGE_REV = 2;
+const IMAGE_REV = 3;
 
 export interface Settings {
   brand: Brand;
@@ -83,11 +101,9 @@ export const DEFAULT_SETTINGS: Settings = {
   brand: {
     name: "",
     author: "",
-    greeting: "",
-    closingHeading: "",
+    greeting: AUTO_GREETING,
+    closingHeading: AUTO_CLOSING,
     bookingUrl: "",
-    placeName: "",
-    placeAddress: "",
     placePhone: "",
     titleSuffixes: [],
     fixedHashtags: [],
@@ -129,21 +145,32 @@ export function loadSettings(): Settings {
     if (!raw) return DEFAULT_SETTINGS;
     const s = JSON.parse(raw) as Partial<Settings>;
     const brand = BrandSchema.safeParse({ ...DEFAULT_SETTINGS.brand, ...s.brand });
-    return {
-      brand: brand.success ? brand.data : DEFAULT_SETTINGS.brand,
-      format: { ...DEFAULT_SETTINGS.format, ...s.format },
-      image: migrateImage({ ...DEFAULT_SETTINGS.image, ...s.image }, s.image?.rev, brand.success ? brand.data.placePhone : ""),
-    };
+    return migrateSettings(
+      {
+        brand: brand.success ? brand.data : DEFAULT_SETTINGS.brand,
+        format: { ...DEFAULT_SETTINGS.format, ...s.format },
+        image: { ...DEFAULT_SETTINGS.image, ...s.image },
+      },
+      s.image?.rev,
+    );
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
-export function migrateImage(im: ImageDesign, rev: number | undefined, phone: string): ImageDesign {
-  if ((rev ?? 1) >= IMAGE_REV) return im;
+/** 저장된 설정을 현재 기본값 체계로 한 번 옮긴다(rev 는 image.rev 에 기록). */
+export function migrateSettings(s: Settings, rev: number | undefined): Settings {
+  const r = rev ?? 1;
+  if (r >= IMAGE_REV) return s;
+  let { brand, image } = s;
   // 2: 실사 사진 + 포스터형 썸네일이 기본, 상담 문구는 등록된 전화번호로 채움
-  const contact = im.contact || (phone.trim() ? `무료상담 ${phone.trim()}` : "");
-  return { ...im, layout: "poster", illustrationStyle: "photo", contact, rev: IMAGE_REV };
+  if (r < 2) {
+    const phone = brand.placePhone.trim();
+    image = { ...image, layout: "poster", illustrationStyle: "photo", contact: image.contact || (phone ? `무료상담 ${phone}` : "") };
+  }
+  // 3: 인사말·마무리 소제목을 {학원명} 템플릿으로(학원 이름이 바뀌어도 따라감)
+  if (r < 3) brand = migrateBrand(brand);
+  return { ...s, brand, image: { ...image, rev: IMAGE_REV } };
 }
 
 export function saveSettings(s: Settings): boolean {

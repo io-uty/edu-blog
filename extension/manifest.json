@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "bbolog 네이버 붙여넣기",
+  "name": "딸깍 네이버 붙여넣기",
   "version": "0.1.0",
-  "description": "bbolog에서 '네이버 글쓰기 열고 붙여넣기'를 누르면 네이버 블로그 글쓰기 화면에 제목과 본문을 자동으로 넣습니다.",
+  "description": "딸깍에서 '네이버 글쓰기 열고 붙여넣기'를 누르면 네이버 블로그 글쓰기 화면에 제목과 본문을 자동으로 넣습니다.",
   "permissions": ["storage"],
   "content_scripts": [
     {

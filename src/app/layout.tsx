@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "bbolog",
+  title: "딸깍",
   description: "블로그 콘텐츠 제작·관리 도구",
 };
 

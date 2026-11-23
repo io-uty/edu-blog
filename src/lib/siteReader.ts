@@ -7,7 +7,7 @@ import net from "node:net";
 // - 로그인·접근 제한을 우회하지 않는다(쿠키·인증 헤더 없음, 401/403 이면 중단).
 // - 내부망 주소로의 요청(SSRF)을 막는다: 매 요청·리다이렉트마다 호스트 IP 를 확인한다.
 
-export const USER_AGENT = "bbolog-site-reader/0.1 (academy onboarding; respects robots.txt)";
+export const USER_AGENT = "ddalkkak-site-reader/0.1 (academy onboarding; respects robots.txt)";
 const MAX_BYTES = 1_500_000;
 const TIMEOUT_MS = 8000;
 
@@ -101,7 +101,7 @@ export async function readRobots(origin: URL): Promise<Robots> {
     const r = await safeFetch(new URL("/robots.txt", origin), "text/plain");
     if (r.status === 404 || r.status === 410) return { status: "missing", rules: [] };
     if (r.status >= 400) return { status: "error", rules: [] }; // 확인할 수 없으면 읽지 않는다
-    // User-agent: * 그룹(또는 bbolog 전용 그룹)의 규칙만 사용
+    // User-agent: * 그룹(또는 ddalkkak 전용 그룹)의 규칙만 사용
     const groups: { agents: string[]; rules: { allow: boolean; path: string }[] }[] = [];
     let cur: (typeof groups)[number] | null = null;
     let lastWasAgent = false;
@@ -124,7 +124,7 @@ export async function readRobots(origin: URL): Promise<Robots> {
           cur.rules.push({ allow: key === "allow", path: val });
       }
     }
-    const mine = groups.find((g) => g.agents.some((a) => a.includes("bbolog"))) ?? groups.find((g) => g.agents.includes("*"));
+    const mine = groups.find((g) => g.agents.some((a) => a.includes("ddalkkak"))) ?? groups.find((g) => g.agents.includes("*"));
     return { status: "allowed", rules: mine?.rules ?? [] };
   } catch {
     return { status: "error", rules: [] };

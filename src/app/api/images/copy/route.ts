@@ -62,10 +62,11 @@ ${valid.map((t, i) => `${i + 1}. ${t.kind === "thumbnail" ? "썸네일(글 전�
   · 소주제는 기본 "scene". 단계·비교·체크리스트처럼 표로 정리해야 읽히는 소주제 1곳만 "card"로 할 수 있다.
 - items: 소주제 이미지마다 그 소주제의 "내용 정리" 3~4개(label 12자 이내 + detail 24자 이내). 본문에 없는 내용은 쓰지 않는다. 썸네일은 [].
 - scene: 사진 생성용 장면 설명(영어 2~3문장). 실제 촬영한 사진처럼 구체적으로 쓴다.
-  · 누가(예: a Korean student in her early twenties in a navy sweatshirt), 어디서(독서실 책상, 상담실, 기숙사 방, 강의실 뒷자리 등), 무엇을 하는지, 손에 든 물건, 빛(아침 창가 빛, 따뜻한 스탠드 조명), 카메라 시점(eye-level medium shot, over-the-shoulder, close-up of hands)을 쓴다.
+  · 누가(예: a Korean student in her early twenties in a navy sweatshirt), 어디서(독서실 책상, 상담실, 기숙사 방, 강의실 뒷자리 등), 무엇을 하는지, 손에 든 물건, 빛(밝은 낮 창가 빛 위주. 어둡거나 밤 장면은 피한다), 카메라 시점(eye-level medium shot, over-the-shoulder, close-up of hands)을 쓴다.
   · 그 이미지가 다루는 내용이 사진만 봐도 느껴지게 한다(예: 학습관리 → 플래너에 체크하는 손과 주간 계획표, 상담 → 강사와 학생이 마주 앉아 노트를 보는 장면).
   · 이미지마다 장소·인물·시점·소품을 모두 다르게 한다. 같은 인물·같은 책상 구도를 반복하지 않는다.
   · 실존 인물·로고·대학 건물·실제 학원 내부·읽을 수 있는 글자 금지.
+  · AI 사진 티를 피한다: 카메라를 보고 웃는 정면 얼굴, 엄지 척, 완벽하게 정돈된 책상 대신 손·옆모습·뒷모습·소품 위주로, 사람이 실제로 쓰던 흔적(접힌 페이지, 포스트잇, 반쯤 마신 음료)이 보이는 순간을 쓴다.
 
 JSON 형식: {"items": [{"eyebrow": "", "title": [""], "highlight": 0, "sub": "", "points": [""], "visual": "card", "items": [{"label": "", "detail": ""}], "scene": ""}]}
 반드시 설명 없이 JSON 객체 하나만 출력하세요.`,

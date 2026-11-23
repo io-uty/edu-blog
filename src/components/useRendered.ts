@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { idbGet } from "@/lib/idb";
-import { autoLayout, canvasToBlob, loadImage, renderImage, variantDesign } from "@/lib/imageRender";
+import { autoLayout, canvasToBlob, loadImage, photoFinish, renderImage, variantDesign } from "@/lib/imageRender";
 import type { ImageDesign } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 
@@ -40,12 +40,14 @@ export async function renderBlob(item: ImageItem, design: ImageDesign): Promise<
       : Promise.resolve(null),
     design.logo ? loadImage(design.logo).catch(() => null) : Promise.resolve(null),
   ]);
+  // 실사 사진은 필름 마감으로 AI 광택을 덜어낸다(문서마다 시드 고정)
+  const finished = illustration && design.illustrationStyle === "photo" ? photoFinish(illustration, [...item.id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7)) : illustration;
   const canvas = await renderImage({
     kind: item.kind,
     copy: item.copy,
     design: variantDesign(item.kind, item.sectionIndex, design),
     layout: item.layout ?? autoLayout(item.kind, item.sectionIndex, design, item.copy),
-    illustration,
+    illustration: finished,
     logo,
   });
   return canvasToBlob(canvas);

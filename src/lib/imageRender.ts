@@ -12,11 +12,12 @@ export interface RenderInput {
   copy: ImageCopy;
   design: ImageDesign;
   layout: ImageLayout;
-  illustration?: HTMLImageElement | null;
+  illustration?: Pic | null;
   logo?: HTMLImageElement | null;
 }
 
 type Ctx = CanvasRenderingContext2D;
+type Pic = HTMLImageElement | HTMLCanvasElement;
 
 // ---------- 공용 도구 ----------
 
@@ -72,6 +73,30 @@ function hashStr(t: string) {
   return h;
 }
 
+/**
+ * 생성 사진의 'AI 광택'을 걷어내는 필름 마감: 채도 10%↓, 검정을 살짝 띄우고(매트), 아주 약한 웜톤, 고운 그레인.
+ * 그림에만 적용하고 글자·로고에는 적용하지 않는다. 같은 이미지는 늘 같은 결과(시드 고정).
+ */
+export function photoFinish(img: Pic, seed: number): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+  const im = ctx.getImageData(0, 0, c.width, c.height);
+  const p = im.data;
+  const rnd = seeded(seed);
+  for (let i = 0; i < p.length; i += 4) {
+    const l = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    const n = (rnd() + rnd() - 1) * 14;
+    p[i] = 11 + 0.93 * (l + (p[i] - l) * 0.9) + n;
+    p[i + 1] = 8 + 0.93 * (l + (p[i + 1] - l) * 0.9) + n;
+    p[i + 2] = 5 + 0.93 * (l + (p[i + 2] - l) * 0.9) + n;
+  }
+  ctx.putImageData(im, 0, 0);
+  return c;
+}
+
 /** 붓으로 칠한 듯한 강조 띠 */
 function brush(ctx: Ctx, x: number, y: number, w: number, h: number, color: string, seed: number) {
   const rnd = seeded(seed);
@@ -103,7 +128,7 @@ function outlined(ctx: Ctx, text: string, x: number, y: number, fill: string, st
 }
 
 /** 이미지를 영역에 cover로 채우고, 가장자리를 배경 쪽으로 부드럽게 사라지게 한다. */
-function drawFaded(ctx: Ctx, img: HTMLImageElement, x: number, y: number, w: number, h: number, fade: "left" | "left-top" | "none") {
+function drawFaded(ctx: Ctx, img: Pic, x: number, y: number, w: number, h: number, fade: "left" | "left-top" | "none") {
   const off = document.createElement("canvas");
   off.width = w;
   off.height = h;
@@ -730,7 +755,7 @@ function rgba(hex: string, a: number) {
   return `rgba(${m[0]},${m[1]},${m[2]},${a})`;
 }
 
-function drawCover(ctx: Ctx, img: HTMLImageElement) {
+function drawCover(ctx: Ctx, img: Pic) {
   const sc = Math.max(SIZE / img.width, SIZE / img.height);
   ctx.drawImage(img, (SIZE - img.width * sc) / 2, (SIZE - img.height * sc) / 2, img.width * sc, img.height * sc);
 }

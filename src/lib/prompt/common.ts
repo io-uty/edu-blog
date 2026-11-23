@@ -1,5 +1,6 @@
 // 1) 공통 콘텐츠 생성 규칙 — 업종·학원과 무관하게 모든 글에 적용한다.
 import { BANNED_PHRASES } from "@/config/rules";
+import { HUMANIZE_RULES } from "../humanize";
 
 export const COMMON_RULES = `
 [글의 관점 — 현장 입시 전문가]
@@ -23,6 +24,8 @@ export const COMMON_RULES = `
 - 소제목은 짧고 단정하게(예: "계획보다 점검 주기가 먼저입니다", "자습 시간이 길수록 관리가 필요합니다"). "~하는 방법", "~에 대해" 꼬리 금지.
 - 체크리스트·단계는 bullets, 비교는 2열 표("항목 | 확인할 내용")로만 쓴다. 숫자 통계 표는 만들지 않는다.
 - 이모지, 느낌표 남발, 과장 수식어("정말", "매우", "꼭꼭") 금지.
+
+${HUMANIZE_RULES}
 
 [금지]
 - 금지 표현: ${BANNED_PHRASES.map((p) => `"${p}"`).join(", ")}

@@ -7,7 +7,7 @@ import { idbDel, idbSet } from "@/lib/idb";
 import { targetKey, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
 import type { Analysis, Draft, Plan } from "@/lib/schemas";
 import { verticalOf } from "@/lib/prompt/verticals";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type ImageLayout, type Settings } from "@/lib/settings";
+import { AUTO_CLOSING, AUTO_GREETING, DEFAULT_SETTINGS, loadSettings, saveSettings, type ImageLayout, type Settings } from "@/lib/settings";
 import { EMPTY_TENANT, displayName, localTenantRepository, type TenantProfile } from "@/lib/tenant";
 import {
   loadDocs,
@@ -33,6 +33,7 @@ import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
 import { illustrationKey, renderBlob } from "./useRendered";
 import { autoLayout } from "@/lib/imageRender";
+import { useLock } from "@/lib/useLock";
 
 export type Route =
   | { name: "compose" }
@@ -82,6 +83,7 @@ export default function Studio() {
 
   const [form, setForm] = useState<Form>({ topic: "", contentType: "", regionIndex: null, images: true });
   const [busy, setBusy] = useState(false);
+  const [runBuy] = useLock();
   const [stages, setStages] = useState<StageState>(IDLE);
   const [genError, setGenError] = useState<string | null>(null);
   const cache = useRef<{ analysis?: Analysis; plan?: Plan }>({});
@@ -398,6 +400,7 @@ export default function Studio() {
 
   // ---------- 생성 ----------
   async function generate(resume: boolean) {
+    if (busy) return; // 생성 중 다시 눌러도 중복 생성·차감하지 않는다
     setBusy(true);
     setGenError(null);
     if (!resume) {
@@ -553,15 +556,8 @@ export default function Studio() {
   }, [vertical, form.contentType]);
   const needsOnboarding = ready && !tenant?.onboardedAt;
 
-  async function completeOnboarding(t: TenantProfile, patch: { logo: string | null; phone: string; importedSettings?: Partial<Settings> }) {
-    const imp = patch.importedSettings;
-    const base: Settings = imp
-      ? {
-          brand: { ...settings.brand, ...imp.brand },
-          format: { ...settings.format, ...imp.format },
-          image: { ...settings.image, ...imp.image },
-        }
-      : settings;
+  async function completeOnboarding(t: TenantProfile, phone: string) {
+    const base = settings;
     const name = displayName(t);
     const oldName = tenant ? displayName(tenant) : "";
     const b = base.brand;
@@ -573,17 +569,16 @@ export default function Studio() {
         ...b,
         name,
         author: auto(b.author, (n) => n),
-        greeting: auto(b.greeting, (n) => `안녕하세요! ${n}입니다.`),
-        closingHeading: auto(b.closingHeading, (n) => `${n} 상담 안내`),
-        placeName: auto(b.placeName, (n) => n),
-        placeAddress: b.placeAddress || t.location,
-        placePhone: patch.phone || b.placePhone,
+        // {학원명} 템플릿: 학원 이름이 바뀌어도 출력할 때 현재 이름으로 채워진다
+        greeting: auto(b.greeting, (n) => `안녕하세요! ${n}입니다.`) === `안녕하세요! ${name}입니다.` ? AUTO_GREETING : b.greeting,
+        closingHeading: auto(b.closingHeading, (n) => `${n} 상담 안내`) === `${name} 상담 안내` ? AUTO_CLOSING : b.closingHeading,
+        placePhone: phone,
       },
       image: {
         ...base.image,
         label: auto(base.image.label, (n) => n),
-        logo: patch.logo,
-        primary: t.primaryColor && base.image.primary === DEFAULT_SETTINGS.image.primary ? t.primaryColor : base.image.primary,
+        // 썸네일 상단 상담 문구는 비어 있을 때만 대표 전화로 채운다(직접 쓴 문구는 유지)
+        contact: base.image.contact || (phone ? `무료상담 ${phone}` : ""),
       },
     };
     if (cloud) {
@@ -611,27 +606,22 @@ export default function Studio() {
     go({ name: "compose" });
   }
 
-  function exportTenant() {
-    if (!tenant) return;
-    const blob = new Blob([JSON.stringify({ tenant, settings }, null, 2)], { type: "application/json" });
-    saveBlob(blob, `${displayName(tenant) || "학원"}-설정.json`);
-  }
-
   const track = useCallback((type: string, plan?: string, kind?: string) => {
     fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, plan, kind }) }).catch(() => undefined);
   }, []);
 
-  async function buyPlan(planId: string) {
-    track("purchase_clicked", planId);
-    const r = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ planId }),
-    }).catch(() => null);
-    const j = await r?.json().catch(() => ({}));
-    if (!r?.ok || !j.checkoutUrl) return notify(j?.error || "결제를 시작하지 못했습니다.");
-    window.location.href = j.checkoutUrl;
-  }
+  const buyPlan = (planId: string) =>
+    runBuy(async () => {
+      track("purchase_clicked", planId);
+      const r = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      }).catch(() => null);
+      const j = await r?.json().catch(() => ({}));
+      if (!r?.ok || !j.checkoutUrl) return notify(j?.error || "결제를 시작하지 못했습니다.");
+      window.location.href = j.checkoutUrl;
+    });
 
   /** 사용자가 직접 확인한 발행 표시(네이버 공식 연동이 아니므로 자동 판정하지 않음) */
   async function confirmPublished(id: string, on: boolean) {
@@ -673,7 +663,7 @@ export default function Studio() {
       <OnboardingView
         key={tenant?.onboardedAt ?? "new"}
         initial={tenant ?? (localSeed ? { ...localSeed, onboardedAt: null } : { ...EMPTY_TENANT, name: settings.brand.name })}
-        settings={settings}
+        phone={settings.brand.placePhone}
         editing={!!tenant?.onboardedAt}
         onComplete={completeOnboarding}
         onCancel={() => go({ name: "settings" })}
@@ -733,7 +723,6 @@ export default function Studio() {
         notify={notify}
         tenant={tenant}
         onEditTenant={() => go({ name: "onboarding" })}
-        onExport={exportTenant}
       />
     );
   } else if (!doc || !derived) {

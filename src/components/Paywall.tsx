@@ -30,7 +30,7 @@ export default function Paywall({
 
   return (
     <div className="flex flex-1 items-start justify-center overflow-y-auto px-5 py-10">
-      <div className="w-full max-w-[720px] rounded-3xl border border-line bg-white p-8 shadow-sm">
+      <div className="w-full max-w-[720px] rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft text-brand">
           <Sparkles size={24} />
         </div>

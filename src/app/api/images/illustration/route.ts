@@ -57,12 +57,12 @@ export async function POST(req: Request) {
     p.data.scene,
     ILLUSTRATION_STYLES[p.data.style].prompt,
     realistic
-      ? "Korean setting and Korean people in their late teens to twenties, natural candid expressions, tidy premium private-academy study environment (generic, not a real place), photographic realism, no plastic AI look, no distorted hands"
+      ? "Korean setting and Korean people in their late teens to twenties, caught mid-action and not posing or smiling at the camera; prefer side views, over-the-shoulder views, hands and objects over front-facing faces; at most two people; a real-looking generic study room or study cafe (not a real place). Avoid the typical AI look: no glossy plastic skin, no perfect symmetry, no HDR glow, no oversaturated colors, no cinematic teal-orange grading, no stock-photo thumbs-up, no distorted hands or extra fingers"
       : "educational illustration for a private academy blog, a generic study space (not a real academy or real building)",
     p.data.colors.length ? `subtle accents of ${p.data.colors.join(", ")} in props or clothing only; overall palette warm and natural` : "",
     p.data.note ? `additional request: ${p.data.note}` : "",
     composition,
-    "square 1:1, high detail, professional quality",
+    realistic ? "square 1:1, looks like an unedited photo a real person took" : "square 1:1, high detail, professional quality",
     IMAGE_STYLE.negativePrompt,
   ]
     .filter(Boolean)

@@ -1,10 +1,12 @@
 // 프롬프트 조립: 1) 공통 규칙 → 2) 학원 브랜드 → 3) 업종 팩 → 4) 학원 문체 → 5) 주제 → 6) 검증된 자료
-import { LENGTH_TARGET, MAX_TABLES, SECTION_RANGE, TOPIC_HASHTAG_COUNT } from "@/config/rules";
+import { BANNED_PHRASES, LENGTH_TARGET, MAX_TABLES, SECTION_RANGE, TOPIC_HASHTAG_COUNT } from "@/config/rules";
 import { COMMON_FACT_RULES, COMMON_RULES, JSON_ONLY } from "./prompt/common";
 import { tenantBrandBlock, tenantStyleBlock } from "./prompt/tenant";
 import { verticalOf, type Vertical } from "./prompt/verticals";
+import type { Polish } from "./humanize";
+import { HUMANIZE_RULES } from "./humanize";
 import type { Analysis, Plan } from "./schemas";
-import type { Brand } from "./settings";
+import { resolveBrand, type Brand } from "./settings";
 import { displayName, type TenantProfile } from "./tenant";
 
 export interface PromptCtx {
@@ -27,7 +29,7 @@ const VERIFIED_SOURCES = `[검증된 자료]
 
 export const systemPrompt = (ctx: PromptCtx) =>
   [
-    `당신은 ${displayName(ctx.tenant)}의 입시·학습 전략을 맡고 있는 현장 컨설턴트이며, 학원 공식 네이버 블로그에 직접 글을 씁니다. 학부모와 수험생이 "이 사람은 현장을 안다"고 느끼게 쓰고, 읽고 나면 이 학원에 상담받고 싶어지게 만드는 것이 목표입니다.`,
+    `당신은 ${displayName(ctx.tenant)}의 공식 네이버 블로그 원고를 작성하는 교육 콘텐츠 에디터입니다. 학원 유형과 등록된 학원 정보에 맞춰 정확하고 실용적인 안내를 씁니다. 전문성은 독자의 상황을 구체적으로 짚고 판단 기준을 설명하는 방식으로 보여 주세요. 강사 경력·성과·합격률·수강생 사례·커리큘럼·시설 등은 등록 정보나 검증된 자료에 있는 내용만 말하고, 그럴듯하게 보충하지 마세요.`,
     COMMON_RULES,
     COMMON_FACT_RULES,
     tenantBrandBlock(ctx.tenant, ctx.brand),
@@ -96,6 +98,7 @@ ${JSON_ONLY}`;
 export function draftPrompt(topic: string, contentType: string, analysis: Analysis, plan: Plan, ctx: PromptCtx) {
   const v = verticalOf(ctx.tenant.academyType);
   const name = displayName(ctx.tenant);
+  const closing = resolveBrand(ctx.brand, name).closingHeading;
   return `기획안대로 네이버 블로그 본문을 작성하세요.
 
 주제: ${topic}
@@ -111,7 +114,7 @@ export function draftPrompt(topic: string, contentType: string, analysis: Analys
   - table: use_table=true인 곳에만, 없으면 null
   - example: use_example=true인 곳에만, 없으면 null. 예문 바로 다음 문단에서 근거를 짚어 설명한다.
 - conclusion 1~2문단: 상담 전에 스스로 점검할 것 2~3가지 → 지금 위치를 정확히 진단받는 것이 다음 단계라는 흐름으로 "${name}" 상담을 권한다. 본문 요약을 반복하지 않는다.
-${ctx.brand.closingHeading ? `  마무리 소제목("${ctx.brand.closingHeading}")은 시스템이 붙인다.\n` : ""}- 본문(인사말·태그 제외, 공백 포함) 약 ${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자. 분량을 위해 반복하지 않는다.
+${closing ? `  마무리 소제목("${closing}")은 시스템이 붙인다.\n` : ""}- 본문(인사말·태그 제외, 공백 포함) ${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자. 분량을 위해 반복하지 않는다.
 - hashtags: 이 글의 주제 태그 정확히 ${TOPIC_HASHTAG_COUNT}개만. '#' 없이, 띄어쓰기 없이. 예) ${JSON.stringify(v.hashtagExample)}
   학원명·지역 태그는 시스템이 붙이므로 넣지 않는다.
 
@@ -131,5 +134,31 @@ JSON 형식:
   "conclusion": ["문단"],
   "hashtags": ["태그1", "태그2", "태그3"]
 }
+${JSON_ONLY}`;
+}
+
+/** 윤문 단계: 내용은 그대로, 문체·리듬·표현만 사람이 쓴 글처럼 */
+export const polishSystem = (ctx: PromptCtx) =>
+  [
+    "당신은 한국어 블로그 원고를 다듬는 윤문 편집자입니다. 내용은 그대로 두고 문체·리듬·표현만 사람이 쓴 글처럼 고칩니다.",
+    HUMANIZE_RULES,
+    tenantStyleBlock(ctx.tenant),
+  ].join("\n\n");
+
+export function polishPrompt(p: Polish, ctx: PromptCtx) {
+  return `아래 블로그 본문 JSON을 윤문하세요.
+
+[지킬 것]
+- 배열 개수와 순서를 그대로 둔다. 문단을 합치거나 나누지 않는다. bullets가 null이면 null.
+- 사실·주장·수치·날짜·학원명·고유명사는 그대로 둔다. 새 정보·예시·비유를 넣지 않는다.
+- 문장의 핵심 명사·개념어는 결과에 그대로 남긴다. 당위("~해야 합니다")·추측("~일 수 있습니다")의 강도를 바꾸지 않는다.
+- 존댓말 등급은 원문과 같게 둔다.
+- 이미 자연스러운 문장은 손대지 않는다. 바꾸는 양은 전체의 30% 안쪽.
+- 소제목은 짧은 단정형을 유지하고, 어색할 때만 고친다.
+- 금지 표현: ${[...BANNED_PHRASES, ...ctx.tenant.prohibited].map((x) => `"${x}"`).join(", ")}
+
+본문:
+${JSON.stringify(p)}
+
 ${JSON_ONLY}`;
 }

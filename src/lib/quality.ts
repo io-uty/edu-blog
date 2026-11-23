@@ -1,5 +1,6 @@
 import { BANNED_PHRASES, LENGTH_TARGET, MAX_TABLES, SECTION_RANGE, TOPIC_HASHTAG_COUNT } from "@/config/rules";
 import { DEFAULT_SETTINGS, type Brand } from "./settings";
+import { aiTells } from "./humanize";
 import { bodyCharCount } from "./render";
 import type { Draft } from "./schemas";
 
@@ -60,8 +61,8 @@ export function checkQuality(d: Draft, brand: Brand = DEFAULT_SETTINGS.brand, ex
       issues.push({ code: "FACT_NEEDS_SOURCE", severity: "warning", message: `근거 확인 필요(${label})`, excerpt: h });
 
   const len = bodyCharCount(d);
-  if (len < LENGTH_TARGET.min * 0.9 || len > LENGTH_TARGET.max * 1.1)
-    issues.push({ code: "LENGTH", severity: "warning", message: `본문 ${len}자 (권장 ${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자)` });
+  if (len < LENGTH_TARGET.min || len > LENGTH_TARGET.max)
+    issues.push({ code: "LENGTH", severity: "warning", message: `본문 ${len}자 (${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자 기준)` });
 
   if (d.hashtags.length !== HASHTAG_COUNT)
     issues.push({ code: "HASHTAG_COUNT", severity: "warning", message: `해시태그 ${d.hashtags.length}개 (설정 기준 ${HASHTAG_COUNT}개)` });
@@ -82,6 +83,8 @@ export function checkQuality(d: Draft, brand: Brand = DEFAULT_SETTINGS.brand, ex
     if (s.example && !s.example.is_fictional)
       issues.push({ code: "EXAMPLE_REAL_CASE", severity: "error", message: `소주제 ${i + 1} 예시가 실제 사례로 표시됨 — 근거 없으면 가상 표시 필요`, excerpt: s.example.text.slice(0, 40) });
   });
+
+  for (const m of aiTells(d)) issues.push({ code: "AI_TELL", severity: "warning", message: `AI 티: ${m}` });
 
   const FATAL = new Set(["UNSUPPORTED_CLAIM", "EXAMPLE_REAL_CASE"]);
   const status: PublishStatus = issues.some((i) => FATAL.has(i.code)) ? "FAILED" : "NEEDS_REVIEW";

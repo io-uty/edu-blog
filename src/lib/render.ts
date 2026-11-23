@@ -1,5 +1,5 @@
 import type { Draft } from "./schemas";
-import { DEFAULT_SETTINGS, type FormatTemplate, type Settings } from "./settings";
+import { DEFAULT_SETTINGS, resolveBrand, type FormatTemplate, type Settings } from "./settings";
 
 export const EXAMPLE_LABEL = {
   practice: "※ 연습을 위해 만든 예문입니다(실제 기출 아님).",
@@ -39,7 +39,8 @@ export function renderHashtags(tags: string[]) {
 
 /** 네이버 에디터에 붙여넣기용 순수 텍스트 */
 export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: ImageSlots): string {
-  const { brand, format: f } = s;
+  const { format: f } = s;
+  const brand = resolveBrand(s.brand);
   const labels = f.imageMarkers ? slotLabels(d, slots) : new Map<string, string>();
   const gap = f.blankLineBetween ? [""] : [];
   const out: string[] = [];
@@ -74,7 +75,8 @@ const size = (n: number, fallback: number) => (Number.isFinite(n) && n >= 8 && n
  * 블로그 설정의 서식 템플릿(정렬, 본문·소제목 크기, 소제목 색, 목록 기호)을 인라인 스타일로 넣는다.
  */
 export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: ImageSlots): string {
-  const { brand, format: f } = s;
+  const { format: f } = s;
+  const brand = resolveBrand(s.brand);
   const align = ["justify", "left", "center"].includes(f.align) ? f.align : "justify";
   const bodyPx = size(f.bodySize, 19);
   const headPx = size(f.headingSize, 24);

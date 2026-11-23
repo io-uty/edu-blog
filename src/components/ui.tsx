@@ -14,11 +14,11 @@ export function PageHeader({
 }) {
   return (
     <header className="flex min-h-[56px] shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-white px-5 py-2 md:px-8">
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[160px] flex-1">
         <h1 className="truncate text-[17px] font-semibold">{title}</h1>
         {sub && <p className="truncate text-xs text-sub">{sub}</p>}
       </div>
-      {status && <div className="text-xs text-sub">{status}</div>}
+      {status && <div className="hidden text-xs text-sub sm:block">{status}</div>}
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </header>
   );
@@ -39,8 +39,8 @@ export function StepBar({ current }: { current: 0 | 1 | 2 }) {
           >
             {i < current ? <Check size={13} /> : i + 1}
           </span>
-          <span className={i === current ? "font-semibold text-ink" : "text-sub"}>{label}</span>
-          {i < FLOW.length - 1 && <span className="mx-1 h-px w-6 bg-line md:w-10" aria-hidden />}
+          <span className={i === current ? "font-semibold text-ink" : "hidden text-sub sm:inline"}>{label}</span>
+          {i < FLOW.length - 1 && <span className="mx-1 h-px w-4 bg-line sm:w-6 md:w-10" aria-hidden />}
         </li>
       ))}
     </ol>

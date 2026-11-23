@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { assemble } from "@/lib/assemble";
 import { IS_MOCK, MODEL, toUserMessage } from "@/lib/llm";
-import { runAnalysis, runDraft, runPlan, type StageName } from "@/lib/pipeline";
+import { runAnalysis, runDraft, runPlan, runPolish, type StageName } from "@/lib/pipeline";
 import { checkQuality } from "@/lib/quality";
 import { renderHtml, renderPlainText } from "@/lib/render";
 import { verticalOf } from "@/lib/prompt/verticals";
@@ -86,7 +86,12 @@ export async function POST(req: Request) {
 
         stage = "draft";
         send({ type: "stage", stage, status: "running" });
-        const raw = await runDraft(input, analysis, plan);
+        const written = await runDraft(input, analysis, plan);
+        // AI 티 윤문: 실패해도 생성은 끝까지 간다(윤문 전 원고 사용)
+        const raw = await runPolish(input, written).catch((e) => {
+          console.warn("[generate:polish]", String(e).slice(0, 200));
+          return written;
+        });
         // 제목 지역 표기·고정/지역 태그는 코드가 조립(AI 생성 아님)
         const { draft, regionIndex } = assemble(raw, input.topic, input.regionIndex, brand);
         send({ type: "stage", stage, status: "done" });

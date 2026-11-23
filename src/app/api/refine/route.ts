@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BANNED_PHRASES } from "@/config/rules";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
+import { HUMANIZE_RULES } from "@/lib/humanize";
 import { systemPrompt } from "@/lib/prompts";
 import { getCtx } from "@/lib/requestCtx";
 
@@ -8,7 +9,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const ACTIONS = {
-  polish: "문장을 자연스럽고 매끄럽게 다듬으세요. 의미와 분량은 유지합니다.",
+  polish: `사람이 쓴 글처럼 자연스럽게 다듬으세요. 의미·분량·존댓말 등급은 유지합니다.\n${HUMANIZE_RULES}`,
   shorten: "핵심만 남기고 길이를 약 30~40% 줄이세요.",
   expand: "필요한 설명을 보태 길이를 약 30~50% 늘리세요. 새로운 사실·수치는 추가하지 마세요.",
   simplify: "수험생이 바로 이해할 수 있는 쉬운 표현으로 바꾸세요.",

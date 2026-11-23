@@ -116,14 +116,12 @@ export default function SettingsView({
   notify,
   tenant,
   onEditTenant,
-  onExport,
 }: {
   settings: Settings;
   onChange: (s: Settings) => void;
   notify: (m: string) => void;
   tenant: TenantProfile | null;
   onEditTenant: () => void;
-  onExport: () => void;
 }) {
   const { brand: b, format: f, image: im } = settings;
   const setBrand = (p: Partial<Brand>) => onChange({ ...settings, brand: { ...b, ...p } });
@@ -181,7 +179,6 @@ export default function SettingsView({
               </div>
               <div className="mt-2 flex gap-2">
                 <button className="btn btn-sm" onClick={onEditTenant}>학원 정보 수정</button>
-                {tenant && <button className="btn btn-sm" onClick={onExport}>학원 설정 내보내기(.json)</button>}
               </div>
             </Field>
             {tenant && tenant.sources.length > 0 && (
@@ -285,9 +282,6 @@ export default function SettingsView({
                     ))}
                   </div>
                 </Field>
-                <Field label="이미지 표기" hint="로고 옆에 들어가는 이름">
-                  <input className="field" value={im.label} onChange={(e) => setImage({ label: e.target.value })} />
-                </Field>
                 <Field label="상담 문구" hint="강조 타이포형 상단 띠에 표시">
                   <input className="field" placeholder="예) 무료상담 02-000-0000" value={im.contact ?? ""} onChange={(e) => setImage({ contact: e.target.value })} />
                 </Field>
@@ -369,27 +363,17 @@ export default function SettingsView({
           </Section>
 
           <Section id="set-brand" title="인사말·예약 링크" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
-            <Field label="이름(학원·블로그)">
-              <input className="field" value={b.name} onChange={(e) => setBrand({ name: e.target.value })} />
-            </Field>
             <Field label="작성자">
               <input className="field" value={b.author} onChange={(e) => setBrand({ author: e.target.value })} />
             </Field>
-            <Field label="인사말" hint="본문 맨 앞">
+            <Field label="인사말" hint="본문 맨 앞 · {학원명}은 학원 이름으로 바뀝니다">
               <input className="field" value={b.greeting} onChange={(e) => setBrand({ greeting: e.target.value })} />
             </Field>
-            <Field label="마무리 소제목">
+            <Field label="마무리 소제목" hint="{학원명}은 학원 이름으로 바뀝니다">
               <input className="field" value={b.closingHeading} onChange={(e) => setBrand({ closingHeading: e.target.value })} />
             </Field>
             <Field label="예약·문의 링크" hint="본문 맨 끝에 붙습니다. 비우면 생략">
               <input className="field" value={b.bookingUrl} onChange={(e) => setBrand({ bookingUrl: e.target.value })} />
-            </Field>
-            <Field label="장소">
-              <div className="grid gap-2 md:grid-cols-[1fr_1fr_140px]">
-                <input className="field" placeholder="장소명" value={b.placeName} onChange={(e) => setBrand({ placeName: e.target.value })} />
-                <input className="field" placeholder="주소" value={b.placeAddress} onChange={(e) => setBrand({ placeAddress: e.target.value })} />
-                <input className="field" placeholder="전화" value={b.placePhone} onChange={(e) => setBrand({ placePhone: e.target.value })} />
-              </div>
             </Field>
           </Section>
 

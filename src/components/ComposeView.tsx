@@ -17,7 +17,7 @@ export interface Form {
 const STEPS: { key: keyof StageState; label: string }[] = [
   { key: "analysis", label: "주제 분석" },
   { key: "plan", label: "콘텐츠 기획" },
-  { key: "draft", label: "본문 작성" },
+  { key: "draft", label: "본문 작성·다듬기" },
   { key: "images", label: "이미지 구성" },
 ];
 
@@ -173,7 +173,7 @@ export default function ComposeView({
           </details>
 
           <div className="flex items-center gap-3">
-            <button type="submit" className="btn btn-primary h-10 px-6 text-sm" disabled={busy}>
+            <button type="submit" className="btn btn-primary h-11 w-full px-6 text-sm sm:h-10 sm:w-auto" disabled={busy}>
               {busy ? <><Loader2 size={15} className="animate-spin" /> 생성 중</> : "글 생성"}
             </button>
             {error && !busy && canResume && (

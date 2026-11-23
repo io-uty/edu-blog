@@ -4,8 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { Loader2, Plus, Trash2, X } from "lucide-react";
 import { EXAMPLE_LABEL } from "@/lib/render";
 import type { Draft } from "@/lib/schemas";
-import type { Settings } from "@/lib/settings";
-import type { TenantProfile } from "@/lib/tenant";
+import { resolveBrand, type Settings } from "@/lib/settings";
+import { displayName, type TenantProfile } from "@/lib/tenant";
 import { sortImages, type ImageItem } from "@/lib/store";
 import { ImageSlot, type ImageActions } from "./images";
 
@@ -133,6 +133,7 @@ export default function DocEditor({
   images: ImageItem[];
   imageActions: ImageActions;
 }) {
+  const shownBrand = resolveBrand(settings.brand, tenant ? displayName(tenant) : "");
   const sorted = sortImages(images);
   const thumb = sorted.find((i) => i.kind === "thumbnail");
   const sectionImage = (i: number) => sorted.find((it) => it.kind === "section" && it.sectionIndex === i);
@@ -297,8 +298,8 @@ export default function DocEditor({
 
       <ImageSlot target={{ kind: "thumbnail", sectionIndex: null }} item={thumb} number={numberOf(thumb)} actions={imageActions} />
 
-      {settings.brand.greeting && (
-        <p className="doc-p mb-6 text-sub" title="블로그 설정의 고정 인사말입니다">{settings.brand.greeting}</p>
+      {shownBrand.greeting && (
+        <p className="doc-p mb-6 text-sub" title="블로그 설정의 고정 인사말입니다">{shownBrand.greeting}</p>
       )}
 
       <div id="blk-intro" className="mb-10">
@@ -445,14 +446,16 @@ export default function DocEditor({
       ))}
 
       <section id="blk-concl" className="mb-10">
-        {settings.brand.closingHeading && <p className="doc-h2 mb-2">{settings.brand.closingHeading}</p>}
+        {shownBrand.closingHeading && <p className="doc-h2 mb-2">{shownBrand.closingHeading}</p>}
         {renderBody("concl")}
       </section>
 
       <section id="blk-tags" className="border-t border-line pt-5">
         <p className="label">해시태그 (쉼표 또는 공백으로 구분)</p>
         <TagInput tags={draft.hashtags} onChange={(hashtags) => onChange({ ...draft, hashtags })} />
-        <p className="mt-4 text-xs text-sub">본문 끝에 네이버 예약 링크가 자동으로 포함됩니다.</p>
+        <p className="mt-4 text-xs text-sub">
+          {shownBrand.bookingUrl ? `본문 끝에 예약 링크가 자동으로 붙습니다: ${shownBrand.bookingUrl}` : "블로그 설정에 예약·문의 링크를 넣으면 본문 끝에 자동으로 붙습니다."}
+        </p>
       </section>
     </article>
   );
