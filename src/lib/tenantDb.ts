@@ -27,7 +27,7 @@ export const SettingsInputSchema = z.object({
     imageMarkers: z.boolean(),
   }),
   image: z.object({
-    layout: z.enum(["poster", "bold", "headline", "notice", "checklist", "summary", "scene"]),
+    layout: z.enum(["note", "card", "poster", "bold", "headline", "notice", "checklist", "summary", "scene"]),
     label: z.string().max(60),
     // 로고는 축소된 dataURL 만 허용(약 300KB 이하)
     logo: z.string().max(400_000).regex(/^data:image\/(png|jpeg|webp|svg\+xml);base64,/).nullable(),

@@ -51,7 +51,7 @@ export interface FormatTemplate {
   imageMarkers: boolean;
 }
 
-export type ImageLayout = "poster" | "bold" | "headline" | "notice" | "checklist" | "summary" | "scene";
+export type ImageLayout = "note" | "card" | "poster" | "bold" | "headline" | "notice" | "checklist" | "summary" | "scene";
 
 /** 일러스트 그림체(이미지 생성 API 연결 시 사용) */
 export const ILLUSTRATION_STYLES = {
@@ -121,7 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
     imageMarkers: true,
   },
   image: {
-    layout: "poster",
+    layout: "note",
     label: "",
     logo: null,
     bg: "#F4EFE6",

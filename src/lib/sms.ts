@@ -6,6 +6,9 @@ const { SOLAPI_API_KEY: KEY, SOLAPI_API_SECRET: SECRET, SMS_SENDER: FROM } = pro
 
 export const smsReady = () => !!(KEY && SECRET && FROM);
 
+/** 가입 때 휴대폰 인증을 받을지. 기본은 꺼짐(테스트 중) — 켜려면 PHONE_VERIFY=on */
+export const phoneVerifyOn = () => process.env.PHONE_VERIFY === "on";
+
 export async function sendSms(to: string, text: string): Promise<boolean> {
   const date = new Date().toISOString();
   const salt = randomBytes(16).toString("hex");

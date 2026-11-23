@@ -1,12 +1,24 @@
-/** 딸깍 워드마크 */
+import { CURSOR_H, CURSOR_W, EDGE, PINK, PURPLE, SHAPE } from "@/lib/pixelCursor";
+
+/** 뚝딱 픽셀 커서 마크(핑크 그림자) */
+export function PixelMark({ size = 24, className = "" }: { size?: number; className?: string }) {
+  const vw = CURSOR_W + 1;
+  const vh = CURSOR_H + 1;
+  return (
+    <svg width={(size * vw) / vh} height={size} viewBox={`0 0 ${vw} ${vh}`} shapeRendering="crispEdges" aria-hidden className={className}>
+      {SHAPE.map((p) => <rect key={`s${p.x}-${p.y}`} x={p.x + 1} y={p.y + 1} width={p.w} height={1} fill={PINK} />)}
+      {SHAPE.map((p) => <rect key={`f${p.x}-${p.y}`} x={p.x} y={p.y} width={p.w} height={1} fill="#fff" />)}
+      {EDGE.map((p) => <rect key={`e${p.x}-${p.y}`} x={p.x} y={p.y} width={p.w} height={1} fill={PURPLE} />)}
+    </svg>
+  );
+}
+
+/** 뚝딱 워드마크 */
 export default function Logo({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`} aria-label="딸깍">
-      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden>
-        <rect width="24" height="24" rx="8" fill="var(--color-brand)" />
-        <path d="M8 6.5v10.2l2.6-2.4 1.7 3.6 1.9-.9-1.7-3.5H16z" fill="#fff" />
-      </svg>
-      <span className="text-[20px] font-extrabold leading-none tracking-[-0.03em]">딸깍</span>
+    <span className={`inline-flex items-center gap-2 ${className}`} aria-label="뚝딱">
+      <PixelMark size={22} />
+      <span className="text-[20px] font-extrabold leading-none tracking-[-0.03em]">뚝딱</span>
     </span>
   );
 }

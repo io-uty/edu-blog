@@ -1,6 +1,7 @@
 "use client";
 
 import { LogIn, LogOut, Menu } from "lucide-react";
+import { celebrate } from "@/lib/pixelFx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { derive } from "@/lib/derive";
 import { idbDel, idbSet } from "@/lib/idb";
@@ -54,7 +55,8 @@ function parseHash(h: string): Route {
 const toHash = (r: Route) => "#/" + ("id" in r ? `${r.name}/${r.id}` : r.name);
 
 /** 레이아웃별로 사진에서 비워 둘 자리 */
-function compositionFor(layout: ImageLayout): "poster" | "side" | "plain" {
+function compositionFor(layout: ImageLayout): "note" | "card" | "poster" | "side" | "plain" {
+  if (layout === "note" || layout === "card") return layout;
   if (layout === "poster" || layout === "scene") return "poster";
   if (layout === "bold" || layout === "summary") return "plain";
   return "side";
@@ -517,6 +519,7 @@ export default function Studio() {
       setForm((f) => ({ ...f, topic: "" }));
       cache.current = {};
       setStages(IDLE);
+      celebrate();
       go({ name: "edit", id: doc.id });
     } else {
       setBusy(false);
@@ -550,7 +553,7 @@ export default function Studio() {
   );
 
   const doc = "id" in route ? docs.find((d) => d.id === route.id) : undefined;
-  const derived = useMemo(() => (doc ? derive(doc, settings, tenant?.prohibited ?? []) : null), [doc, settings, tenant]);
+  const derived = useMemo(() => (doc ? derive(doc, settings, tenant?.prohibited ?? [], tenant ? displayName(tenant) : "") : null), [doc, settings, tenant]);
 
   // ---------- 학원(테넌트) ----------
   const vertical = verticalOf(tenant?.academyType ?? "기타 교육기관");

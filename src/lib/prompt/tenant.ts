@@ -26,7 +26,7 @@ export function tenantStyleBlock(t: TenantProfile) {
   const p = t.styleProfile;
   const parts = [
     "[학원 문체·독자]",
-    line("기본 문체", t.tone || "현장 경험이 많은 선생님의 단정한 \"~다\" 체, 군더더기 없이"),
+    line("기본 문체", t.tone || "학원 공식 블로그의 정중한 안내문 말투(~입니다, ~하세요), 정확하고 실용적으로"),
     line("주요 독자", t.targetAudience),
     line("지역 SEO 키워드(자연스러울 때만 1~2회)", t.seoKeywords),
     t.prohibited.length ? `- 이 학원이 쓰지 않는 표현: ${t.prohibited.map((x) => `"${x}"`).join(", ")}` : "",

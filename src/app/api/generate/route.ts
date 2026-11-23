@@ -10,6 +10,7 @@ import { docToRow } from "@/lib/tenantDb";
 import { consume, logEvent, refund } from "@/lib/usage";
 import { randomUUID } from "node:crypto";
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+import { displayName } from "@/lib/tenant";
 import { AnalysisSchema, PlanSchema } from "@/lib/schemas";
 
 export const runtime = "nodejs";
@@ -58,7 +59,8 @@ export async function POST(req: Request) {
   }
   const input = { ...parsed.data, ctx };
   const brand = ctx.brand;
-  const settings = { ...DEFAULT_SETTINGS, brand };
+  // 인사말·마무리 소제목의 {학원명}이 비지 않게 학원 이름으로 채운다
+  const settings = { ...DEFAULT_SETTINGS, brand: { ...brand, name: brand.name.trim() || displayName(ctx.tenant) } };
   const vertical = verticalOf(ctx.tenant.academyType);
 
   const enc = new TextEncoder();

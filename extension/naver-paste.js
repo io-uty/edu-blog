@@ -62,9 +62,9 @@
       paste(bodyEl, { "text/html": p.html, "text/plain": p.plainText });
       await sleep(1200);
       const filled = (document.querySelector(".se-main-container")?.innerText || "").trim().length > 20;
-      banner(filled ? "딸깍: 제목과 본문을 넣었습니다. 이미지와 서식을 확인해 주세요." : "딸깍: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
+      banner(filled ? "뚝딱: 제목과 본문을 넣었습니다. 이미지와 서식을 확인해 주세요." : "뚝딱: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
     } catch {
-      banner("딸깍: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
+      banner("뚝딱: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
     }
   }
 

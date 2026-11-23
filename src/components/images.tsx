@@ -9,14 +9,19 @@ import { useRendered } from "./useRendered";
 import { autoLayout } from "@/lib/imageRender";
 
 export const LAYOUT_LABEL: Record<ImageLayout, string> = {
+  note: "메모지형",
+  card: "카드형",
   poster: "포스터형(사진)",
   bold: "강조 타이포형",
-  headline: "헤드라인형",
-  notice: "공지형",
-  checklist: "체크리스트형",
   summary: "내용정리형",
-  scene: "사진형",
+  // 예전에 저장된 값(같은 디자인으로 그려짐)
+  scene: "포스터형(사진)",
+  headline: "내용정리형",
+  notice: "내용정리형",
+  checklist: "내용정리형",
 };
+/** 고를 수 있는 디자인 */
+export const LAYOUT_CHOICES: ImageLayout[] = ["note", "card", "poster", "bold", "summary"];
 
 export interface ImageActions {
   design: ImageDesign;
@@ -224,7 +229,7 @@ export function ImageLightbox({
                 value={item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design, item.copy)}
                 onChange={(e) => actions.update(item.id, { layout: e.target.value as ImageLayout })}
               >
-                {Object.entries(LAYOUT_LABEL).map(([k, v]) => (
+                {LAYOUT_CHOICES.map((k) => [k, LAYOUT_LABEL[k]] as const).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
               </select>

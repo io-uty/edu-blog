@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { shrinkImage } from "@/lib/imageRender";
-import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAME_TOKEN, resolveBrand, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 import { displayName, type TenantProfile } from "@/lib/tenant";
-import { LAYOUT_LABEL } from "./images";
+import { LAYOUT_CHOICES, LAYOUT_LABEL } from "./images";
 import { useRendered } from "./useRendered";
 import { PageHeader } from "./ui";
 
@@ -55,6 +55,22 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       </div>
       <div className="min-w-0">{children}</div>
     </div>
+  );
+}
+
+/** 실제 글에 들어갈 모습 미리보기. {학원명}은 학원 이름이 바뀌면 따라 바뀐다. */
+function NamePreview({ text, hasToken, onInsert }: { text: string; hasToken: boolean; onInsert: () => void }) {
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-sub">
+      <span>
+        글에는 이렇게 들어갑니다: <span className="text-ink">{text || "(비어 있음)"}</span>
+      </span>
+      {!hasToken && (
+        <button type="button" className="underline underline-offset-2 hover:text-ink" onClick={onInsert}>
+          학원 이름 자동으로 넣기
+        </button>
+      )}
+    </p>
   );
 }
 
@@ -124,6 +140,7 @@ export default function SettingsView({
   onEditTenant: () => void;
 }) {
   const { brand: b, format: f, image: im } = settings;
+  const academy = tenant ? displayName(tenant) : "";
   const setBrand = (p: Partial<Brand>) => onChange({ ...settings, brand: { ...b, ...p } });
   const setFormat = (p: Partial<FormatTemplate>) => onChange({ ...settings, format: { ...f, ...p } });
   const setImage = (p: Partial<ImageDesign>) => onChange({ ...settings, image: { ...im, ...p } });
@@ -275,8 +292,8 @@ export default function SettingsView({
               <div className="divide-y divide-bg2">
                 <Field label="기본 레이아웃">
                   <div className="flex flex-wrap gap-1">
-                    {(Object.keys(LAYOUT_LABEL) as ImageLayout[]).map((k) => (
-                      <button key={k} className={`btn btn-sm ${im.layout === k ? "border-ink font-semibold" : ""}`} onClick={() => setImage({ layout: k })}>
+                    {LAYOUT_CHOICES.map((k) => (
+                      <button key={k} className={`btn btn-sm ${LAYOUT_LABEL[im.layout] === LAYOUT_LABEL[k] ? "border-ink font-semibold" : ""}`} onClick={() => setImage({ layout: k })}>
                         {LAYOUT_LABEL[k]}
                       </button>
                     ))}
@@ -366,11 +383,13 @@ export default function SettingsView({
             <Field label="작성자">
               <input className="field" value={b.author} onChange={(e) => setBrand({ author: e.target.value })} />
             </Field>
-            <Field label="인사말" hint="본문 맨 앞 · {학원명}은 학원 이름으로 바뀝니다">
+            <Field label="인사말" hint="본문 맨 앞에 들어갑니다">
               <input className="field" value={b.greeting} onChange={(e) => setBrand({ greeting: e.target.value })} />
+              <NamePreview text={resolveBrand(b, academy).greeting} hasToken={b.greeting.includes(NAME_TOKEN)} onInsert={() => setBrand({ greeting: `안녕하세요! ${NAME_TOKEN}입니다 😊` })} />
             </Field>
-            <Field label="마무리 소제목" hint="{학원명}은 학원 이름으로 바뀝니다">
+            <Field label="마무리 소제목" hint="본문 끝 상담 안내 위에 들어갑니다">
               <input className="field" value={b.closingHeading} onChange={(e) => setBrand({ closingHeading: e.target.value })} />
+              <NamePreview text={resolveBrand(b, academy).closingHeading} hasToken={b.closingHeading.includes(NAME_TOKEN)} onInsert={() => setBrand({ closingHeading: `${NAME_TOKEN} 상담 안내` })} />
             </Field>
             <Field label="예약·문의 링크" hint="본문 맨 끝에 붙습니다. 비우면 생략">
               <input className="field" value={b.bookingUrl} onChange={(e) => setBrand({ bookingUrl: e.target.value })} />

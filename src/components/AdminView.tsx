@@ -135,7 +135,7 @@ function TrendChart({ data }: { data: Stats["trend"] }) {
         }}>
         {[0, 1, 2, 3, 4].map((k) => (
           <g key={k}>
-            <line x1={L} x2={L + iw} y1={y(step * k)} y2={y(step * k)} stroke="#ece8e4" strokeWidth={1} />
+            <line x1={L} x2={L + iw} y1={y(step * k)} y2={y(step * k)} stroke="#ebe8f2" strokeWidth={1} />
             <text x={L - 8} y={y(step * k) + 4} textAnchor="end" fontSize={11} fill="#7a756f">{step * k}</text>
           </g>
         ))}

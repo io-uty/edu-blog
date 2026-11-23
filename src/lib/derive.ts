@@ -11,8 +11,9 @@ export function slotsOf(doc: DocRecord): ImageSlots {
   };
 }
 
-/** 문서의 검사 결과와 붙여넣기용 텍스트·HTML을 현재 설정으로 계산한다. */
-export function derive(doc: DocRecord, s: Settings, prohibited: string[] = []) {
+/** 문서의 검사 결과와 붙여넣기용 텍스트·HTML을 현재 설정으로 계산한다. 인사말의 {학원명}은 학원 이름으로 채운다. */
+export function derive(doc: DocRecord, settings: Settings, prohibited: string[] = [], academyName = "") {
+  const s = { ...settings, brand: { ...settings.brand, name: settings.brand.name.trim() || academyName } };
   const slots = slotsOf(doc);
   return {
     slots,

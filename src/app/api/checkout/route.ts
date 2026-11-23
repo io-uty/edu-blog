@@ -73,7 +73,7 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!data || data.tenant_id !== s.tenantId) return Response.json({ error: "주문을 찾을 수 없습니다." }, { status: 404 });
   const plan = data.plans as unknown as { name: string; features?: { summary?: string } } | null;
-  const base = { orderId: data.order_id, amount: data.amount, status: data.status, provider: data.provider, plan, orderName: `딸깍 ${plan?.name ?? "생성권"}` };
+  const base = { orderId: data.order_id, amount: data.amount, status: data.status, provider: data.provider, plan, orderName: `뚝딱 ${plan?.name ?? "생성권"}` };
 
   if (data.provider === "bank_transfer") {
     const bank = bankConfig();

@@ -21,7 +21,7 @@ const Body = z.object({
   style: z.enum(Object.keys(ILLUSTRATION_STYLES) as [IllustrationStyle, ...IllustrationStyle[]]).default("photo"),
   note: z.string().max(200).default(""),
   // side: 오른쪽에 그림, 왼쪽 위는 글자 자리 / poster: 전체를 채우는 장면, 위쪽은 제목 자리 / plain: 글자 없이 그대로
-  composition: z.enum(["side", "scene", "poster", "plain"]).default("poster"),
+  composition: z.enum(["note", "card", "side", "scene", "poster", "plain"]).default("poster"),
   colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(3).default([]),
 });
 
@@ -46,6 +46,8 @@ export async function POST(req: Request) {
 
   const realistic = p.data.style === "photo" || p.data.style === "render3d";
   const composition = {
+    note: "bright tidy study desk seen from slightly above, objects only around the edges of the frame (a potted plant, a stack of hardcover books with blank spines, a laptop corner, an open spiral notebook, a pen, a small flower); the center 60% of the frame is a clear, evenly lit empty desk surface because a paper sticky note will be placed there",
+    card: "the main subject sits in the lower part of the frame: a person or character's head and eyes peeking up from behind a laptop or desk toward the viewer; plain soft single-color background with a few simple subject-related props as flat icons; nothing important in the upper third",
     poster:
       "full-bleed square composition. The main subject sits in the lower 55-60% of the frame; the upper 40% is calm, softly lit, out-of-focus background (wall, window light, bokeh) with no objects, so a large headline can be placed there",
     scene:

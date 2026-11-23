@@ -261,7 +261,7 @@ export default function PublishView({
                   <Check size={15} /> 네이버에 발행했어요
                 </button>
               )}
-              <p className="text-xs text-sub">딸깍은 네이버에 직접 게시하지 않습니다. 발행 여부는 직접 눌러 표시해 주세요.</p>
+              <p className="text-xs text-sub">뚝딱은 네이버에 직접 게시하지 않습니다. 발행 여부는 직접 눌러 표시해 주세요.</p>
             </Step>
           </ol>
 
