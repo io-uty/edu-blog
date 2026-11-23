@@ -94,10 +94,10 @@ export default function ComposeView({
           }}
         >
           <div className="mb-6">
-            <label htmlFor="topic" className="mb-2 block text-[17px] font-semibold">어떤 글을 쓸까요?</label>
+            <label htmlFor="topic" className="mb-3 block text-[22px] font-bold tracking-[-0.02em]">어떤 글을 쓸까요?</label>
             <input
               id="topic"
-              className="field h-11 text-[15px]"
+              className="field h-12 rounded-xl px-4 text-[16px]"
               value={form.topic}
               maxLength={200}
               disabled={busy}
@@ -105,7 +105,7 @@ export default function ComposeView({
               placeholder={topicPlaceholder}
               autoFocus
             />
-            <p className="mt-1.5 text-xs text-sub">주제 한 줄만 적으면 됩니다. 나머지 설정은 그대로 두셔도 됩니다.</p>
+            <p className="mt-2 text-xs text-sub">주제 한 줄만 적으면 됩니다. 나머지 설정은 그대로 두셔도 됩니다.</p>
             {!form.topic.trim() && exampleTopics.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-sub">예시 주제</span>
@@ -128,7 +128,7 @@ export default function ComposeView({
             <label htmlFor="ctype" className="label">콘텐츠 유형</label>
             <select
               id="ctype"
-              className="field h-9 py-0"
+              className="field h-11 rounded-xl py-0"
               value={form.contentType}
               disabled={busy}
               onChange={(e) => setForm({ ...form, contentType: e.target.value })}
@@ -146,7 +146,7 @@ export default function ComposeView({
               disabled={busy}
               onChange={(e) => setForm({ ...form, images: e.target.checked })}
             />
-            이미지 함께 만들기 <span className="text-sub">(썸네일 + 소주제별, 1:1)</span>
+            이미지 함께 만들기 <span className="text-sub">(썸네일 포함 2~5장, 글에 맞게 자동 선택)</span>
           </label>
 
           <details className="group mb-8 border-t border-line pt-4">
@@ -173,7 +173,7 @@ export default function ComposeView({
           </details>
 
           <div className="flex items-center gap-3">
-            <button type="submit" className="btn btn-primary h-11 w-full px-6 text-sm sm:h-10 sm:w-auto" disabled={busy}>
+            <button type="submit" className="btn btn-primary h-12 w-full px-8 text-[15px] font-bold sm:w-auto" disabled={busy}>
               {busy ? <><Loader2 size={15} className="animate-spin" /> 생성 중</> : "글 생성"}
             </button>
             {error && !busy && canResume && (

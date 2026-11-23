@@ -625,367 +625,215 @@ function ellipsize(ctx: Ctx, text: string, maxW: number) {
 }
 
 /** 소주제 내용 정리 카드: 제목 + 번호 붙은 핵심 항목과 한 줄 설명. 부드러운 카드 스타일 */
+/** 내용 정리 카드: 위는 학원 색 띠 + 제목, 아래는 번호 매긴 항목(장식 없이 선으로만 나눈다) */
 function layoutSummary(ctx: Ctx, r: RenderInput) {
   const { copy: c, design: d } = r;
-  const bandH = d.footer ? 120 : 0;
-  ctx.fillStyle = d.bg;
+  const opts = { x: EDGE, top: 76, maxW: SIZE - EDGE * 2, fg: "#FFFFFF", hi: hiColor(d), muted: "rgba(255,255,255,0.72)", base: 84, showName: true };
+  const end = headlineStack(ctx, { ...r, copy: { ...c, sub: "" } }, { ...opts, draw: false });
+  const bandH = Math.round(end + 60);
+  ctx.fillStyle = mix(d.bg, "#ffffff", 0.6);
   ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillStyle = bandColor(d);
+  ctx.fillRect(0, 0, SIZE, bandH);
+  headlineStack(ctx, { ...r, copy: { ...c, sub: "" } }, { ...opts, draw: true });
 
-  // 배경: 모서리에 걸친 큰 원 두 개로 깊이감
-  ctx.save();
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = mix(d.accent, "#ffffff", 0.55);
-  ctx.beginPath();
-  ctx.arc(SIZE - 40, 40, 300, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = mix(d.primary, "#ffffff", 0.8);
-  ctx.beginPath();
-  ctx.arc(60, SIZE - bandH - 20, 240, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  const dark = "#1c1c28";
-  drawLogoLine(ctx, d.footer ? { ...d, label: "" } : d, r.logo, M, 66, onColor(d.bg) === "#111111" ? "#333333" : "#FFFFFF", "left");
-
-  // 머리: 배지 + 큰 제목 + 한 줄 요약
-  const illS = r.illustration ? 230 : 0;
-  const textW = SIZE - M * 2 - (illS ? illS + 24 : 0);
-  let y = 112;
-  if (c.eyebrow) {
-    const p = pill(ctx, c.eyebrow, M, y, 36, d.primary, "#FFFFFF", null);
-    y += p.h + 18;
-  }
-  const subH = c.sub ? 62 : 0;
-  y = titleBlock(ctx, c, d, M, y, textW, "brush", 100, Math.max(120, 372 - y - subH));
-  if (c.sub) {
-    const s = fit(ctx, c.sub, 800, textW, 40, 28);
-    ctx.fillStyle = d.point;
-    ctx.fillText(c.sub, M, y + s + 8);
-    y += s + 16;
-  }
-  if (illS && r.illustration) {
-    const ix = SIZE - M - illS;
-    const iy = 112;
-    ctx.save();
-    rr(ctx, ix, iy, illS, illS, 40);
-    ctx.clip();
-    const sc = Math.max(illS / r.illustration.width, illS / r.illustration.height);
-    const dw = r.illustration.width * sc;
-    const dh = r.illustration.height * sc;
-    ctx.drawImage(r.illustration, ix + (illS - dw) / 2, iy + (illS - dh) / 2, dw, dh);
-    ctx.restore();
-    y = Math.max(y, iy + illS);
-  }
-
-  // 핵심 항목 카드(왼쪽 색 띠 + 둥근 번호 + 제목/설명)
   const rows = (c.items && c.items.length ? c.items.filter((i) => i.label) : c.points.filter(Boolean).map((p) => ({ label: p, detail: "" }))).slice(0, 4);
-  const top = Math.max(y + 26, 390);
-  const bottom = SIZE - bandH - (d.footer ? 36 : 60);
-  const gap = 18;
-  const rowH = Math.min(172, (bottom - top - gap * (rows.length - 1)) / Math.max(1, rows.length));
+  const top = bandH + 40;
+  const bottom = SIZE - 56;
+  const rowH = Math.min(170, (bottom - top) / Math.max(1, rows.length));
+  const ink = "#16181f";
+  const numW = 96;
   rows.forEach((it, i) => {
-    const ry = top + i * (rowH + gap);
-    const tone = i % 2 ? d.point : d.primary;
-    ctx.save();
-    ctx.shadowColor = "rgba(20,20,40,0.10)";
-    ctx.shadowBlur = 22;
-    ctx.shadowOffsetY = 8;
-    rr(ctx, M, ry, SIZE - M * 2, rowH, 32);
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fill();
-    ctx.restore();
-    ctx.save();
-    rr(ctx, M, ry, SIZE - M * 2, rowH, 32);
-    ctx.clip();
-    ctx.fillStyle = tone;
-    ctx.fillRect(M, ry, 16, rowH);
-    ctx.restore();
-
-    const bs = Math.min(76, rowH * 0.5);
-    const bx = M + 16 + 28;
-    const by = ry + (rowH - bs) / 2;
-    rr(ctx, bx, by, bs, bs, bs * 0.32);
-    ctx.fillStyle = mix(tone, "#ffffff", 0.86);
-    ctx.fill();
-    ctx.fillStyle = tone;
-    ctx.font = font(900, bs * 0.58);
-    ctx.textAlign = "center";
+    const ry = top + i * rowH;
+    if (i > 0) {
+      ctx.fillStyle = "rgba(20,24,40,0.12)";
+      ctx.fillRect(EDGE, ry, SIZE - EDGE * 2, 2);
+    }
+    ctx.font = font(900, 64);
+    ctx.fillStyle = luminance(d.point) < 0.6 ? d.point : bandColor(d);
     ctx.textBaseline = "middle";
-    ctx.fillText(String(i + 1), bx + bs / 2, by + bs / 2 + bs * 0.04);
-    ctx.textAlign = "left";
-
-    const tx = bx + bs + 26;
-    const tw = SIZE - M - 30 - tx;
+    ctx.fillText(String(i + 1).padStart(2, "0"), EDGE, ry + rowH / 2 + 4);
+    const tx = EDGE + numW + 12;
+    const tw = SIZE - EDGE - tx;
     if (it.detail) {
-      const ls = fit(ctx, it.label, 900, tw, Math.min(46, rowH * 0.3), 28);
-      const ds = Math.min(32, Math.max(23, rowH * 0.2));
-      const total = ls + 12 + ds;
-      const t0 = ry + (rowH - total) / 2;
-      ctx.fillStyle = dark;
-      ctx.fillText(ellipsize(ctx, it.label, tw), tx, t0 + ls * 0.88);
-      ctx.font = font(600, ds);
-      ctx.fillStyle = "#5a5a6a";
-      ctx.fillText(ellipsize(ctx, it.detail, tw), tx, t0 + ls + 12 + ds * 0.88);
+      const ls = fit(ctx, it.label, 800, tw, Math.min(46, rowH * 0.3), 28);
+      const ds = Math.min(32, Math.max(24, rowH * 0.2));
+      const t0 = ry + (rowH - (ls + 12 + ds)) / 2;
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = ink;
+      ctx.fillText(ellipsize(ctx, it.label, tw), tx, t0 + ls * 0.9);
+      ctx.font = font(500, ds);
+      ctx.fillStyle = "#555a66";
+      ctx.fillText(ellipsize(ctx, it.detail, tw), tx, t0 + ls + 12 + ds * 0.9);
     } else {
-      const ls = fit(ctx, it.label, 900, tw, Math.min(52, rowH * 0.34), 30);
-      ctx.fillStyle = dark;
-      ctx.fillText(ellipsize(ctx, it.label, tw), tx, ry + rowH / 2 + ls * 0.36);
+      fit(ctx, it.label, 800, tw, Math.min(50, rowH * 0.34), 30);
+      ctx.fillStyle = ink;
+      ctx.fillText(ellipsize(ctx, it.label, tw), tx, ry + rowH / 2 + 4);
     }
     ctx.textBaseline = "alphabetic";
   });
-
-  if (d.footer) {
-    ctx.fillStyle = d.primary;
-    ctx.beginPath();
-    ctx.moveTo(0, SIZE - bandH + 20);
-    ctx.lineTo(SIZE, SIZE - bandH - 20);
-    ctx.lineTo(SIZE, SIZE);
-    ctx.lineTo(0, SIZE);
-    ctx.closePath();
-    ctx.fill();
-    drawLogoLine(ctx, { ...d }, null, M, SIZE - bandH / 2 + 8, "#FFFFFF", "left");
-  }
 }
 
 // ---------- 포스터형(썸네일 기본) ----------
-
-function rgba(hex: string, a: number) {
-  const m = hex.replace("#", "").match(/.{2}/g)?.map((v) => parseInt(v, 16)) ?? [255, 255, 255];
-  return `rgba(${m[0]},${m[1]},${m[2]},${a})`;
-}
 
 function drawCover(ctx: Ctx, img: Pic) {
   const sc = Math.max(SIZE / img.width, SIZE / img.height);
   ctx.drawImage(img, (SIZE - img.width * sc) / 2, (SIZE - img.height * sc) / 2, img.width * sc, img.height * sc);
 }
 
-/** 제목 옆 반짝 강조선(세 줄) */
-function sparks(ctx: Ctx, cx: number, cy: number, dir: -1 | 1, color: string, len = 46) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 11;
-  ctx.lineCap = "round";
-  [-0.7, 0, 0.7].forEach((a, i) => {
-    const ang = (dir === -1 ? Math.PI : 0) + a * dir;
-    const r0 = i === 1 ? 0 : 6;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
-    ctx.lineTo(cx + Math.cos(ang) * (r0 + len), cy + Math.sin(ang) * (r0 + len));
-    ctx.stroke();
-  });
-  ctx.restore();
-}
 
-/** 하단 가운데 학원 표기(로고 + 이름 + 상담 문구) */
-function bottomBadge(ctx: Ctx, d: ImageDesign, logo: HTMLImageElement | null | undefined, onPhoto: boolean) {
-  const text = d.label.trim();
-  if (!text && !logo) return;
-  const lh = 44;
-  const lw = logo ? (logo.width / logo.height) * lh : 0;
-  ctx.font = font(800, 34);
-  const tw = text ? ctx.measureText(text).width : 0;
-  const gap = logo && text ? 16 : 0;
-  const w = lw + gap + tw + 64;
-  const h = 76;
-  const x = (SIZE - w) / 2;
-  const y = SIZE - h - 40;
-  ctx.save();
-  if (onPhoto) {
-    ctx.shadowColor = "rgba(0,0,0,0.18)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 4;
-  }
-  rr(ctx, x, y, w, h, h / 2);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.fill();
-  ctx.restore();
-  let cx = x + 32;
-  if (logo) {
-    ctx.drawImage(logo, cx, y + (h - lh) / 2, lw, lh);
-    cx += lw + gap;
-  }
-  if (text) {
-    ctx.fillStyle = "#1b1f2a";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, cx, y + h / 2 + 2);
-    ctx.textBaseline = "alphabetic";
-  }
-}
+// ---------- 에디토리얼 포스터(기본 썸네일) ----------
+// 원칙: 사진은 가리지 않고, 글자는 단색 띠 위에서 크게·왼쪽 정렬로. 장식(화살표·붓 띠·알약 배지)은 쓰지 않는다.
 
-/** 실사·3D 사진 위에 큰 제목. 위쪽은 배경색으로 부드럽게 바래 글자 자리를 만든다. */
-function layoutPoster(ctx: Ctx, r: RenderInput) {
+const EDGE = 72; // 포스터 좌우 여백
+
+/** 학원명(작게) → 제목(굵게, 강조 줄은 강조색) → 부제. draw=false면 높이만 잰다. 끝 y를 돌려준다. */
+function headlineStack(
+  ctx: Ctx,
+  r: RenderInput,
+  o: { x: number; top: number; maxW: number; fg: string; hi: string; muted: string; base: number; showName: boolean; draw: boolean },
+) {
   const { copy: c, design: d } = r;
-  const ill = r.illustration!;
-  const thumb = r.kind === "thumbnail";
-  const paper = mix(d.bg, "#ffffff", 0.55);
-  ctx.fillStyle = paper;
-  ctx.fillRect(0, 0, SIZE, SIZE);
-  drawCover(ctx, ill);
-
-  const lines = c.title.filter(Boolean).slice(0, 3);
-  const maxW = SIZE - 150;
-  const base = thumb ? (lines.length >= 3 ? 118 : 138) : lines.length >= 3 ? 96 : 112;
-  const sizes = lines.map((l) => fit(ctx, l, 900, maxW, base, 60));
-  const eyebrowH = c.eyebrow && !thumb ? 76 : 0;
-  const subH = c.sub ? 92 : 0;
-  const blockH = 70 + eyebrowH + sizes.reduce((a, s) => a + s * 1.16, 0) + subH;
-
-  // 글자 자리: 위쪽을 종이색으로 덮고 아래로 갈수록 사진이 드러나게
-  const fadeEnd = Math.min(SIZE * 0.78, blockH + 170);
-  const g = ctx.createLinearGradient(0, 0, 0, fadeEnd);
-  g.addColorStop(0, rgba(paper, 0.97));
-  g.addColorStop(Math.max(0.05, (blockH - 30) / fadeEnd), rgba(paper, 0.88));
-  g.addColorStop(1, rgba(paper, 0));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, SIZE, fadeEnd);
-
-  const ink = luminance(d.primary) < 0.35 ? d.primary : "#141b34";
-  let y = 70;
-  if (eyebrowH) {
-    ctx.font = font(800, 34);
-    const w = ctx.measureText(c.eyebrow).width + 48;
-    pill(ctx, c.eyebrow, (SIZE - w) / 2, y, 34, ink, "#FFFFFF", null);
-    y += eyebrowH;
+  let y = o.top;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  const name = d.label.trim();
+  if (o.showName && name) {
+    ctx.font = font(700, 32);
+    if (o.draw) {
+      ctx.fillStyle = o.muted;
+      ctx.fillText(name, o.x, y + 30);
+    }
+    y += 30 + 40;
   }
-  ctx.textAlign = "center";
-  let firstTop = y;
+  const lines = c.title.filter(Boolean).slice(0, 3);
+  const base = lines.length >= 3 ? Math.round(o.base * 0.86) : o.base;
+  ctx.letterSpacing = "-2px";
   lines.forEach((line, i) => {
-    const s = sizes[i];
-    ctx.font = font(900, s);
-    y += s;
-    if (i === 0) firstTop = y - s;
-    const hi = i === c.highlight;
-    const w = ctx.measureText(line).width;
-    if (hi) brush(ctx, SIZE / 2 - w / 2 - 6, y - s * 0.34, w + 12, s * 0.36, rgba(d.accent, 0.9), hashStr(line));
-    ctx.font = font(900, s);
-    outlined(ctx, line, SIZE / 2, y, hi ? d.point : ink, rgba(paper, 0.9), s * 0.08);
+    const s = fit(ctx, line, 900, o.maxW, base, 56);
+    y += s * 0.98;
+    if (o.draw) {
+      ctx.fillStyle = i === c.highlight ? o.hi : o.fg;
+      ctx.fillText(line, o.x, y);
+    }
     y += s * 0.16;
   });
-  const widest = Math.max(...lines.map((l, i) => (ctx.font = font(900, sizes[i]), ctx.measureText(l).width)));
-  if (thumb && widest / 2 + 34 + 56 < SIZE / 2 - 16) {
-    sparks(ctx, SIZE / 2 - widest / 2 - 34, firstTop + 30, -1, d.accent);
-    sparks(ctx, SIZE / 2 + widest / 2 + 34, firstTop + 30, 1, d.accent);
-  }
+  ctx.letterSpacing = "0px";
   if (c.sub) {
-    y += 26;
-    const s = fit(ctx, c.sub, 800, SIZE - 260, 44, 28);
-    const w = ctx.measureText(c.sub).width + s * 1.6;
-    const h = s * 1.8;
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.08)";
-    ctx.shadowBlur = 16;
-    rr(ctx, (SIZE - w) / 2, y, w, h, h / 2);
-    ctx.fillStyle = mix(d.primary, "#ffffff", 0.86);
-    ctx.fill();
-    ctx.restore();
-    ctx.fillStyle = "#1b1f2a";
-    ctx.textBaseline = "middle";
-    ctx.fillText(c.sub, SIZE / 2, y + h / 2 + 2);
-    ctx.textBaseline = "alphabetic";
+    const s = fit(ctx, c.sub, 600, o.maxW, 40, 28);
+    y += 20 + s;
+    if (o.draw) {
+      ctx.fillStyle = o.muted;
+      ctx.fillText(c.sub, o.x, y);
+    }
   }
-  ctx.textAlign = "left";
-  if (thumb || d.footer) bottomBadge(ctx, d, r.logo, true);
+  return y;
 }
 
-const BOLD_GRADIENT = ["#EE7B78", "#F4CFC6", "#F2CBEF", "#A6EFB6", "#98D2F0"];
+/** 사진을 주어진 영역에 cover로 채운다. 아래쪽 기준으로 맞춰 피사체(사진 아래쪽)가 잘리지 않게 한다. */
+function drawPhotoIn(ctx: Ctx, img: Pic, x: number, y: number, w: number, h: number) {
+  const sc = Math.max(w / img.width, h / img.height);
+  const dw = img.width * sc;
+  const dh = img.height * sc;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.drawImage(img, x + (w - dw) / 2, y + h - dh, dw, dh);
+  ctx.restore();
+}
 
-/** 단색(또는 어둡게 깐 사진) 배경 + 상단 상담 띠 + 그라데이션 외곽선 제목 */
+/** 로고는 사진 위 왼쪽 아래에 작게(흰 바탕 칩) */
+function logoChip(ctx: Ctx, logo: HTMLImageElement | null | undefined) {
+  if (!logo) return;
+  const lh = 40;
+  const lw = Math.min(260, (logo.width / logo.height) * lh);
+  const pad = 18;
+  const w = lw + pad * 2;
+  const h = lh + pad * 1.4;
+  const x = EDGE - 8;
+  const y = SIZE - h - 48;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.16)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 6;
+  rr(ctx, x, y, w, h, 14);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fill();
+  ctx.restore();
+  ctx.drawImage(logo, x + pad, y + (h - lh) / 2, lw, lh);
+}
+
+const bandColor = (d: ImageDesign) => (luminance(d.primary) < 0.35 ? d.primary : "#141B34");
+const hiColor = (d: ImageDesign) => (luminance(d.accent) > 0.45 ? d.accent : "#FFD84D");
+
+/** 사진형: 위는 학원 색 띠 + 큰 제목, 아래는 사진(경계는 깔끔하게 끊는다) */
+function layoutPoster(ctx: Ctx, r: RenderInput) {
+  const { design: d } = r;
+  const thumb = r.kind === "thumbnail";
+  const band = bandColor(d);
+  const opts = {
+    x: EDGE,
+    top: 76,
+    maxW: SIZE - EDGE * 2,
+    fg: "#FFFFFF",
+    hi: hiColor(d),
+    muted: "rgba(255,255,255,0.72)",
+    base: thumb ? 132 : 100,
+    showName: true,
+  };
+  const end = headlineStack(ctx, r, { ...opts, draw: false });
+  const bandH = Math.round(Math.min(SIZE * 0.56, Math.max(SIZE * 0.36, end + 64)));
+  ctx.fillStyle = band;
+  ctx.fillRect(0, 0, SIZE, bandH);
+  if (r.illustration) drawPhotoIn(ctx, r.illustration, 0, bandH, SIZE, SIZE - bandH);
+  headlineStack(ctx, r, { ...opts, top: 76 + Math.max(0, (bandH - 64 - end) / 2), draw: true });
+  const contact = (d.contact ?? "").trim();
+  if (thumb && contact) {
+    ctx.font = font(700, 30);
+    ctx.textAlign = "right";
+    ctx.fillStyle = hiColor(d);
+    ctx.fillText(contact, SIZE - EDGE, 76 + 30);
+    ctx.textAlign = "left";
+  }
+  if (thumb || d.footer) logoChip(ctx, r.logo);
+}
+
+/** 글자형(사진 없음): 학원 색 바탕에 큰 제목. 사진이 있으면 사진 위 아래쪽을 어둡게 깔고 그 위에 제목 */
 function layoutBold(ctx: Ctx, r: RenderInput) {
-  const { copy: c, design: d } = r;
+  const { design: d } = r;
+  const thumb = r.kind === "thumbnail";
+  const opts = {
+    x: EDGE,
+    top: 0,
+    maxW: SIZE - EDGE * 2,
+    fg: "#FFFFFF",
+    hi: hiColor(d),
+    muted: "rgba(255,255,255,0.74)",
+    base: thumb ? 150 : 120,
+    showName: !r.illustration,
+  };
   if (r.illustration) {
     drawCover(ctx, r.illustration);
-    ctx.fillStyle = "rgba(10,12,20,0.38)";
-    ctx.fillRect(0, 0, SIZE, SIZE);
-  } else {
-    ctx.fillStyle = d.bg;
-    ctx.fillRect(0, 0, SIZE, SIZE);
-    // 은은한 비네팅
-    const v = ctx.createRadialGradient(SIZE / 2, SIZE / 2, SIZE * 0.25, SIZE / 2, SIZE / 2, SIZE * 0.75);
-    v.addColorStop(0, "rgba(255,255,255,0.06)");
-    v.addColorStop(1, "rgba(0,0,0,0.10)");
-    ctx.fillStyle = v;
-    ctx.fillRect(0, 0, SIZE, SIZE);
-  }
-
-  // 상단 흰 띠: 학원명 + 상담 문구(없으면 배지 문구)
-  const left = d.label.trim() || c.eyebrow;
-  const right = (d.contact ?? "").trim();
-  let top = 120;
-  if (left || right) {
-    const lsz = 58;
-    ctx.font = font(900, lsz);
-    const lw = left ? ctx.measureText(left).width : 0;
-    const rw = right ? ctx.measureText(right).width : 0;
-    const gap = left && right ? 24 : 0;
-    let sz = lsz;
-    const avail = SIZE - 200;
-    if (lw + gap + rw > avail) sz = Math.max(30, Math.floor((lsz * avail) / (lw + gap + rw)));
-    ctx.font = font(900, sz);
-    const tw = (left ? ctx.measureText(left).width : 0) + gap + (right ? ctx.measureText(right).width : 0);
-    const bw = tw + 90;
-    const bh = sz * 1.75;
-    const bx = (SIZE - bw) / 2;
-    const by = 110;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(bx, by, bw, bh);
-    ctx.textBaseline = "middle";
-    let x = bx + 45;
-    if (left) {
-      ctx.fillStyle = luminance(d.primary) < 0.4 ? d.primary : "#1f4040";
-      ctx.fillText(left, x, by + bh / 2 + 3);
-      x += ctx.measureText(left).width + gap;
-    }
-    if (right) {
-      ctx.fillStyle = d.point;
-      ctx.fillText(right, x, by + bh / 2 + 3);
-    }
-    ctx.textBaseline = "alphabetic";
-    top = by + bh + 50;
-  }
-
-  const lines = c.title.filter(Boolean).slice(0, 3);
-  const subH = c.sub ? 110 : 0;
-  const avail = SIZE - top - subH - 70;
-  const base = Math.min(lines.length >= 3 ? 190 : 220, avail / (lines.length * 1.08));
-  const sizes = lines.map((l) => fit(ctx, l, 900, SIZE - 170, base, 70));
-  const total = sizes.reduce((a, s) => a + s * 1.08, 0);
-  let y = top + Math.max(0, (avail - total) / 2);
-  const g = ctx.createLinearGradient(0, y, 0, y + total);
-  BOLD_GRADIENT.forEach((col, i) => g.addColorStop(i / (BOLD_GRADIENT.length - 1), col));
-  ctx.textAlign = "center";
-  lines.forEach((line, i) => {
-    const s = sizes[i];
-    y += s * 0.98;
-    ctx.font = font(900, s);
-    ctx.lineJoin = "round";
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.25)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 8;
-    ctx.strokeStyle = "#0b0b0f";
-    ctx.lineWidth = s * 0.24;
-    ctx.strokeText(line, SIZE / 2, y);
-    ctx.restore();
+    const g = ctx.createLinearGradient(0, SIZE * 0.35, 0, SIZE);
+    g.addColorStop(0, "rgba(8,10,18,0)");
+    g.addColorStop(1, "rgba(8,10,18,0.82)");
     ctx.fillStyle = g;
-    ctx.fillText(line, SIZE / 2, y);
-    y += s * 0.1;
-  });
-  if (c.sub) {
-    y += 40;
-    const s = fit(ctx, c.sub, 900, SIZE - 260, 50, 30);
-    const w = ctx.measureText(c.sub).width + s * 1.6;
-    const h = s * 1.8;
-    rr(ctx, (SIZE - w) / 2, y, w, h, h / 2);
-    ctx.fillStyle = "#0b0b0f";
-    ctx.fill();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.textBaseline = "middle";
-    ctx.fillText(c.sub, SIZE / 2, y + h / 2 + 2);
-    ctx.textBaseline = "alphabetic";
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    const h = headlineStack(ctx, r, { ...opts, draw: false });
+    headlineStack(ctx, r, { ...opts, top: SIZE - 84 - h, draw: true });
+  } else {
+    ctx.fillStyle = bandColor(d);
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    headlineStack(ctx, r, { ...opts, top: 110, draw: true });
+    const contact = (d.contact ?? "").trim();
+    if (contact) {
+      ctx.font = font(700, 34);
+      ctx.fillStyle = hiColor(d);
+      ctx.fillText(contact, EDGE, SIZE - 84);
+    }
   }
-  ctx.textAlign = "left";
-  if (r.logo && !d.label.trim()) bottomBadge(ctx, d, r.logo, !!r.illustration);
+  if (r.logo) logoChip(ctx, r.logo);
 }
 
 // ---------- 진입점 ----------

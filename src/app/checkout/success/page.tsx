@@ -57,7 +57,7 @@ export default function CheckoutSuccess() {
           <>
             <CheckCircle2 size={36} className="mx-auto mt-8 text-ok" />
             <p className="mt-4 text-[18px] font-bold">결제가 완료되었어요</p>
-            <p className="mt-1 text-[13px] text-sub">이용권이 적용되었습니다. 곧 작성 화면으로 이동합니다.</p>
+            <p className="mt-1 text-[13px] text-sub">생성권이 충전되었습니다. 곧 작성 화면으로 이동합니다.</p>
             <Link className="btn btn-primary mt-5 h-11 w-full" href="/#/compose">바로 글 쓰러 가기</Link>
           </>
         )}
@@ -72,7 +72,7 @@ export default function CheckoutSuccess() {
           <>
             <p className="mt-8 text-[16px] font-semibold text-err">결제를 완료하지 못했어요</p>
             <p className="mt-1 text-[13px] leading-5 text-sub">{st.msg}</p>
-            <Link className="btn btn-primary mt-5 h-11 w-full" href="/#/compose">이용권 다시 선택하기</Link>
+            <Link className="btn btn-primary mt-5 h-11 w-full" href="/#/compose">생성권 다시 선택하기</Link>
           </>
         )}
       </div>

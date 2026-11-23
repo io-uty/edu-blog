@@ -87,19 +87,19 @@ function BankTransfer({ order, onChange }: { order: Order; onChange: (o: Partial
     return (
       <div className="mt-6 space-y-3">
         <p className="flex items-center gap-2 rounded-2xl bg-bg2 px-4 py-3 text-[14px] font-semibold text-ok">
-          <Check size={16} /> 입금이 확인되어 이용권이 활성화되었어요.
+          <Check size={16} /> 입금이 확인되어 생성권이 충전되었어요.
         </p>
         <button className="btn btn-primary h-11 w-full" onClick={() => router.push("/#/compose")}>글 만들러 가기</button>
       </div>
     );
   if (order.status !== "pending" || order.expired)
-    return <p className="mt-6 text-[14px] text-sub">이 주문은 더 이상 입금할 수 없습니다. 이용권을 다시 선택해 주세요.</p>;
+    return <p className="mt-6 text-[14px] text-sub">이 주문은 더 이상 입금할 수 없습니다. 생성권을 다시 선택해 주세요.</p>;
 
   if (!order.depositorName)
     return (
       <div className="mt-6 space-y-3">
         <label className="block text-[14px] font-semibold" htmlFor="dep">입금하실 분의 이름</label>
-        <p className="text-xs leading-5 text-sub">이체할 때 상대 통장에 찍히는 이름과 똑같이 입력해 주세요(보통 보내는 분 이름). 이름과 금액이 맞으면 입금 확인 후 자동으로 이용권이 켜져요.</p>
+        <p className="text-xs leading-5 text-sub">이체할 때 상대 통장에 찍히는 이름과 똑같이 입력해 주세요(보통 보내는 분 이름). 이름과 금액이 맞으면 입금 확인 후 자동으로 생성권이 충전돼요.</p>
         <input id="dep" className="field h-11 w-full" value={name} maxLength={20} placeholder="예: 홍길동" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && name.trim().length >= 2 && !saving && save()} />
         <button className="btn btn-primary h-11 w-full" disabled={saving || name.trim().length < 2} onClick={save}>
           {saving && <Loader2 size={15} className="animate-spin" />} 입금 계좌 확인하기
@@ -137,7 +137,7 @@ function BankTransfer({ order, onChange }: { order: Order; onChange: (o: Partial
       <ul className="space-y-1 text-xs leading-5 text-sub">
         <li>· 입금액은 {order.amount.toLocaleString()}원 그대로, 입금자명은 위 이름과 같게 보내 주세요.</li>
         {until && <li>· {until}까지 입금해 주세요. 지나면 주문이 만료됩니다.</li>}
-        <li>· 확인이 오래 걸리면 운영자가 입금을 직접 확인해 이용권을 켜 드려요.</li>
+        <li>· 확인이 오래 걸리면 운영자가 입금을 직접 확인해 생성권을 충전해 드려요.</li>
       </ul>
       <Link className="btn h-11 w-full" href="/#/compose">나중에 하기</Link>
     </div>
@@ -206,7 +206,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
         )}
         {order && (
           <>
-            <h1 className="mt-6 text-[20px] font-bold">{order.plan?.name ?? "이용권"} {order.provider === "bank_transfer" ? "구매" : "결제"}</h1>
+            <h1 className="mt-6 text-[20px] font-bold">{order.plan?.name ?? "생성권"} {order.provider === "bank_transfer" ? "구매" : "결제"}</h1>
             {order.plan?.features?.summary && <p className="mt-1 text-[14px] text-sub">{order.plan.features.summary}</p>}
             <div className="mt-6 flex items-baseline justify-between rounded-2xl bg-bg2 px-5 py-4">
               <span className="text-[14px] text-sub">{order.provider === "bank_transfer" ? "입금 금액" : "결제 금액"}</span>
@@ -219,7 +219,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
             ) : order.status === "paid" ? (
               <Link className="btn btn-primary mt-6 h-11 w-full" href="/#/compose">이미 결제된 주문입니다 · 돌아가기</Link>
             ) : order.status !== "pending" ? (
-              <p className="mt-6 text-[14px] text-sub">이 주문은 더 이상 결제할 수 없습니다. 이용권을 다시 선택해 주세요.</p>
+              <p className="mt-6 text-[14px] text-sub">이 주문은 더 이상 결제할 수 없습니다. 생성권을 다시 선택해 주세요.</p>
             ) : !order.available ? (
               <p className="mt-6 text-[14px] text-sub">결제 준비 중입니다. 잠시 뒤 다시 시도해 주세요.</p>
             ) : (

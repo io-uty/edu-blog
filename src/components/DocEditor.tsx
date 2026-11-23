@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Plus, Trash2, X } from "lucide-react";
-import { EXAMPLE_LABEL } from "@/lib/render";
 import type { Draft } from "@/lib/schemas";
 import { resolveBrand, type Settings } from "@/lib/settings";
 import { displayName, type TenantProfile } from "@/lib/tenant";
@@ -425,11 +424,11 @@ export default function DocEditor({
           )}
 
           {s.example && (
-            <div className="my-4 rounded-2xl border-l-4 border-brand bg-bg2 px-4 py-3">
+            <div className="my-4 rounded-2xl border border-line bg-bg2 px-4 py-3">
               <div className="mb-1 flex items-center justify-between text-xs text-sub">
                 <span>
-                  {s.example.kind === "practice" ? "연습용 예문" : "예시"} ·{" "}
-                  {s.example.is_fictional ? EXAMPLE_LABEL[s.example.kind] : "실제 사례로 표시됨 (근거 필요)"}
+                  {s.example.kind === "practice" ? "예문" : "예시"}
+                  {!s.example.is_fictional && " · 실제 사례로 표시됨 (근거 필요)"}
                 </span>
                 <button className="hover:text-err" onClick={() => setSection(i, { example: null })}>
                   예시 삭제

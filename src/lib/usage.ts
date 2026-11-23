@@ -34,33 +34,36 @@ export interface UsageSummary {
   image: { used: number; limit: number | null };
 }
 
-/** 현재 이용권과 사용량(이용권 시작 이후 합계) */
+type PlanRow = { id: string; name: string; is_trial: boolean; content_limit: number | null; image_limit: number | null };
+
+/** 남은 생성권: 유효한 체험·구매 묶음의 한도를 모두 더하고, 가장 이른 시작 이후 사용량을 뺀다(DB consume_usage 와 같은 계산) */
 export async function summary(tenantId: string): Promise<UsageSummary> {
   const admin = supabaseAdmin();
-  const { data: sub } = await admin
+  const now = new Date();
+  const { data: subs } = await admin
     .from("subscriptions")
     .select("status, started_at, expires_at, plans(id, name, is_trial, content_limit, image_limit)")
     .eq("tenant_id", tenantId)
     .in("status", ["trial", "active"])
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const plan = (sub?.plans ?? null) as unknown as { id: string; name: string; is_trial: boolean; content_limit: number | null; image_limit: number | null } | null;
-  const expired = sub?.expires_at && new Date(sub.expires_at) < new Date();
-  if (!sub || !plan || expired)
-    return { plan: null, status: expired ? "expired" : null, expiresAt: sub?.expires_at ?? null, content: { used: 0, limit: 0 }, image: { used: 0, limit: 0 } };
-  const { data: rows } = await admin
-    .from("usage_ledger")
-    .select("usage_type, quantity")
-    .eq("tenant_id", tenantId)
-    .gte("created_at", sub.started_at);
+    .order("started_at", { ascending: false });
+  const live = (subs ?? []).filter((s) => s.plans && (!s.expires_at || new Date(s.expires_at) > now));
+  if (!live.length) {
+    const last = subs?.[0];
+    return { plan: null, status: last ? "expired" : null, expiresAt: last?.expires_at ?? null, content: { used: 0, limit: 0 }, image: { used: 0, limit: 0 } };
+  }
+  const plans = live.map((s) => s.plans as unknown as PlanRow);
+  const since = live.map((s) => s.started_at).sort()[0];
+  const { data: rows } = await admin.from("usage_ledger").select("usage_type, quantity").eq("tenant_id", tenantId).gte("created_at", since);
   const sum = (t: UsageType) => (rows ?? []).filter((r) => r.usage_type === t).reduce((a, r) => a + r.quantity, 0);
+  const limit = (k: "content_limit" | "image_limit") => (plans.some((p) => p[k] === null) ? null : plans.reduce((a, p) => a + (p[k] ?? 0), 0));
+  const paid = live.find((s) => !(s.plans as unknown as PlanRow).is_trial);
+  const shown = (paid ?? live[0]).plans as unknown as PlanRow;
   return {
-    plan: { id: plan.id, name: plan.name, isTrial: plan.is_trial },
-    status: sub.status,
-    expiresAt: sub.expires_at,
-    content: { used: sum("content"), limit: plan.content_limit },
-    image: { used: sum("image"), limit: plan.image_limit },
+    plan: { id: shown.id, name: shown.name, isTrial: !paid },
+    status: (paid ?? live[0]).status,
+    expiresAt: (paid ?? live[0]).expires_at,
+    content: { used: sum("content"), limit: limit("content_limit") },
+    image: { used: sum("image"), limit: limit("image_limit") },
   };
 }
 

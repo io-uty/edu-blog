@@ -18,7 +18,7 @@ function verticalBlock(v: Vertical) {
   return `[교육 분야 — 이 분야의 독자와 구성에 맞춘다]
 - 분야: ${v.domain}
 - 기본 독자: ${v.defaultAudience}
-- 단정하면 안 되는 사실: ${v.factTopics} → "${v.confirmGuide}"처럼 확인 방법으로 안내
+- 단정하면 안 되는 사실: ${v.factTopics} → 쓰지 않거나 "${v.confirmGuide}"처럼 확인 방법으로 안내(이 안내는 글 전체에서 1번만)
 - 이 분야에서 잘 읽히는 구성:
 ${v.composition.map((c) => `  - ${c}`).join("\n")}
 - 예문 규칙: ${v.exampleRule}`;
@@ -29,7 +29,7 @@ const VERIFIED_SOURCES = `[검증된 자료]
 
 export const systemPrompt = (ctx: PromptCtx) =>
   [
-    `당신은 ${displayName(ctx.tenant)}의 공식 네이버 블로그 원고를 작성하는 교육 콘텐츠 에디터입니다. 학원 유형과 등록된 학원 정보에 맞춰 정확하고 실용적인 안내를 씁니다. 전문성은 독자의 상황을 구체적으로 짚고 판단 기준을 설명하는 방식으로 보여 주세요. 강사 경력·성과·합격률·수강생 사례·커리큘럼·시설 등은 등록 정보나 검증된 자료에 있는 내용만 말하고, 그럴듯하게 보충하지 마세요.`,
+    `당신은 ${displayName(ctx.tenant)} 선생님의 목소리로 학원 공식 네이버 블로그 글을 씁니다. 학부모와 학생이 '사람이 직접 쓴 글'로 느끼고 끝까지 읽게 만드는 것이 목표입니다. 전문성은 독자의 상황을 구체적으로 짚고 판단 기준을 알려 주는 방식으로 보여 주세요. 강사 경력·성과·합격률·수강생 사례·커리큘럼·시설 등은 등록 정보나 검증된 자료에 있는 내용만 말하고, 그럴듯하게 보충하지 마세요.`,
     COMMON_RULES,
     COMMON_FACT_RULES,
     tenantBrandBlock(ctx.tenant, ctx.brand),
@@ -78,7 +78,7 @@ ${suffixes.length ? `- 지역 표기 ${suffixes.map((t) => `"${t}"`).join(", ")}
 - 자극적·낚시성 문구 금지, 본문에서 다루지 않는 내용 금지
 
 [소주제] ${SECTION_RANGE.min}~${SECTION_RANGE.max}개(보통 3~4개). 서로 다른 정보, 중복 금지. 표는 전체 최대 ${MAX_TABLES}개.
-- 흐름: 독자가 놓치고 있는 문제 → 판단 기준·전략 → 혼자 지키기 어려운 부분과 관리 방식. 마지막 소주제 또는 그 앞 소주제에서 학원의 관리 방식(등록된 정보 범위 안)으로 자연스럽게 연결한다.
+- 흐름: 독자가 놓치고 있는 문제 → 판단 기준·바로 써먹을 방법. 학원 이야기는 마지막 소주제나 마무리 중 한 곳에서만(등록된 정보 범위 안). 매번 "혼자 하면 어렵다" 소주제를 만들지 않는다.
 [근거 없는 사실] 다음 항목은 기획에서 제외하거나 확인 방법 안내로 대체: ${JSON.stringify(analysis.facts_needed)}
 
 JSON 형식:
@@ -89,7 +89,7 @@ JSON 형식:
   "sections": [
     { "heading": "소주제(번호 없이)", "key_point": "이 소주제에서만 전달할 정보", "use_table": false, "use_example": true }
   ],
-  "closing_message": "마무리에서 권할 점검 행동과, 정확한 진단(상담)으로 이어지는 연결",
+  "closing_message": "독자가 오늘 해 볼 행동 하나와 상담 안내(한 문장)",
   "keyword_plan": "메인/서브 키워드를 어디에 자연스럽게 배치할지"
 }
 ${JSON_ONLY}`;
@@ -108,12 +108,13 @@ export function draftPrompt(topic: string, contentType: string, analysis: Analys
 
 [구성]
 - 인사말은 시스템이 붙이므로 쓰지 않는다.
-- introduction 1~2문단: 첫 문장에서 현장 경험에서 나온 핵심 판단을 단정형으로. 이어서 독자가 지금 겪고 있을 상황을 구체적으로 짚는다. "이 글에서는 ~를 정리했습니다" 같은 목차 소개 문장은 쓰지 않는다.
-- sections: 기획의 소주제 수와 순서 그대로. heading에 번호 금지(시스템이 부여). 각 2~4문단.
+- introduction 1~2문단: 첫 문장은 상담에서 자주 듣는 말, 수업에서 보는 장면, 핵심 판단 중 주제에 맞는 것으로 시작한다(매번 같은 틀 금지). "이 글에서는 ~를 정리했습니다" 같은 목차 소개 문장은 쓰지 않는다.
+- sections: 기획의 소주제 수와 순서 그대로. heading에 번호 금지(시스템이 부여). 각 2~5문단(한 문장짜리 짧은 문단 포함).
   - bullets: 체크리스트·단계·확인 항목이 있을 때만 짧은 항목 배열, 없으면 null
   - table: use_table=true인 곳에만, 없으면 null
-  - example: use_example=true인 곳에만, 없으면 null. 예문 바로 다음 문단에서 근거를 짚어 설명한다.
-- conclusion 1~2문단: 상담 전에 스스로 점검할 것 2~3가지 → 지금 위치를 정확히 진단받는 것이 다음 단계라는 흐름으로 "${name}" 상담을 권한다. 본문 요약을 반복하지 않는다.
+  - example: use_example=true인 곳에만, 없으면 null.
+  - 화면에는 문단 → bullets → 표 → 예시 순서로 붙는다. 예시·표·목록을 "아래"로 가리키는 문장은 그 소주제의 마지막 문단에만 쓰고, 예시에 대한 설명은 예시 앞 문단에서 미리 짚는다.
+- conclusion 1~2문단: 독자가 오늘 바로 해 볼 행동 하나 → "${name}" 상담 안내 한 문장. 본문 요약·정해진 마무리 문장("진단받는 것이 다음 단계") 금지.
 ${closing ? `  마무리 소제목("${closing}")은 시스템이 붙인다.\n` : ""}- 본문(인사말·태그 제외, 공백 포함) ${LENGTH_TARGET.min}~${LENGTH_TARGET.max}자. 분량을 위해 반복하지 않는다.
 - hashtags: 이 글의 주제 태그 정확히 ${TOPIC_HASHTAG_COUNT}개만. '#' 없이, 띄어쓰기 없이. 예) ${JSON.stringify(v.hashtagExample)}
   학원명·지역 태그는 시스템이 붙이므로 넣지 않는다.
@@ -154,6 +155,7 @@ export function polishPrompt(p: Polish, ctx: PromptCtx) {
 - 문장의 핵심 명사·개념어는 결과에 그대로 남긴다. 당위("~해야 합니다")·추측("~일 수 있습니다")의 강도를 바꾸지 않는다.
 - 존댓말 등급은 원문과 같게 둔다.
 - 이미 자연스러운 문장은 손대지 않는다. 바꾸는 양은 전체의 30% 안쪽.
+- 특히 고칠 것: 문단 끝 교훈·격언 한 줄(사실 서술로 바꾸거나 앞 문장에 녹인다), 같은 확인 안내의 반복(첫 번째만 남기고 뒤는 그 문장만 뺀다), 문장마다 끼워 넣은 긴 키워드 구(자연스러운 말로), 40자를 훌쩍 넘는 문장이 이어질 때(둘로 나눈다).
 - 소제목은 짧은 단정형을 유지하고, 어색할 때만 고친다.
 - 금지 표현: ${[...BANNED_PHRASES, ...ctx.tenant.prohibited].map((x) => `"${x}"`).join(", ")}
 

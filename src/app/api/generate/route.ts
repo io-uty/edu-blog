@@ -43,7 +43,7 @@ export async function POST(req: Request) {
         return Response.json(
           {
             code: "QUOTA_EXCEEDED",
-            error: "무료 체험이 완료되었습니다. 계속해서 학원 맞춤형 블로그 콘텐츠를 제작하려면 이용권을 선택해 주세요.",
+            error: "무료 체험(또는 생성권)을 모두 사용했습니다. 생성권을 구매하면 계속 만들 수 있습니다.",
             used: r.used,
             limit: r.usage_limit,
           },

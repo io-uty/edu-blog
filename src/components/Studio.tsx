@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LogIn, LogOut, Menu } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { derive } from "@/lib/derive";
 import { idbDel, idbSet } from "@/lib/idb";
 import { targetKey, type ImageCopy, type ImageTarget } from "@/lib/imageCopy";
@@ -20,13 +20,13 @@ import {
   type ImageItem,
 } from "@/lib/store";
 import OnboardingView from "./OnboardingView";
+import Logo from "./Logo";
 import Paywall from "./Paywall";
 import { contentLeft, type PaymentInfo, type PlanInfo, type UsageInfo } from "@/lib/billingTypes";
 import ComposeView, { type Form, type StageState } from "./ComposeView";
 import EditorView, { type SaveState } from "./EditorView";
 import { imageFileName, saveBlob } from "./exporter";
 import { copyBusyKey, type ImageActions } from "./images";
-import Logo from "./Logo";
 import { HistoryView, ListView } from "./Pages";
 import PublishView from "./PublishView";
 import SettingsView from "./SettingsView";
@@ -299,7 +299,7 @@ export default function Studio() {
 
   /** 지정한 자리의 이미지 문구를 (다시) 만든다. 다른 이미지는 건드리지 않는다. */
   const requestCopy = useCallback(
-    async (docId: string, targets: ImageTarget[], draftOverride?: Draft, meta?: { topic: string; contentType: string }): Promise<string | null> => {
+    async (docId: string, targets: ImageTarget[], draftOverride?: Draft, meta?: { topic: string; contentType: string }, auto = false): Promise<string | null> => {
       const doc = docsRef.current.find((d) => d.id === docId);
       const draft = draftOverride ?? doc?.draft;
       if (!draft) return "문서를 찾을 수 없습니다.";
@@ -315,6 +315,7 @@ export default function Studio() {
             brand: settings.brand,
             tenant,
             targets,
+            auto,
           }),
         });
         const j = await r.json().catch(() => ({}));
@@ -505,7 +506,8 @@ export default function Studio() {
       // 이미지 문구는 글이 저장된 뒤 만든다. 실패해도 글은 그대로 남는다.
       if (input.images) {
         setStages((s) => ({ ...s, images: "running" }));
-        const err = await requestCopy(doc.id, allTargets(doc.draft), doc.draft, { topic: doc.topic, contentType: doc.contentType });
+        // 썸네일 + 글 성격에 맞게 고른 소주제 이미지(합계 2~5장)
+        const err = await requestCopy(doc.id, allTargets(doc.draft), doc.draft, { topic: doc.topic, contentType: doc.contentType }, true);
         setStages((s) => ({ ...s, images: err ? "error" : "done" }));
         if (err) notify(`글은 저장되었습니다. 이미지는 편집 화면에서 다시 만들어 주세요. (${err})`);
       }
@@ -532,7 +534,8 @@ export default function Studio() {
     if (!api.illustration) return;
     for (const d of docs) {
       for (const it of d.images ?? []) {
-        if (it.illustration !== "none" || autoIllustrated.current.has(it.id) || Date.now() - d.createdAt > 10 * 60_000) continue;
+        // 내용 정리 카드는 사진을 쓰지 않으므로 그림을 만들지 않는다(이미지 생성권 절약)
+        if (it.illustration !== "none" || it.copy.visual === "card" || autoIllustrated.current.has(it.id) || Date.now() - d.createdAt > 10 * 60_000) continue;
         autoIllustrated.current.add(it.id);
         illustrate(d.id, it.id);
       }
@@ -657,7 +660,19 @@ export default function Studio() {
   // ---------- 렌더 ----------
   let view: React.ReactNode;
   if (!ready) {
-    view = null;
+    // 계정·학원 정보를 불러오는 동안 화면 자리를 먼저 보여 준다
+    view = (
+      <div className="flex min-h-0 flex-1 flex-col" aria-busy="true" aria-label="불러오는 중">
+        <div className="flex h-14 items-center border-b border-line px-5 md:px-8">
+          <div className="skeleton h-5 w-40" />
+        </div>
+        <div className="mx-auto w-full max-w-[720px] space-y-4 px-5 py-10 md:px-8">
+          <div className="skeleton h-7 w-48" />
+          <div className="skeleton h-12 w-full" />
+          <div className="skeleton h-4 w-2/3" />
+        </div>
+      </div>
+    );
   } else if (needsOnboarding || route.name === "onboarding") {
     view = (
       <OnboardingView
@@ -683,7 +698,7 @@ export default function Studio() {
               ? `무료 체험 ${left}회 남음`
               : u.content.limit === null
                 ? `${u.plan.name} 이용 중`
-                : `${u.plan.name} · ${left}편 남음`
+                : `생성권 ${left}개 남음`
             : undefined
         }
         form={form}
@@ -772,7 +787,9 @@ export default function Studio() {
           <Menu size={16} />
         </button>
         <Logo />
-        {cloud ? (
+        {!ready ? (
+          <div className="skeleton ml-auto h-8 w-20" aria-hidden />
+        ) : cloud ? (
           <form action="/auth/signout" method="post" className="ml-auto">
             <button className="btn btn-sm gap-1.5" aria-label="로그아웃">
               <LogOut size={14} /> 로그아웃
@@ -791,6 +808,7 @@ export default function Studio() {
           api={api}
           tenantName={tenant?.onboardedAt ? displayName(tenant) : ""}
           locked={needsOnboarding}
+          ready={ready}
           email={cloud?.email ?? null}
           onNavigate={go}
           onRecheck={checkApi}

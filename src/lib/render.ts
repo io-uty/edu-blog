@@ -1,14 +1,6 @@
 import type { Draft } from "./schemas";
 import { DEFAULT_SETTINGS, resolveBrand, type FormatTemplate, type Settings } from "./settings";
 
-export const EXAMPLE_LABEL = {
-  practice: "※ 연습을 위해 만든 예문입니다(실제 기출 아님).",
-  scenario: "※ 가상의 예시입니다.",
-} as const;
-
-type Section = Draft["sections"][number];
-const exampleLabel = (e: NonNullable<Section["example"]>) => (e.is_fictional ? EXAMPLE_LABEL[e.kind] : "");
-
 /** 본문에 이미지가 들어갈 위치(썸네일 여부, 이미지가 있는 소주제 번호) */
 export interface ImageSlots {
   thumbnail: boolean;
@@ -53,11 +45,7 @@ export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?
     sec.paragraphs.forEach((p) => out.push(p, ...gap));
     if (sec.bullets?.length) out.push(...sec.bullets.map((b) => `${f.listMarker} ${b}`), ...gap);
     if (sec.table) out.push(sec.table.headers.join(" | "), ...sec.table.rows.map((r) => r.join(" | ")), ...gap);
-    if (sec.example) {
-      const label = exampleLabel(sec.example);
-      if (label) out.push(label);
-      out.push(sec.example.text, ...gap);
-    }
+    if (sec.example) out.push(sec.example.text, ...gap);
   });
   if (brand.closingHeading) out.push(brand.closingHeading, ...gap);
   out.push(...d.conclusion.flatMap((p) => [p, ...gap]));
@@ -108,11 +96,7 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
         gap,
       );
     }
-    if (sec.example) {
-      const label = exampleLabel(sec.example);
-      if (label) html.push(P(span(label, "color:#888888;")));
-      html.push(`<blockquote>${body(sec.example.text)}</blockquote>`, gap);
-    }
+    if (sec.example) html.push(`<blockquote>${body(sec.example.text)}</blockquote>`, gap);
   });
   if (brand.closingHeading) html.push(heading(brand.closingHeading), gap);
   html.push(...d.conclusion.flatMap((p) => [body(p), gap]));

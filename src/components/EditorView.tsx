@@ -112,8 +112,8 @@ export default function EditorView({
       />
       <StepBar current={1} />
       {tip && (
-        <div className="mx-4 mt-3 flex items-start gap-3 rounded-2xl bg-[#fff7e0] px-5 py-3 text-[14px] leading-6 md:mx-6">
-          <Lightbulb size={18} className="mt-0.5 shrink-0 text-warn" />
+        <div className="mx-4 mt-3 flex items-start gap-3 rounded-2xl border border-[#fbd9cc] bg-brand-soft px-5 py-3 text-[14px] leading-6 md:mx-6">
+          <Lightbulb size={18} className="mt-0.5 shrink-0 text-brand" />
           <div className="flex-1">
             <p>
               <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 선택하면 <b>문장 다듬기·길이 줄이기</b> 같은 도구가 나타납니다.

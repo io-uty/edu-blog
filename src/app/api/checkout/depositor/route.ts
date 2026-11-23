@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const { data: pay } = await db.from("payments").select("order_id, tenant_id, amount, status, provider, expires_at").eq("order_id", p.data.orderId).maybeSingle();
   if (!pay || pay.tenant_id !== s.tenantId || pay.provider !== "bank_transfer") return Response.json({ error: "주문을 찾을 수 없습니다." }, { status: 404 });
   if (pay.status !== "pending") return Response.json({ error: "이미 처리된 주문입니다." }, { status: 409 });
-  if (pay.expires_at && new Date(pay.expires_at) < new Date()) return Response.json({ error: "주문 시간이 지났습니다. 이용권을 다시 선택해 주세요." }, { status: 410 });
+  if (pay.expires_at && new Date(pay.expires_at) < new Date()) return Response.json({ error: "주문 시간이 지났습니다. 생성권을 다시 선택해 주세요." }, { status: 410 });
 
   const { data: others } = await db
     .from("payments")

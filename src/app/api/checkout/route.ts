@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const s = await getSession();
   if (!s) return UNAUTHORIZED();
   if (!s.tenantId) return Response.json({ error: "학원 정보를 먼저 등록해 주세요." }, { status: 403 });
-  if (s.role === "editor") return Response.json({ error: "이용권은 학원 관리자만 구매할 수 있습니다." }, { status: 403 });
+  if (s.role === "editor") return Response.json({ error: "생성권은 학원 관리자만 구매할 수 있습니다." }, { status: 403 });
   const method = activeMethod();
   if (!method) return Response.json({ code: "PAYMENT_UNAVAILABLE", error: "결제 준비 중입니다. 잠시 뒤 다시 시도해 주세요." }, { status: 503 });
   const p = z.object({ planId: z.string().max(40) }).safeParse(await req.json().catch(() => null));
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
     .maybeSingle();
   if (!data || data.tenant_id !== s.tenantId) return Response.json({ error: "주문을 찾을 수 없습니다." }, { status: 404 });
   const plan = data.plans as unknown as { name: string; features?: { summary?: string } } | null;
-  const base = { orderId: data.order_id, amount: data.amount, status: data.status, provider: data.provider, plan, orderName: `딸깍 ${plan?.name ?? "이용권"}` };
+  const base = { orderId: data.order_id, amount: data.amount, status: data.status, provider: data.provider, plan, orderName: `딸깍 ${plan?.name ?? "생성권"}` };
 
   if (data.provider === "bank_transfer") {
     const bank = bankConfig();

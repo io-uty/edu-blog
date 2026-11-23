@@ -26,6 +26,7 @@ export default function Sidebar({
   api,
   tenantName,
   locked,
+  ready,
   email,
   onNavigate,
   onRecheck,
@@ -35,6 +36,7 @@ export default function Sidebar({
   api: ApiState;
   tenantName: string;
   locked: boolean;
+  ready: boolean;
   email: string | null;
   onNavigate: (r: Route) => void;
   onRecheck: () => void;
@@ -79,7 +81,9 @@ export default function Sidebar({
         ))}
       </nav>
       <div className="border-t border-line px-4 py-3">
-        {email ? (
+        {!ready ? (
+          <div className="skeleton h-10" aria-hidden />
+        ) : email ? (
           <form action="/auth/signout" method="post" className="space-y-2">
             <p className="truncate px-1 text-xs text-sub" title={email}>{email}</p>
             <button className="btn h-10 w-full justify-center gap-2 text-[14px]">

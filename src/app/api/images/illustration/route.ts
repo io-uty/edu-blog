@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   if (session?.tenantId) {
     const r = await consume(session.tenantId, session.user.id, "image", key).catch(() => null);
     if (!r) return Response.json({ error: "사용량을 확인하지 못했습니다." }, { status: 500 });
-    if (!r.allowed) return Response.json({ code: "QUOTA_EXCEEDED", error: "이미지 생성 횟수를 모두 사용했습니다. 이용권을 선택해 주세요." }, { status: 402 });
+    if (!r.allowed) return Response.json({ code: "QUOTA_EXCEEDED", error: "이미지 생성 횟수를 모두 사용했습니다. 생성권을 구매해 주세요." }, { status: 402 });
   }
   const undo = async () => {
     if (session?.tenantId) await refund(session.tenantId, session.user.id, "image", key);

@@ -58,7 +58,7 @@ export async function confirmOrder(orderId: string, by: string, txId: string): P
   const { error } = await db.rpc("activate_subscription", { p_order: orderId, p_payment_key: txId, p_raw: { method: "계좌이체", confirmedBy: by } });
   if (error) {
     console.error("[bank:activate]", error.message);
-    return { ok: false, error: "이용권을 적용하지 못했습니다." };
+    return { ok: false, error: "생성권을 충전하지 못했습니다." };
   }
   await db.from("payments").update({ confirmed_by: by, deposit_tx_id: txId }).eq("order_id", orderId);
   await logEvent(pay.tenant_id, null, "payment_completed", { plan: pay.plan_id, method: "bank_transfer", auto: by.startsWith("auto:") }, orderId);

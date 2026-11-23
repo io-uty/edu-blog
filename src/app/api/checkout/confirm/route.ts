@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     else activated = true;
   }
   if (!activated)
-    return Response.json({ ok: false, pending: true, error: "결제는 승인되었지만 이용권 적용이 지연되고 있습니다. 이 화면을 새로고침하면 다시 반영합니다." }, { status: 202 });
+    return Response.json({ ok: false, pending: true, error: "결제는 승인되었지만 생성권 충전이 지연되고 있습니다. 이 화면을 새로고침하면 다시 반영합니다." }, { status: 202 });
   await logEvent(s.tenantId, s.user.id, "payment_completed", { plan: pay.plan_id, mode: pay.mode }, p.data.orderId);
   return Response.json({ ok: true });
 }
