@@ -13,6 +13,8 @@ export const AnalysisSchema = z.object({
   academy_angle: z.string().optional(),
   // 사실 확인이 필요한 정보(전형·일정·인원·합격선·수업료·이벤트 등)
   facts_needed: z.array(z.string()),
+  // 웹 검색으로 공식 출처에서 확인한 사실(이전에 저장된 글에는 없음)
+  verified_facts: z.array(z.object({ fact: z.string(), source: z.string() })).optional(),
   // 근거 자료 없이 작성 가능한지
   can_write_without_sources: z.boolean(),
 });

@@ -22,6 +22,8 @@ export function runAnalysis(i: PipelineInput) {
     schema: AnalysisSchema,
     mock: () => mockAnalysis(i.topic),
     maxTokens: 1500,
+    // 일정·제도·통계처럼 확인이 필요한 사실만 공식 출처에서 찾아본다
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 }],
   });
 }
 

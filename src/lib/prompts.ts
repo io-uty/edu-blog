@@ -25,7 +25,8 @@ ${v.composition.map((c) => `  - ${c}`).join("\n")}
 }
 
 const VERIFIED_SOURCES = `[검증된 자료]
-- 현재 제공된 검증 자료 없음. 공식 확인이 필요한 사실은 쓰지 않는다.`;
+- 분석 단계에서 웹 검색으로 공식 출처를 확인한 사실은 분석의 verified_facts에 출처와 함께 들어 있다. 이것만 A 유형 사실로 쓸 수 있고, 쓸 때는 "교육부 발표에 따르면"처럼 출처 기관을 문장 안에서 밝힌다.
+- verified_facts에 없는 공식 사실(일정·제도·인원·합격선 등)은 쓰지 않는다.`;
 
 export const systemPrompt = (ctx: PromptCtx) =>
   [
@@ -46,6 +47,11 @@ export function analysisPrompt(topic: string, contentType: string, ctx: PromptCt
 콘텐츠 유형: ${contentType}
 기본 독자: ${ctx.tenant.targetAudience || v.defaultAudience}
 
+[웹 검색]
+- 글의 깊이를 더할 최신 제도·일정·공식 통계·개정 내용이 필요하면 web_search로 찾아본다. 학습법·개념 설명처럼 검색이 필요 없는 주제면 검색하지 않는다.
+- 교육부, 한국교육과정평가원, 시·도 교육청, 대학 입학처, 시험 주관 기관 같은 공식 출처에서 확인된 내용만 verified_facts에 넣는다. 블로그·카페·커뮤니티 글은 근거로 쓰지 않는다.
+- 확인한 사실은 verified_facts에, 확인하지 못한 사실은 facts_needed에 넣는다. 검색하지 않았으면 verified_facts는 빈 배열.
+
 JSON 형식:
 {
   "core_topic": "핵심 주제",
@@ -56,7 +62,8 @@ JSON 형식:
   "sub_keywords": ["서브 키워드 2~4개"],
   "core_message": "글에서 전달할 핵심 메시지 한 문장(전문가의 판단이 담긴 주장)",
   "academy_angle": "이 주제에서 혼자 준비할 때 막히는 지점과, 체계적 관리·전문가 진단이 그걸 어떻게 푸는지 한 문장",
-  "facts_needed": ["공식 근거가 있어야 쓸 수 있는 사실 항목. 없으면 빈 배열"],
+  "verified_facts": [{ "fact": "웹 검색으로 확인한 사실 한 문장", "source": "출처 기관·페이지 이름" }],
+  "facts_needed": ["공식 근거가 필요한데 검색으로도 확인하지 못한 사실 항목. 없으면 빈 배열"],
   "can_write_without_sources": true 또는 false
 }
 ${JSON_ONLY}`;
@@ -95,6 +102,9 @@ JSON 형식:
 ${JSON_ONLY}`;
 }
 
+/** 안부 인사용 오늘 날짜(한국 시간) */
+const today = () => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric" }).format(new Date());
+
 export function draftPrompt(topic: string, contentType: string, analysis: Analysis, plan: Plan, ctx: PromptCtx) {
   const v = verticalOf(ctx.tenant.academyType);
   const name = displayName(ctx.tenant);
@@ -107,9 +117,12 @@ export function draftPrompt(topic: string, contentType: string, analysis: Analys
 기획: ${JSON.stringify(plan)}
 
 [구성]
-- 인사말은 시스템이 붙이므로 쓰지 않는다.
-- introduction 1~2문단: 첫 문장에서 독자의 질문에 대한 답(결론)을 바로 말한다. 이어서 기준이나 헷갈리는 지점을 짚는다. "이 글에서는 ~를 정리했습니다" 같은 목차 소개 문장은 쓰지 않는다.
-- sections: 기획의 소주제 수와 순서 그대로. heading에 번호 금지(시스템이 부여). 각 2~3문단, 문단마다 2~4문장. 소제목은 독자가 할 일·구분할 기준을 한 문장으로.
+- "안녕하세요! {학원명}입니다" 같은 고정 인사말은 시스템이 붙이므로 쓰지 않는다.
+- introduction 2~3문단:
+  - 첫 문단은 고정 인사말 바로 뒤에 이어질 안부 1~2문장. 지금 시기(${today()})와 이 글의 주제에 맞춰 독자의 요즘 상황을 헤아리는 말로 쓴다(예: 시험 기간이면 "기말고사 준비로 바쁘게 지내고 계시죠?", 방학 전이면 방학 계획 이야기). "안녕하세요"를 다시 쓰지 않고, 날씨 이야기만 늘어놓지 않으며, 주제와 동떨어진 안부는 쓰지 않는다.
+  - 다음 문단부터 본론: 독자의 질문에 대한 답(결론)을 말하고, 기준이나 헷갈리는 지점을 짚는다. "이 글에서는 ~를 정리했습니다" 같은 목차 소개 문장은 쓰지 않는다.
+- sections: 기획의 소주제 수와 순서 그대로. heading에 번호 금지(시스템이 부여). 각 3~4문단, 문단마다 3~5문장. 소제목은 독자가 할 일·구분할 기준을 한 문장으로.
+  - 각 소주제는 "무엇을(기준·개념) → 왜 그런지(원리·이유) → 어떻게(구체적 단계·수치·예) → 흔히 하는 실수와 바로잡는 법" 중 필요한 것을 갖춰 깊이 있게 쓴다. 일반론으로 끝내지 않고, 현장에서 가르치는 사람이 아는 구체적인 판단 기준을 담는다.
   - bullets: 체크리스트·단계·확인 항목이 있을 때만 짧은 항목 배열, 없으면 null
   - table: use_table=true인 곳에만, 없으면 null
   - example: use_example=true인 곳에만, 없으면 null.

@@ -30,6 +30,7 @@ export async function generateJson<T>(opts: {
   schema: z.ZodType<T>;
   mock: () => T;
   maxTokens?: number;
+  tools?: Anthropic.ToolUnion[];
 }): Promise<T> {
   if (IS_MOCK || !client) return opts.schema.parse(opts.mock());
   // Claude Sonnet 5.5 는 사고(thinking)가 항상 켜져 있고 그 토큰도 max_tokens 에 포함된다.
@@ -43,6 +44,7 @@ export async function generateJson<T>(opts: {
       max_tokens: maxTokens,
       system: opts.system,
       messages: [{ role: "user", content: opts.user }],
+      ...(opts.tools && { tools: opts.tools }),
       output_config: { format: zodOutputFormat(opts.schema as z.ZodType<T>) },
     });
     if (res.stop_reason === "refusal") throw new Error("모델이 요청을 거절했습니다.");
@@ -64,6 +66,7 @@ export async function generateJson<T>(opts: {
       max_tokens: maxTokens,
       system: opts.system,
       messages,
+      ...(opts.tools && { tools: opts.tools }),
     });
     const text = res.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
