@@ -1,0 +1,389 @@
+<title>뚝딱 사용설명서</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+  :root {
+    --ink: #17142b; --sub: #5b5873; --line: #e6e3f0; --soft: #f6f5fb;
+    --brand: #6c4de6; --brand-soft: #efebfd; --red: #e11d1d; --bg: #fff; --card: #fff; --onbrand: #fff;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink:#ece9f7; --sub:#a9a5c2; --line:#2e2a45; --soft:#1c1930; --brand:#9a85ff; --brand-soft:#2a2350; --red:#ff4d4d; --bg:#121022; --card:#17142b; --onbrand:#17142b; color-scheme: dark } }
+  :root[data-theme="dark"] { --ink:#ece9f7; --sub:#a9a5c2; --line:#2e2a45; --soft:#1c1930; --brand:#9a85ff; --brand-soft:#2a2350; --red:#ff4d4d; --bg:#121022; --card:#17142b; --onbrand:#17142b; color-scheme: dark }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.7 "Noto Sans KR", system-ui, sans-serif; word-break: keep-all; }
+  .wrap { max-width: 920px; margin: 0 auto; padding-block: 56px 80px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { line-height: 1.3; margin: 0; }
+  img { max-width: 100%; display: block; }
+
+  /* 표지 */
+  .cover { padding-bottom: 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .brand i { width: 28px; height: 28px; border-radius: 8px; background: var(--brand); display: inline-block; }
+  .cover h1 { font-size: 40px; font-weight: 800; margin: 28px 0 10px; letter-spacing: -0.02em; }
+  .cover p.lead { font-size: 17px; color: var(--sub); margin: 0; }
+  .meta { margin-top: 22px; font-size: 13px; color: var(--sub); }
+
+  .persona { margin-top: 36px; display: grid; grid-template-columns: 88px 1fr; gap: 20px; align-items: center; background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; }
+  .avatar { width: 88px; height: 88px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; font-weight: 800; font-size: 28px; }
+  .persona .tag { font-size: 12px; font-weight: 700; color: var(--brand); letter-spacing: .04em; }
+  .persona h3 { font-size: 19px; margin: 2px 0 6px; }
+  .persona p { margin: 0; color: var(--sub); font-size: 14px; }
+
+  /* 전체 흐름 */
+  .flow-title { margin: 48px 0 16px; font-size: 20px; font-weight: 800; }
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; counter-reset: f; }
+  .flow a { display: block; text-decoration: none; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--card); }
+  .flow a b { display: block; font-size: 12px; color: var(--brand); }
+  .flow a span { font-size: 14px; font-weight: 700; }
+  .flow .phase { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--sub); margin-top: 6px; }
+  .legend { margin-top: 18px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--sub); }
+  .legend i { width: 30px; height: 18px; border: 3px solid var(--red); border-radius: 5px; display: inline-block; }
+
+  /* 단계 */
+  section.step { padding-top: 56px; margin-top: 56px; border-top: 1px solid var(--line); }
+  .step-head { display: flex; gap: 16px; align-items: flex-start; }
+  .num { flex: none; width: 46px; height: 46px; border-radius: 12px; background: var(--brand); color: var(--onbrand); font-weight: 800; font-size: 18px; display: grid; place-items: center; }
+  .step-head h2 { font-size: 25px; font-weight: 800; letter-spacing: -0.01em; }
+  .step-head p { margin: 4px 0 0; color: var(--sub); }
+  .where { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 2px 10px; }
+
+  figure { margin: 24px 0 0; }
+  figure .shot { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 6px 24px rgba(23, 20, 43, .07); }
+  figure.narrow .shot { max-width: 560px; }
+  figcaption { font-size: 13px; color: var(--sub); margin-top: 8px; }
+
+  ol.do { margin: 18px 0 0; padding: 0; list-style: none; counter-reset: d; }
+  ol.do li { position: relative; padding: 0 0 10px 34px; counter-increment: d; }
+  ol.do li::before { content: counter(d); position: absolute; left: 0; top: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .btn { display: inline-block; border: 2px solid var(--red); border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 14px; line-height: 1.5; }
+  .next { margin-top: 14px; padding: 12px 16px; border-radius: 10px; background: var(--soft); font-size: 14px; }
+  .next b { color: var(--brand); }
+  .tip { margin-top: 12px; padding: 12px 16px; border-left: 3px solid var(--brand); background: var(--soft); font-size: 14px; color: var(--sub); }
+  .sub-h { margin-top: 34px; font-size: 17px; font-weight: 800; }
+
+  table.ref { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+  table.ref th, table.ref td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.ref th { width: 30%; color: var(--sub); font-weight: 600; background: var(--soft); }
+
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; color: var(--sub); }
+
+  @media (max-width: 640px) {
+    .wrap { padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    .cover h1 { font-size: 30px; }
+    .flow { grid-template-columns: repeat(2, 1fr); }
+    .persona { grid-template-columns: 1fr; }
+  }
+  @page { size: A4; margin: 14mm 12mm; }
+  @media print {
+    .wrap { padding: 0; max-width: none; }
+    section.step { break-before: page; border-top: 0; margin-top: 0; padding-top: 0; }
+    figure, .next, .tip, table.ref { break-inside: avoid; }
+    figure .shot { box-shadow: none; }
+    .flow a { break-inside: avoid; }
+  }
+</style>
+<div class="wrap">
+
+<header class="cover">
+  <div class="brand"><i></i>뚝딱</div>
+  <h1>뚝딱 사용설명서</h1>
+  <p class="lead">학원 블로그 글을 주제 한 줄로 만들어 네이버 블로그에 올리기까지의 과정을 순서대로 안내합니다.</p>
+  <p class="meta">대상: 뚝딱을 처음 쓰는 학원 운영자·실장 · 2026년 11월 기준</p>
+
+  <div class="persona">
+    <div class="avatar">김</div>
+    <div>
+      <div class="tag">이 설명서의 예시 사용자</div>
+      <h3>김하늘 원장 · 하늘수학학원 대치점</h3>
+      <p>중·고등 수학 학원을 운영합니다. 블로그를 꾸준히 올리고 싶지만 글 쓸 시간이 부족합니다. 오늘 처음 뚝딱에 가입해 <b>"고1 수학 내신 대비 오답 노트 정리법"</b> 글을 네이버 블로그에 올리려고 합니다.</p>
+    </div>
+  </div>
+
+  <h2 class="flow-title">전체 흐름</h2>
+  <nav class="flow">
+    <div class="phase">시작하기</div>
+    <a href="#s1"><b>01</b><span>회원가입</span></a>
+    <a href="#s2"><b>02</b><span>학원 정보 등록</span></a>
+    <div class="phase">글 만들기</div>
+    <a href="#s3"><b>03</b><span>주제 입력</span></a>
+    <a href="#s4"><b>04</b><span>글 생성</span></a>
+    <a href="#s5"><b>05</b><span>내용 확인·수정</span></a>
+    <a href="#s6"><b>06</b><span>네이버에 올리기</span></a>
+    <div class="phase">관리하기</div>
+    <a href="#s7"><b>07</b><span>콘텐츠 목록</span></a>
+    <a href="#s8"><b>08</b><span>생성 이력</span></a>
+    <a href="#s9"><b>09</b><span>블로그 설정</span></a>
+    <a href="#s10"><b>10</b><span>생성권 구매</span></a>
+    <a href="#s11"><b>11</b><span>다시 로그인</span></a>
+  </nav>
+  <div class="legend"><i></i> 화면의 빨간 상자는 그 단계에서 누를 버튼입니다.</div>
+</header>
+
+<!-- 01 -->
+<section class="step" id="s1">
+  <div class="step-head"><div class="num">01</div><div>
+    <h2>회원가입</h2>
+    <p>계정을 만들면 무료 체험으로 글 2편을 바로 만들 수 있습니다.</p>
+  </div></div>
+
+  <figure class="narrow"><div class="shot"><img src="img/00-login-signup.png" alt="로그인 화면의 회원가입 링크"></div>
+    <figcaption>로그인 화면</figcaption></figure>
+  <ol class="do">
+    <li>뚝딱에 접속하면 로그인 화면이 나옵니다. 처음이라면 아래의 <span class="btn">회원가입</span>을 누릅니다.</li>
+  </ol>
+
+  <figure class="narrow"><div class="shot"><img src="img/01-signup-1.png" alt="회원가입 1단계"></div>
+    <figcaption>회원가입 1/2 · 기본 정보</figcaption></figure>
+  <ol class="do">
+    <li><b>이름</b>, <b>전화번호</b>, <b>이메일</b>을 입력합니다. 전화번호는 숫자만 치면 하이픈(-)이 자동으로 들어갑니다.</li>
+    <li><span class="btn">다음</span>을 누릅니다.</li>
+  </ol>
+
+  <figure class="narrow"><div class="shot"><img src="img/01-signup-2.png" alt="회원가입 2단계"></div>
+    <figcaption>회원가입 2/2 · 아이디·비밀번호</figcaption></figure>
+  <ol class="do">
+    <li><b>아이디</b>(영문 소문자·숫자·_ 4~20자)와 <b>비밀번호</b>(8자 이상)를 입력하고, 비밀번호를 한 번 더 입력합니다.</li>
+    <li><span class="btn">가입하기</span>를 누릅니다.</li>
+  </ol>
+  <div class="next">가입이 끝나면 자동으로 로그인되어 <b>02 학원 정보 등록</b> 화면으로 이동합니다.</div>
+</section>
+
+<!-- 02 -->
+<section class="step" id="s2">
+  <div class="step-head"><div class="num">02</div><div>
+    <h2>학원 정보 등록</h2>
+    <p>처음 한 번만 입력합니다. 여기 입력한 내용이 모든 글과 이미지에 쓰입니다.</p>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/02-onboarding.png" alt="학원 정보 등록"></div>
+    <figcaption>학원 정보 등록 · 기본 항목</figcaption></figure>
+  <ol class="do">
+    <li><b>학원 유형</b>을 고릅니다. 김하늘 원장은 <b>수학학원</b>을 선택했습니다.</li>
+    <li><b>학원명</b>(필수)과 <b>지점명</b>을 입력합니다.</li>
+    <li><span class="btn">주소 검색</span>을 눌러 학원 주소를 찾고, 층·호수를 입력합니다.</li>
+    <li><b>대표 전화</b>를 입력합니다. 홈페이지가 있으면 주소를 넣어 두세요. 학원 정보를 자동으로 찾아 줍니다.</li>
+  </ol>
+
+  <figure><div class="shot"><img src="img/02-onboarding-detail.png" alt="자세한 정보"></div>
+    <figcaption>자세한 정보 (선택)</figcaption></figure>
+  <ol class="do">
+    <li><b>▶ 자세한 정보</b>를 열면 학원 소개, 특징, 강사진, 교육 과정, 주요 타깃, 기본 문체, 금지 표현을 입력할 수 있습니다.</li>
+    <li>입력할수록 글이 학원에 맞게 정확해집니다. 특징은 <b>적은 그대로만</b> 글에 쓰이므로 사실인 내용만 적습니다.</li>
+    <li>기존 블로그 글을 올리면 학원의 문체를 분석해 그대로 따라 씁니다.</li>
+    <li>다 입력했으면 화면 오른쪽 아래의 <span class="btn">완료하고 시작하기</span>를 누릅니다.</li>
+  </ol>
+  <div class="next">저장이 끝나면 <b>03 주제 입력</b> 화면으로 이동합니다. 학원 정보는 나중에 <b>09 블로그 설정</b>에서 고칠 수 있습니다.</div>
+</section>
+
+<!-- 03 -->
+<section class="step" id="s3">
+  <div class="step-head"><div class="num">03</div><div>
+    <h2>주제 입력</h2>
+    <p>쓸 글의 주제를 한 줄로 적습니다.</p>
+    <span class="where">왼쪽 메뉴 › 새 콘텐츠 작성</span>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/03-compose.png" alt="새 블로그 글 작성"></div>
+    <figcaption>새 블로그 글 작성</figcaption></figure>
+  <ol class="do">
+    <li><b>어떤 글을 쓸까요?</b> 칸에 주제를 적습니다. 아래 예시 주제를 눌러도 됩니다. 김하늘 원장은 "고1 수학 내신 대비 오답 노트 정리법"을 입력했습니다.</li>
+    <li><b>콘텐츠 유형</b>을 고릅니다(개념 정리, 내신 대비, 학부모 가이드, 학원 소식 등).</li>
+    <li><b>이미지 함께 만들기</b>를 켜 두면 썸네일을 포함해 이미지 2~5장이 함께 만들어집니다.</li>
+    <li><span class="btn">글 생성</span>을 누릅니다.</li>
+  </ol>
+  <div class="tip">오른쪽 위의 <b>무료 체험 2회 남음</b>은 남은 생성 횟수입니다. 생성권을 사면 <b>생성권 N개 남음</b>으로 바뀝니다.</div>
+</section>
+
+<!-- 04 -->
+<section class="step" id="s4">
+  <div class="step-head"><div class="num">04</div><div>
+    <h2>글 생성</h2>
+    <p>AI가 주제를 분석해 글과 이미지를 만듭니다. 보통 1~3분 걸립니다.</p>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/04-generating.png" alt="생성 중"></div>
+    <figcaption>생성 진행 상태</figcaption></figure>
+  <ol class="do">
+    <li><b>주제 분석 → 콘텐츠 기획 → 본문 작성·다듬기 → 이미지 구성</b> 순서로 진행 상태가 표시됩니다.</li>
+    <li>생성 중에는 <b>이 화면을 벗어나지 마세요.</b></li>
+  </ol>
+  <div class="next">생성이 끝나면 자동으로 <b>05 내용 확인·수정</b> 화면이 열립니다. 생성에 실패하면 차감된 횟수는 자동으로 돌아옵니다.</div>
+</section>
+
+<!-- 05 -->
+<section class="step" id="s5">
+  <div class="step-head"><div class="num">05</div><div>
+    <h2>내용 확인·수정</h2>
+    <p>만들어진 글과 이미지를 확인하고 필요한 부분을 고칩니다. 고친 내용은 자동으로 저장됩니다.</p>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/05-edit.png" alt="블로그 글 편집"></div>
+    <figcaption>블로그 글 편집 · 전체 화면</figcaption></figure>
+  <table class="ref">
+    <tr><th>왼쪽 · 구성</th><td>제목, 도입부, 소제목, 마무리, 태그 목록입니다. 누르면 그 위치로 이동합니다.</td></tr>
+    <tr><th>가운데 · 본문</th><td>글 본문입니다. 바로 클릭해 고칠 수 있습니다.</td></tr>
+    <tr><th>오른쪽 · 검토</th><td>사실 확인이 필요한 표현, 학원 문체, 자연스러움, 구성·분량을 자동으로 점검한 결과와 SEO 정보입니다.</td></tr>
+  </table>
+
+  <h3 class="sub-h">문장 고치기</h3>
+  <figure><div class="shot"><img src="img/05-edit-select.png" alt="문장 선택 도구"></div>
+    <figcaption>문장을 선택하면 나타나는 도구</figcaption></figure>
+  <ol class="do">
+    <li>고칠 문장을 마우스로 드래그해 선택합니다.</li>
+    <li>본문 아래에 나타나는 도구에서 원하는 기능을 누릅니다: <b>문장 다듬기 · 길이 줄이기 · 길이 늘리기 · 쉬운 표현 · 전문적인 표현</b>.</li>
+  </ol>
+
+  <h3 class="sub-h">이미지 관리</h3>
+  <figure><div class="shot"><img src="img/05-edit-images.png" alt="이미지 탭"></div>
+    <figcaption>오른쪽 패널 › 이미지 탭</figcaption></figure>
+  <ol class="do">
+    <li>위쪽 <b>이미지 N</b> 버튼이나 오른쪽 패널의 <b>이미지</b> 탭을 누르면 글에 들어갈 이미지 목록이 나옵니다.</li>
+    <li>각 이미지 아래 <span class="btn">아이콘</span>으로 <b>문구 다시 만들기 · 일러스트 생성 · 다운로드 · 삭제</b>를 할 수 있습니다.</li>
+    <li>이미지가 없는 소제목에는 <b>이미지 만들기</b>로 새 이미지를 추가합니다.</li>
+  </ol>
+  <div class="next">확인이 끝났으면 오른쪽 위의 <span class="btn">발행 준비 →</span>를 누릅니다. <b>06 네이버에 올리기</b> 화면으로 이동합니다.</div>
+</section>
+
+<!-- 06 -->
+<section class="step" id="s6">
+  <div class="step-head"><div class="num">06</div><div>
+    <h2>네이버에 올리기</h2>
+    <p>오른쪽 안내 순서대로 복사해 네이버 블로그 글쓰기에 붙여넣습니다.</p>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/06-publish.png" alt="네이버 블로그에 올리기 1"></div>
+    <figcaption>네이버 블로그에 올리기 · 1~3단계</figcaption></figure>
+  <ol class="do">
+    <li><span class="btn">네이버 글쓰기 열기</span>를 누르면 새 탭에 네이버 블로그 글쓰기 화면이 열립니다. 네이버 로그인이 필요할 수 있습니다.</li>
+    <li><span class="btn">제목 복사</span>를 누르고 네이버 글쓰기의 제목 칸에 붙여넣습니다.</li>
+    <li><span class="btn">본문 복사 (서식 포함)</span>를 누르고 네이버 본문 칸을 한 번 클릭한 뒤 붙여넣습니다. 글자 크기·정렬·소제목 서식이 함께 들어갑니다.</li>
+  </ol>
+  <div class="tip">왼쪽 미리보기는 네이버에 붙여넣었을 때의 모습입니다. <b>[이미지 1 · 썸네일]</b> 같은 표시는 이미지를 넣을 자리입니다.</div>
+
+  <figure><div class="shot"><img src="img/06-publish-2.png" alt="네이버 블로그에 올리기 2"></div>
+    <figcaption>네이버 블로그에 올리기 · 4~6단계</figcaption></figure>
+  <ol class="do">
+    <li><span class="btn">이미지 한 번에 받기 (.zip)</span>로 이미지를 내려받습니다. 본문의 [이미지 N] 표시 자리에 같은 번호의 이미지를 올리고 표시 문구는 지웁니다.</li>
+    <li>해시태그는 본문 끝에 이미 들어 있습니다. 네이버 태그 칸에 따로 넣으려면 <span class="btn">태그 복사</span>를 누릅니다.</li>
+    <li>네이버에서 발행을 마친 뒤 <span class="btn">네이버에 발행했어요</span>를 누르면 목록에 <b>발행 완료</b>로 표시됩니다.</li>
+  </ol>
+  <div class="tip">뚝딱은 네이버에 글을 직접 올리지 않습니다. 발행은 원장님이 네이버에서 직접 하고, 발행 여부만 뚝딱에 표시합니다.</div>
+</section>
+
+<!-- 07 -->
+<section class="step" id="s7">
+  <div class="step-head"><div class="num">07</div><div>
+    <h2>콘텐츠 목록</h2>
+    <p>지금까지 만든 글을 모아 봅니다.</p>
+    <span class="where">왼쪽 메뉴 › 콘텐츠 목록</span>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/07-list.png" alt="콘텐츠 목록"></div>
+    <figcaption>콘텐츠 목록</figcaption></figure>
+  <ol class="do">
+    <li>글마다 제목, 상태(작성 중·발행 완료), 유형, 작성 시각이 보입니다.</li>
+    <li><span class="btn">편집</span>을 누르면 <b>05 내용 확인·수정</b> 화면으로, <span class="btn">발행 준비</span>를 누르면 <b>06 네이버에 올리기</b> 화면으로 이동합니다.</li>
+  </ol>
+</section>
+
+<!-- 08 -->
+<section class="step" id="s8">
+  <div class="step-head"><div class="num">08</div><div>
+    <h2>생성 이력</h2>
+    <p>글을 생성한 기록을 시간순으로 봅니다.</p>
+    <span class="where">왼쪽 메뉴 › 생성 이력</span>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/08-history.png" alt="생성 이력"></div>
+    <figcaption>생성 이력</figcaption></figure>
+  <ol class="do">
+    <li>생성 시각, 입력한 주제, 유형이 표시됩니다. <b>완료 · 열기</b>를 누르면 해당 글이 열립니다.</li>
+    <li>생성 이력은 지금 쓰는 브라우저에 저장됩니다. 다른 컴퓨터에서는 <b>콘텐츠 목록</b>을 이용하세요.</li>
+  </ol>
+</section>
+
+<!-- 09 -->
+<section class="step" id="s9">
+  <div class="step-head"><div class="num">09</div><div>
+    <h2>블로그 설정</h2>
+    <p>모든 글에 공통으로 적용되는 서식, 이미지 디자인, 고정 문구를 정합니다. 바꾸면 바로 저장됩니다.</p>
+    <span class="where">왼쪽 메뉴 › 블로그 설정</span>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/09-settings.png" alt="블로그 설정"></div>
+    <figcaption>블로그 설정 · 학원 정보와 글 서식</figcaption></figure>
+  <ol class="do">
+    <li>위쪽 탭(학원 정보 · 글 서식 · 이미지 디자인 · 인사말·예약 링크 · 제목·해시태그)을 누르면 해당 항목으로 이동합니다.</li>
+    <li><span class="btn">학원 정보 수정</span>을 누르면 <b>02 학원 정보 등록</b> 화면이 열려 내용을 고칠 수 있습니다.</li>
+    <li><b>글 서식</b>에서 정렬, 본문·소제목 글자 크기, 소제목 앞 표시, 목록 기호를 정합니다. 네이버에 붙여넣을 때 그대로 적용됩니다.</li>
+  </ol>
+
+  <figure><div class="shot"><img src="img/09-settings-image.png" alt="이미지 디자인"></div>
+    <figcaption>이미지 디자인</figcaption></figure>
+  <ol class="do">
+    <li><span class="btn">기본 레이아웃</span>을 고릅니다: 메모지형 · 카드형 · 포스터형(사진) · 강조 타이포형 · 내용정리형. 오른쪽에서 미리보기를 확인합니다.</li>
+    <li>상담 문구, 로고, 배경색·주조색·강조색·포인트색, 일러스트 그림체를 학원에 맞게 정합니다.</li>
+  </ol>
+
+  <figure><div class="shot"><img src="img/09-settings-greeting.png" alt="인사말·예약 링크"></div>
+    <figcaption>인사말·예약 링크 · 제목·해시태그</figcaption></figure>
+  <ol class="do">
+    <li><b>인사말</b>은 본문 맨 앞에, <b>마무리 소제목</b>은 상담 안내 위에 들어갑니다. {학원명}은 학원 이름으로 바뀝니다.</li>
+    <li><b>예약·문의 링크</b>를 넣으면 본문 맨 끝에 붙습니다.</li>
+    <li><b>제목·해시태그 규칙</b>에서 제목 끝 지역 표기, 고정 해시태그, 지역 해시태그 묶음을 정합니다.</li>
+  </ol>
+</section>
+
+<!-- 10 -->
+<section class="step" id="s10">
+  <div class="step-head"><div class="num">10</div><div>
+    <h2>생성권 구매</h2>
+    <p>무료 체험 2회를 모두 쓰면 생성권을 구매해 계속 쓸 수 있습니다.</p>
+  </div></div>
+
+  <figure><div class="shot"><img src="img/10-paywall.png" alt="생성권 선택"></div>
+    <figcaption>새 콘텐츠 작성 › 무료 체험 소진 시</figcaption></figure>
+  <table class="ref">
+    <tr><th>생성권 5개 · 4,900원</th><td>블로그 글 5편 · 이미지 15장</td></tr>
+    <tr><th>생성권 10개 · 8,900원</th><td>블로그 글 10편 · 이미지 30장</td></tr>
+    <tr><th>생성권 30개 · 19,900원</th><td>블로그 글 30편 · 이미지 90장</td></tr>
+  </table>
+  <ol class="do">
+    <li>원하는 생성권의 <span class="btn">계좌이체로 구매</span>를 누릅니다. 생성권은 구매 후 365일 동안 쓸 수 있습니다.</li>
+  </ol>
+
+  <figure class="narrow"><div class="shot"><img src="img/11-checkout-1.png" alt="입금자명 입력"></div>
+    <figcaption>구매 · 입금자명 입력</figcaption></figure>
+  <ol class="do">
+    <li><b>입금하실 분의 이름</b>을 입력합니다. 이체할 때 받는 통장에 찍히는 이름과 똑같아야 자동으로 확인됩니다.</li>
+    <li><span class="btn">입금 계좌 확인하기</span>를 누릅니다.</li>
+  </ol>
+
+  <figure class="narrow"><div class="shot"><img src="img/11-checkout-2.png" alt="입금 계좌 안내"></div>
+    <figcaption>구매 · 입금 계좌 안내 (예시 화면이며, 실제 화면에는 실제 계좌가 표시됩니다)</figcaption></figure>
+  <ol class="do">
+    <li><span class="btn">복사</span>로 계좌번호를 복사해 <b>표시된 금액 그대로</b> 입금합니다.</li>
+    <li>입금이 확인되면 이 화면이 자동으로 바뀌고 생성권이 충전됩니다. 입금 기한이 지나면 주문은 만료됩니다.</li>
+    <li>확인이 오래 걸리면 운영자가 입금을 직접 확인해 충전합니다. <b>나중에 하기</b>를 눌러 화면을 닫아도 됩니다.</li>
+  </ol>
+  <div class="next">충전이 끝나면 <b>03 주제 입력</b>으로 돌아가 이어서 글을 만듭니다.</div>
+</section>
+
+<!-- 11 -->
+<section class="step" id="s11">
+  <div class="step-head"><div class="num">11</div><div>
+    <h2>다시 로그인</h2>
+    <p>다음에 접속할 때는 아이디와 비밀번호로 로그인합니다.</p>
+  </div></div>
+
+  <figure class="narrow"><div class="shot"><img src="img/12-login.png" alt="로그인"></div>
+    <figcaption>로그인</figcaption></figure>
+  <ol class="do">
+    <li>가입할 때 정한 <b>아이디</b>와 <b>비밀번호</b>를 입력합니다.</li>
+    <li><span class="btn">로그인</span>을 누르면 <b>03 주제 입력</b> 화면으로 바로 이동합니다.</li>
+    <li>사용을 마치면 왼쪽 메뉴 아래의 <b>로그아웃</b>을 누릅니다.</li>
+  </ol>
+</section>
+
+<footer>뚝딱 사용설명서 · 화면은 2026년 11월 기준이며 이후 일부 모양이 달라질 수 있습니다.</footer>
+</div>

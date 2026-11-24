@@ -21,7 +21,7 @@ const load = () =>
     ? Promise.resolve()
     : (loading ??= new Promise<void>((ok, fail) => {
         const s = document.createElement("script");
-        s.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+        s.src = "https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
         s.onload = () => ok();
         s.onerror = () => {
           loading = null;
