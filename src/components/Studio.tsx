@@ -777,6 +777,7 @@ export default function Studio() {
         plainText={derived.plainText}
         onBack={() => go({ name: "edit", id: doc.id })}
         onConfirmPublished={(on) => confirmPublished(doc.id, on)}
+        onDone={() => go({ name: "compose" })}
         track={cloud ? (type, kind) => track(type, undefined, kind) : undefined}
         notify={notify}
       />

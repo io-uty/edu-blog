@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, ChevronRight, Circle, Loader2, X } from "lucide-react";
+import { ArrowUp, Check, ChevronDown, Circle, Loader2, X } from "lucide-react";
 import type { Brand } from "@/lib/settings";
 import { formatTime, type DocRecord } from "@/lib/store";
-import { PageHeader, StepBar } from "./ui";
+import { PixelMark } from "./Logo";
 
 export type StageStatus = "idle" | "running" | "done" | "error";
 export type StageState = { analysis: StageStatus; plan: StageStatus; draft: StageStatus; images: StageStatus };
@@ -64,71 +64,53 @@ export default function ComposeView({
   notify: (m: string) => void;
 }) {
   const showProgress = busy || !!error;
+  const submit = () => {
+    if (busy) return;
+    if (form.topic.trim().length < 2) return notify("주제를 2자 이상 입력해 주세요.");
+    onGenerate(false);
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <PageHeader
-        title="새 블로그 글 작성"
-        status={
-          usageLabel ? (
-            <span className="rounded-full bg-brand-soft px-3 py-1 text-[13px] font-semibold text-brand-dark">{usageLabel}</span>
-          ) : (
-            "생성하면 자동 저장됩니다"
-          )
-        }
-        actions={
-          <button className="btn" onClick={onHistory}>
-            작성 이력
-          </button>
-        }
-      />
-      <StepBar current={0} />
-      <div className="flex-1 overflow-y-auto">
-        <form
-          className="mx-auto max-w-[720px] px-5 py-8 md:px-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (busy) return;
-            if (form.topic.trim().length < 2) return notify("주제를 2자 이상 입력해 주세요.");
-            onGenerate(false);
-          }}
-        >
-          <div className="mb-6">
-            <label htmlFor="topic" className="mb-3 block text-[22px] font-bold tracking-[-0.02em]">어떤 글을 쓸까요?</label>
-            <input
-              id="topic"
-              className="field h-12 rounded-xl px-4 text-[16px]"
-              value={form.topic}
-              maxLength={200}
-              disabled={busy}
-              onChange={(e) => setForm({ ...form, topic: e.target.value })}
-              placeholder={topicPlaceholder}
-              autoFocus
-            />
-            <p className="mt-2 text-xs text-sub">주제 한 줄만 적으면 됩니다. 나머지 설정은 그대로 두셔도 됩니다.</p>
-            {!form.topic.trim() && exampleTopics.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-sub">예시 주제</span>
-                {exampleTopics.map((x) => (
-                  <button
-                    key={x}
-                    type="button"
-                    className="btn btn-sm font-normal"
-                    disabled={busy}
-                    onClick={() => setForm({ ...form, topic: x })}
-                  >
-                    {x}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="compose-hero relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="relative z-10 flex items-center justify-end gap-2 px-5 pt-4 md:px-8">
+        {usageLabel && (
+          <span className="rounded-full bg-white/80 px-3 py-1 text-[13px] font-semibold text-brand-dark ring-1 ring-line">{usageLabel}</span>
+        )}
+        <button className="btn btn-sm bg-white/80" onClick={onHistory}>
+          작성 이력
+        </button>
+      </div>
 
-          <div className="mb-6 sm:w-[320px]">
-            <label htmlFor="ctype" className="label">콘텐츠 유형</label>
+      <form
+        className="relative z-10 mx-auto flex w-full max-w-[760px] flex-1 flex-col items-center justify-center px-5 pb-10 pt-6 md:px-8"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <PixelMark size={40} className="compose-mark" />
+        <h1 className="compose-h">
+          <span className="block">안녕하세요{brand.name ? `, ${brand.name}` : ""}.</span>
+          <span className="block text-brand">어떤 글을 쓸까요?</span>
+        </h1>
+
+        <label htmlFor="topic" className="sr-only">글 주제</label>
+        <div className={`compose-bar ${busy ? "is-busy" : ""}`}>
+          <input
+            id="topic"
+            className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-sub/80 md:text-[17px]"
+            value={form.topic}
+            maxLength={200}
+            disabled={busy}
+            onChange={(e) => setForm({ ...form, topic: e.target.value })}
+            placeholder={topicPlaceholder}
+            autoFocus
+          />
+          <label htmlFor="ctype" className="sr-only">콘텐츠 유형</label>
+          <span className="relative hidden shrink-0 sm:block">
             <select
               id="ctype"
-              className="field h-11 rounded-xl py-0"
+              className="compose-select"
               value={form.contentType}
               disabled={busy}
               onChange={(e) => setForm({ ...form, contentType: e.target.value })}
@@ -137,88 +119,104 @@ export default function ComposeView({
                 <option key={t}>{t}</option>
               ))}
             </select>
+            <ChevronDown size={15} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-sub" />
+          </span>
+          <button type="submit" className="compose-go" disabled={busy || form.topic.trim().length < 2} aria-label="글 생성">
+            {busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={19} strokeWidth={2.4} />}
+          </button>
+        </div>
+
+        {/* 좁은 화면에서는 유형 선택을 입력창 아래에 */}
+        <select
+          aria-label="콘텐츠 유형"
+          className="compose-select mt-3 self-stretch sm:hidden"
+          value={form.contentType}
+          disabled={busy}
+          onChange={(e) => setForm({ ...form, contentType: e.target.value })}
+        >
+          {contentTypes.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
+        </select>
+
+        {!form.topic.trim() && !busy && exampleTopics.length > 0 && (
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {exampleTopics.map((x) => (
+              <button key={x} type="button" className="compose-chip" onClick={() => setForm({ ...form, topic: x })}>
+                {x}
+              </button>
+            ))}
           </div>
+        )}
 
-          <label className="mb-6 flex items-center gap-2 text-[14px]">
-            <input
-              type="checkbox"
-              checked={form.images}
-              disabled={busy}
-              onChange={(e) => setForm({ ...form, images: e.target.checked })}
-            />
-            이미지 함께 만들기 <span className="text-sub">(썸네일 포함 2~5장, 글에 맞게 자동 선택)</span>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-sub">
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" checked={form.images} disabled={busy} onChange={(e) => setForm({ ...form, images: e.target.checked })} />
+            이미지 함께 만들기
           </label>
-
-          <details className="group mb-8 border-t border-line pt-4">
-            <summary className="flex cursor-pointer list-none items-center gap-1 text-[14px] text-sub hover:text-ink">
-              <ChevronRight size={14} className="transition-transform group-open:rotate-90" /> 고급 설정
-            </summary>
-            <div className="mt-4 sm:w-[320px]">
-              <label htmlFor="region" className="label">지역 해시태그 묶음</label>
+          {brand.regionHashtagGroups.length > 0 && (
+            <label className="flex items-center gap-1.5">
+              지역 해시태그
               <select
                 id="region"
-                className="field h-9 py-0"
+                className="rounded-md bg-transparent py-0.5 text-[13px] text-ink outline-none"
                 value={form.regionIndex ?? ""}
                 disabled={busy}
                 onChange={(e) => setForm({ ...form, regionIndex: e.target.value === "" ? null : Number(e.target.value) })}
               >
-                <option value="">자동 (주제별로 순환)</option>
+                <option value="">자동</option>
                 {brand.regionHashtagGroups.map((g, i) => (
                   <option key={i} value={i}>
                     {g.slice(0, 3).join(" · ")} 외
                   </option>
                 ))}
               </select>
-            </div>
-          </details>
-
-          <div className="flex items-center gap-3">
-            <button type="submit" className="btn btn-primary h-12 w-full px-8 text-[15px] font-bold sm:w-auto" disabled={busy}>
-              {busy ? <><Loader2 size={15} className="animate-spin" /> 생성 중</> : "글 생성"}
-            </button>
-            {error && !busy && canResume && (
-              <button type="button" className="btn h-10" onClick={() => onGenerate(true)}>
-                실패한 단계부터 이어서 생성
-              </button>
-            )}
-          </div>
-
-          {showProgress && (
-            <section className="mt-8 border-t border-line pt-5" aria-live="polite">
-              <ol className="flex flex-wrap gap-x-8 gap-y-2 text-[14px]">
-                {STEPS.filter((s) => s.key !== "images" || form.images).map((s) => (
-                  <li key={s.key} className={`flex items-center gap-2 ${stages[s.key] === "idle" ? "text-sub" : ""}`}>
-                    <StepIcon s={stages[s.key]} /> {s.label}
-                  </li>
-                ))}
-              </ol>
-              {busy && <p className="mt-3 text-xs text-sub">보통 1~2분 걸립니다. 이 화면을 벗어나지 말아 주세요.</p>}
-              {error && (
-                <p className="mt-3 border-l-2 border-err bg-bg2 px-3 py-2 text-[14px] leading-6">
-                  {error}
-                  {canResume && <span className="text-sub"> 완료된 단계는 보존되어 있습니다.</span>}
-                </p>
-              )}
-            </section>
+            </label>
           )}
-        </form>
+        </div>
 
-        {recent.length > 0 && (
-          <section className="mx-auto max-w-[720px] border-t border-line px-5 py-6 md:px-8">
-            <p className="label">최근 작성한 콘텐츠</p>
-            <ul>
-              {recent.map((d) => (
-                <li key={d.id} className="flex items-baseline gap-3 border-b border-bg2 py-2 text-[14px]">
-                  <button className="min-w-0 flex-1 truncate text-left hover:underline" onClick={() => onOpen(d.id)}>
-                    {d.title}
-                  </button>
-                  <span className="shrink-0 text-xs text-sub">{formatTime(d.updatedAt)}</span>
+        {showProgress && (
+          <section className="mt-8 w-full rounded-2xl bg-white/85 px-5 py-4 ring-1 ring-line" aria-live="polite">
+            <ol className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-[14px]">
+              {STEPS.filter((s) => s.key !== "images" || form.images).map((s) => (
+                <li key={s.key} className={`flex items-center gap-2 ${stages[s.key] === "idle" ? "text-sub" : ""}`}>
+                  <StepIcon s={stages[s.key]} /> {s.label}
                 </li>
               ))}
-            </ul>
+            </ol>
+            {busy && <p className="mt-3 text-center text-xs text-sub">보통 1~2분 걸립니다. 이 화면을 벗어나지 말아 주세요.</p>}
+            {error && (
+              <p className="mt-3 border-l-2 border-err bg-bg2 px-3 py-2 text-[14px] leading-6">
+                {error}
+                {canResume && <span className="text-sub"> 완료된 단계는 보존되어 있습니다.</span>}
+              </p>
+            )}
+            {error && !busy && canResume && (
+              <div className="mt-3 text-center">
+                <button type="button" className="btn h-10" onClick={() => onGenerate(true)}>
+                  실패한 단계부터 이어서 생성
+                </button>
+              </div>
+            )}
           </section>
         )}
-      </div>
+      </form>
+
+      {recent.length > 0 && (
+        <section className="relative z-10 mx-auto w-full max-w-[760px] px-5 pb-8 md:px-8">
+          <p className="label">최근 작성한 콘텐츠</p>
+          <ul className="rounded-2xl bg-white/80 px-4 ring-1 ring-line">
+            {recent.map((d) => (
+              <li key={d.id} className="flex items-baseline gap-3 border-b border-bg2 py-2.5 text-[14px] last:border-0">
+                <button className="min-w-0 flex-1 truncate text-left hover:underline" onClick={() => onOpen(d.id)}>
+                  {d.title}
+                </button>
+                <span className="shrink-0 text-xs text-sub">{formatTime(d.updatedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

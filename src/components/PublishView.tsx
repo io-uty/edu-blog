@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, Copy, Dot, Download, ExternalLink, Loader2 } from "lucide-react";
 import { HUMAN_REVIEW_NOTICE, buildChecks } from "@/lib/checks";
 import { renderHashtags } from "@/lib/render";
@@ -9,6 +9,7 @@ import { formatTime, imagePosition, sortImages, type DocRecord, type ImageItem, 
 import { buildZip, imageFileName, saveBlob } from "./exporter";
 import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
+import { PixelMark } from "./Logo";
 
 const NAVER_WRITE_URL = "https://blog.naver.com/GoBlogWrite.naver";
 
@@ -79,6 +80,7 @@ export default function PublishView({
   plainText,
   onBack,
   onConfirmPublished,
+  onDone,
   notify,
   track = () => undefined,
 }: {
@@ -89,6 +91,7 @@ export default function PublishView({
   plainText: string;
   onBack: () => void;
   onConfirmPublished: (published: boolean) => void;
+  onDone: () => void;
   notify: (m: string) => void;
   track?: (type: string, kind?: string) => void;
 }) {
@@ -99,6 +102,27 @@ export default function PublishView({
   const mark = (k: string) => setDone((d) => ({ ...d, [k]: true }));
   const [zipping, setZipping] = useState<"" | "images" | "all">("");
   const published = doc.status === "published_confirmed";
+  const [celebrate, setCelebrate] = useState(false);
+  const [ask, setAsk] = useState(false);
+  const asked = useRef(false);
+
+  // 네이버 발행 여부는 알 수 없으므로, 글쓰기 탭을 열고 본문까지 복사한 뒤 이 탭으로 돌아오면 한 번 물어본다.
+  useEffect(() => {
+    const back = () => {
+      if (document.visibilityState === "visible" && done.open && done.body && !published && !asked.current) {
+        asked.current = true;
+        setAsk(true);
+      }
+    };
+    document.addEventListener("visibilitychange", back);
+    return () => document.removeEventListener("visibilitychange", back);
+  }, [done.open, done.body, published]);
+
+  const finish = () => {
+    setAsk(false);
+    if (!published) onConfirmPublished(true);
+    setCelebrate(true);
+  };
 
   async function copyBody(): Promise<boolean> {
     try {
@@ -250,14 +274,19 @@ export default function PublishView({
               }
             >
               {published ? (
-                <div className="flex items-center justify-between gap-2 text-[13px]">
-                  <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` · ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
-                  <button className="text-sub underline underline-offset-2" onClick={() => onConfirmPublished(false)}>
-                    표시 취소
+                <>
+                  <div className="flex items-center justify-between gap-2 text-[13px]">
+                    <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` · ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
+                    <button className="text-sub underline underline-offset-2" onClick={() => onConfirmPublished(false)}>
+                      표시 취소
+                    </button>
+                  </div>
+                  <button className="btn btn-primary w-full" onClick={onDone}>
+                    완료하고 홈으로
                   </button>
-                </div>
+                </>
               ) : (
-                <button className="btn w-full" onClick={() => onConfirmPublished(true)}>
+                <button className="btn btn-primary w-full" onClick={finish}>
                   <Check size={15} /> 네이버에 발행했어요
                 </button>
               )}
@@ -286,6 +315,40 @@ export default function PublishView({
           </section>
         </aside>
       </div>
+
+      {ask && !celebrate && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="ask-title">
+          <div className="w-full max-w-[380px] rounded-2xl bg-white p-6 text-center shadow-xl">
+            <p id="ask-title" className="text-[18px] font-bold">네이버에 발행을 마치셨나요?</p>
+            <p className="mt-1.5 text-[14px] text-sub">발행했다면 완료로 표시하고 홈으로 돌아갑니다.</p>
+            <div className="mt-5 flex gap-2">
+              <button className="btn h-11 flex-1" onClick={() => setAsk(false)}>
+                아직이에요
+              </button>
+              <button className="btn btn-primary h-11 flex-1" onClick={finish} autoFocus>
+                발행 완료
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {celebrate && (
+        <div className="publish-done" role="dialog" aria-modal="true" aria-labelledby="done-title">
+          <div className="flex max-w-[520px] flex-col items-center">
+            <PixelMark size={56} className="compose-mark" />
+            <h2 id="done-title">발행 완료!</h2>
+            <p className="mt-3 text-[15px] leading-7 text-sub">
+              <b className="text-ink">{doc.draft.title}</b>
+              <br />
+              글을 발행 완료로 표시했습니다.
+            </p>
+            <button className="intro-cta mt-8" style={{ animation: "none" }} onClick={onDone} autoFocus>
+              완료
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
