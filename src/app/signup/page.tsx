@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import Logo from "@/components/Logo";
-import { toPhone } from "@/lib/phone";
+import { formatPhone, toPhone } from "@/lib/phone";
 import { useLock } from "@/lib/useLock";
 
 // 회원가입 2단계: 1) 이름·전화번호·이메일 → 2) 아이디·비밀번호
@@ -38,7 +38,7 @@ export default function SignupPage() {
   }, []);
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setF({ ...f, [k]: e.target.value });
+    setF({ ...f, [k]: k === "phone" ? formatPhone(e.target.value) : e.target.value });
     if (k === "phone") {
       setSent(false);
       setVerified(false);
@@ -65,7 +65,7 @@ export default function SignupPage() {
   // 1단계 → 2단계: 전화번호 형식과 중복을 미리 확인
   const next = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!toPhone(f.phone)) return fail("휴대폰 번호를 확인해 주세요. 예) 01012345678");
+    if (!toPhone(f.phone)) return fail("휴대폰 번호를 확인해 주세요. 예) 010-1234-5678");
     if (needVerify && !verified) return fail("휴대폰 인증을 먼저 완료해 주세요.");
     return run(async () => {
       setMsg(null);
@@ -112,7 +112,7 @@ export default function SignupPage() {
             </Field>
             <Field label="전화번호" id="phone">
               <div className="flex gap-2">
-                <input id="phone" type="tel" required inputMode="numeric" autoComplete="tel" placeholder="01012345678" className="field" value={f.phone} readOnly={verified} onChange={set("phone")} />
+                <input id="phone" type="tel" required inputMode="numeric" autoComplete="tel" placeholder="010-1234-5678" maxLength={13} className="field" value={f.phone} readOnly={verified} onChange={set("phone")} />
                 {needVerify && (
                   <button type="button" className="btn shrink-0" disabled={busy || verified || !f.phone.trim()} onClick={sendCode}>
                     {sent ? "다시 받기" : "인증번호 받기"}
