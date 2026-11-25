@@ -1,5 +1,5 @@
 // 픽셀 파티클: 버튼 '뚝딱' 효과와 생성 완료 축하에 쓴다. 브라우저에서만 호출.
-const COLORS = ["#ff8fbf", "#b8a4ff", "#6b4ee6", "#ffc2dc"];
+const COLORS = ["#ffc23d", "#ffb27a", "#c8500c", "#ffe0a8"];
 
 const calm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

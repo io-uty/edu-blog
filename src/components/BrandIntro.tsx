@@ -84,7 +84,7 @@ export default function BrandIntro() {
           <span className="intro-cursor" aria-hidden>
             <PixelMark size={30} />
             <svg className="intro-spark" width="12" height="12" viewBox="0 0 4 4" shapeRendering="crispEdges">
-              <path d="M1.5 0h1v1.5H4v1H2.5V4h-1V2.5H0v-1h1.5z" fill="#ff8fbf" />
+              <path d="M1.5 0h1v1.5H4v1H2.5V4h-1V2.5H0v-1h1.5z" fill="#ffc23d" />
             </svg>
           </span>
         </div>

@@ -36,8 +36,8 @@ const runs = (pick: (ch: string) => boolean) =>
 export const SHAPE = runs((c) => c !== ".");
 export const EDGE = runs((c) => c === "X");
 
-export const PURPLE = "#2b1a66";
-export const PINK = "#ff8fbf";
+export const OUTLINE = "#3d1f0a";
+export const SHADOW = "#ffc23d";
 
 /** CSS cursor 용 SVG data URL. sparkle: 호버 때 붙는 핑크 반짝이, squash: 누를 때 납작하게 */
 export function cursorUrl({ px = 1.5, sparkle = false, squash = false } = {}) {
@@ -46,9 +46,9 @@ export function cursorUrl({ px = 1.5, sparkle = false, squash = false } = {}) {
   const vh = CURSOR_H + 1;
   const w = Math.round(vw * px);
   const h = Math.round(vh * px * (squash ? 0.82 : 1));
-  const star = sparkle ? `<path d="M12.5 1h1v1.5h1.5v1h-1.5V5h-1V3.5H11v-1h1.5z" fill="${PINK}"/>` : "";
+  const star = sparkle ? `<path d="M12.5 1h1v1.5h1.5v1h-1.5V5h-1V3.5H11v-1h1.5z" fill="${SHADOW}"/>` : "";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none" shape-rendering="crispEdges">` +
-    r(SHAPE, PINK, 1, 1) + r(SHAPE, "#fff") + r(EDGE, PURPLE) + star + "</svg>";
+    r(SHAPE, SHADOW, 1, 1) + r(SHAPE, "#fff") + r(EDGE, OUTLINE) + star + "</svg>";
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 0 0`;
 }
