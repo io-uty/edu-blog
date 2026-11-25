@@ -314,6 +314,10 @@ values ('학원 id', 'content', -1, 'manual:' || gen_random_uuid());
 가입·학원 정보 입력·글 생성·복사·다운로드·결제 등 이벤트를 남깁니다. 본문이나 개인정보는 저장하지 않습니다. 관리자 화면 통계가 이 테이블을 읽습니다.
 컬럼: `tenant_id`, `user_id`, `event_type`, `session_id`, `project_id`, `metadata`(jsonb), `dedupe_key`, `occurred_at`.
 
+#### `rate_limits` — 호출 횟수 제한
+로그인·가입·인증번호·문장 다듬기 등의 호출 횟수를 셉니다. 컬럼: `key`(예: `login:id:아이디`, `refine:회원id`), `window_start`, `hits`.
+누군가 제한에 걸려 바로 풀어 줘야 하면 해당 `key` 행을 지우면 됩니다.
+
 #### `admin_audit` — 관리자 작업 기록
 관리자 화면에서 결제 승인·학원 삭제·초기화를 하면 자동으로 남습니다.
 컬럼: `admin_email`, `action`, `target`, `detail`(jsonb), `created_at`.

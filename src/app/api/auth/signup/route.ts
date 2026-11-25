@@ -2,6 +2,7 @@ import { z } from "zod";
 import { toPhone } from "@/lib/phone";
 import { phoneVerifyOn } from "@/lib/sms";
 import { SUPABASE_ENABLED, supabaseAdmin, supabaseUser } from "@/lib/supabase/server";
+import { HOUR, allow, clientIp, tooMany } from "@/lib/rateLimit";
 
 const Body = z.object({
   name: z.string().trim().min(1).max(30),
@@ -15,6 +16,7 @@ const bad = (error: string, status: number) => Response.json({ error }, { status
 /** 가입: 전화번호·아이디 중복은 DB 제약이 막고, 실패하면 만든 계정을 되돌린다. PHONE_VERIFY=on 이면 휴대폰 인증을 마친 번호만 허용. */
 export async function POST(req: Request) {
   if (!SUPABASE_ENABLED) return bad("서버 설정이 필요합니다.", 503);
+  if (!(await allow(`signup:ip:${clientIp(req)}`, 5, HOUR))) return tooMany("가입 시도가 너무 많습니다. 1시간 뒤 다시 시도해 주세요.");
   const p = Body.safeParse(await req.json().catch(() => null));
   const phone = p.success ? toPhone(p.data.phone) : null;
   if (!p.success || !phone) return bad("입력한 내용을 확인해 주세요. 아이디는 영문 소문자·숫자·_ 4~20자, 비밀번호는 8자 이상입니다.", 400);

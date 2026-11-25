@@ -4,6 +4,7 @@ import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { HUMANIZE_RULES } from "@/lib/humanize";
 import { systemPrompt } from "@/lib/prompts";
 import { getCtx } from "@/lib/requestCtx";
+import { DAY, allow, tooMany } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
   const { action, text } = p.data;
   const got = await getCtx(p.data);
   if (!got.ok) return got.res;
+  if (got.session && !(await allow(`refine:${got.session.user.id}`, 150, DAY)))
+    return tooMany("오늘 문장 다듬기 사용 한도(150회)를 넘었습니다. 내일 다시 이용해 주세요.");
   const { ctx } = got;
   if (IS_MOCK) return Response.json({ mock: true, text });
   try {

@@ -4,6 +4,7 @@ import { ImageCopySchema, fallbackCopy, type ImageTarget } from "@/lib/imageCopy
 import { systemPrompt } from "@/lib/prompts";
 import { DraftSchema } from "@/lib/schemas";
 import { getCtx } from "@/lib/requestCtx";
+import { DAY, allow, tooMany } from "@/lib/rateLimit";
 import { logEvent } from "@/lib/usage";
 
 export const runtime = "nodejs";
@@ -29,6 +30,8 @@ export async function POST(req: Request) {
   const { draft, topic, contentType } = p.data;
   const got = await getCtx(p.data);
   if (!got.ok) return got.res;
+  if (got.session && !(await allow(`image-copy:${got.session.user.id}`, 100, DAY)))
+    return tooMany("오늘 이미지 문구 만들기 사용 한도(100회)를 넘었습니다. 내일 다시 이용해 주세요.");
   const { ctx } = got;
   const targets: ImageTarget[] = p.data.targets ?? [
     { kind: "thumbnail", sectionIndex: null },

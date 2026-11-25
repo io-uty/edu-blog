@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/requestCtx";
+import { DAY, allow, clientIp, tooMany } from "@/lib/rateLimit";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { assertPublicUrl, evidenceIn, readRobots, readSite } from "@/lib/siteReader";
 
@@ -27,6 +28,7 @@ const Out = z.object({
 export async function POST(req: Request) {
   const denied = await requireUser();
   if (denied) return denied;
+  if (!(await allow(`analyze-site:${clientIp(req)}`, 30, DAY))) return tooMany("오늘 분석 사용 한도를 넘었습니다. 내일 다시 이용해 주세요.");
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "홈페이지 주소와 수집 동의를 확인해 주세요." }, { status: 400 });
 

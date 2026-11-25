@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireUser } from "@/lib/requestCtx";
+import { DAY, allow, clientIp, tooMany } from "@/lib/rateLimit";
 import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
 import { StyleProfileSchema } from "@/lib/tenant";
 
@@ -14,6 +15,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const denied = await requireUser();
   if (denied) return denied;
+  if (!(await allow(`analyze-style:${clientIp(req)}`, 30, DAY))) return tooMany("오늘 분석 사용 한도를 넘었습니다. 내일 다시 이용해 주세요.");
   const p = Body.safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "글을 1~3개, 각각 200자 이상 올려 주세요." }, { status: 400 });
   const excerpts = p.data.samples.slice(0, 2).map((s) => s.text.slice(0, 2500));
