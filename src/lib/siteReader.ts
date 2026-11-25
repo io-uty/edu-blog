@@ -20,7 +20,13 @@ function isPrivateIp(ip: string) {
     );
   }
   const v = ip.toLowerCase();
-  if (v.startsWith("::ffff:")) return isPrivateIp(v.slice(7));
+  if (v.startsWith("::ffff:") && net.isIPv4(v.slice(7))) return isPrivateIp(v.slice(7));
+  // new URL() 이 ::ffff:127.0.0.1 을 ::ffff:7f00:1 로 바꾸므로 16진 두 칸도 IPv4 로 풀어 검사한다
+  const hex = v.match(/^::(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const n = (parseInt(hex[1], 16) << 16) | parseInt(hex[2], 16);
+    return isPrivateIp([n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
+  }
   return v === "::" || v === "::1" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80");
 }
 

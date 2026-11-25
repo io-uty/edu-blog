@@ -1,0 +1,25 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          LLM_MODE: mock
+      # 운영 의존성 취약점. 알려진 Next/PostCSS 건이 정리되기 전까지는 경고만 한다
+      - run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
