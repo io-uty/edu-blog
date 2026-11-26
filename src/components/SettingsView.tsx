@@ -290,7 +290,7 @@ export default function SettingsView({
           <Section id="set-image" title="이미지 디자인" desc="썸네일과 소주제 이미지(1:1, 1080px)에 공통으로 쓰이는 디자인입니다. 글자·로고는 코드로 그려 정확하게 들어갑니다.">
             <div className="grid gap-6 py-3 md:grid-cols-[1fr_320px]">
               <div className="divide-y divide-bg2">
-                <Field label="기본 레이아웃">
+                <Field label="카드뉴스 템플릿">
                   <div className="flex flex-wrap gap-1">
                     {LAYOUT_CHOICES.map((k) => (
                       <button key={k} className={`btn btn-sm ${LAYOUT_LABEL[im.layout] === LAYOUT_LABEL[k] ? "border-ink font-semibold" : ""}`} onClick={() => setImage({ layout: k })}>
@@ -299,7 +299,7 @@ export default function SettingsView({
                     ))}
                   </div>
                 </Field>
-                <Field label="상담 문구" hint="강조 타이포형 상단 띠에 표시">
+                <Field label="상담 문구" hint="썸네일 위쪽에 표시(파일 폴더·말풍선)">
                   <input className="field" placeholder="예) 무료상담 02-000-0000" value={im.contact ?? ""} onChange={(e) => setImage({ contact: e.target.value })} />
                 </Field>
                 <Field label="로고" hint="PNG 권장(투명 배경)">
@@ -393,6 +393,12 @@ export default function SettingsView({
             </Field>
             <Field label="예약·문의 링크" hint="본문 맨 끝에 붙습니다. 비우면 생략">
               <input className="field" value={b.bookingUrl} onChange={(e) => setBrand({ bookingUrl: e.target.value })} />
+            </Field>
+            <Field label="학원 전화번호" hint="본문 맨 끝에 작은 굵은 글씨로 붙습니다. 비우면 생략">
+              <input className="field" type="tel" value={b.placePhone} onChange={(e) => setBrand({ placePhone: e.target.value })} placeholder="02-000-0000" />
+            </Field>
+            <Field label="네이버 플레이스 링크" hint="네이버 지도에서 학원 → 공유 → 링크 복사(naver.me/…). 본문 맨 끝에 붙습니다">
+              <input className="field" value={b.placeUrl} onChange={(e) => setBrand({ placeUrl: e.target.value })} placeholder="https://naver.me/..." />
             </Field>
           </Section>
 

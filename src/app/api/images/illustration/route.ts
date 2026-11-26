@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     if (session?.tenantId) await refund(session.tenantId, session.user.id, "image", key);
   };
 
-  const realistic = p.data.style === "photo" || p.data.style === "render3d";
+  const realistic = p.data.style === "photo";
   const composition = {
     note: "bright tidy study desk seen from slightly above, objects only around the edges of the frame (a potted plant, a stack of hardcover books with blank spines, a laptop corner, an open spiral notebook, a pen, a small flower); the center 60% of the frame is a clear, evenly lit empty desk surface because a paper sticky note will be placed there",
     card: "the main subject sits in the lower part of the frame: a person or character's head and eyes peeking up from behind a laptop or desk toward the viewer; plain soft single-color background with a few simple subject-related props as flat icons; nothing important in the upper third",

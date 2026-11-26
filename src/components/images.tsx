@@ -6,22 +6,25 @@ import { itemsToText, targetKey, textToItems, type ImageCopy, type ImageTarget }
 import type { ImageDesign, ImageLayout } from "@/lib/settings";
 import { imageLabel, imagePosition, sortImages, type ImageItem } from "@/lib/store";
 import { useRendered } from "./useRendered";
-import { autoLayout } from "@/lib/imageRender";
+import { autoLayout, normalizeLayout } from "@/lib/imageRender";
 
 export const LAYOUT_LABEL: Record<ImageLayout, string> = {
-  note: "메모지형",
-  card: "카드형",
-  poster: "포스터형(사진)",
-  bold: "강조 타이포형",
-  summary: "내용정리형",
-  // 예전에 저장된 값(같은 디자인으로 그려짐)
-  scene: "포스터형(사진)",
-  headline: "내용정리형",
-  notice: "내용정리형",
-  checklist: "내용정리형",
+  clip: "클립 노트",
+  folder: "파일 폴더",
+  bubble: "말풍선",
+  // 예전에 저장된 값(가장 가까운 템플릿으로 그려짐)
+  note: "클립 노트",
+  card: "클립 노트",
+  poster: "말풍선",
+  scene: "말풍선",
+  bold: "말풍선",
+  summary: "파일 폴더",
+  headline: "파일 폴더",
+  notice: "파일 폴더",
+  checklist: "파일 폴더",
 };
-/** 고를 수 있는 디자인 */
-export const LAYOUT_CHOICES: ImageLayout[] = ["note", "card", "poster", "bold", "summary"];
+/** 고를 수 있는 카드뉴스 템플릿 */
+export const LAYOUT_CHOICES: ImageLayout[] = ["clip", "folder", "bubble"];
 
 export interface ImageActions {
   design: ImageDesign;
@@ -226,7 +229,7 @@ export function ImageLightbox({
               <label className="label">레이아웃</label>
               <select
                 className="field h-9 py-0"
-                value={item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design, item.copy)}
+                value={normalizeLayout(item.layout ?? autoLayout(item.kind, item.sectionIndex, actions.design, item.copy))}
                 onChange={(e) => actions.update(item.id, { layout: e.target.value as ImageLayout })}
               >
                 {LAYOUT_CHOICES.map((k) => [k, LAYOUT_LABEL[k]] as const).map(([k, v]) => (

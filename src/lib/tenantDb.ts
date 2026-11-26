@@ -27,7 +27,7 @@ export const SettingsInputSchema = z.object({
     imageMarkers: z.boolean(),
   }),
   image: z.object({
-    layout: z.enum(["note", "card", "poster", "bold", "headline", "notice", "checklist", "summary", "scene"]),
+    layout: z.enum(["clip", "folder", "bubble", "note", "card", "poster", "bold", "headline", "notice", "checklist", "summary", "scene"]),
     label: z.string().max(60),
     // 로고는 축소된 dataURL 만 허용(약 300KB 이하)
     logo: z.string().max(400_000).regex(/^data:image\/(png|jpeg|webp|svg\+xml);base64,/).nullable(),
@@ -36,7 +36,7 @@ export const SettingsInputSchema = z.object({
     accent: HEX,
     point: HEX,
     footer: z.boolean(),
-    illustrationStyle: z.enum(["photo", "render3d", "flat", "cute", "webtoon", "watercolor", "clay"]).default("photo"),
+    illustrationStyle: z.enum(["photo", "webtoon", "flat"]).default("photo"),
     illustrationNote: z.string().max(200).default(""),
     contact: z.string().max(60).default(""),
     rev: z.number().int().min(0).max(100).optional(),

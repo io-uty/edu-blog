@@ -11,6 +11,14 @@ import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
 import { PixelMark } from "./Logo";
 
+const toDataUrl = (b: Blob) =>
+  new Promise<string>((ok, no) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result as string);
+    r.onerror = no;
+    r.readAsDataURL(b);
+  });
+
 const NAVER_WRITE_URL = "https://blog.naver.com/GoBlogWrite.naver";
 
 // 네이버 공식 게시 연동이 없으므로 자동 게시·화면 조작 없이, 사용자가 순서대로 옮기도록 안내한다.
@@ -124,12 +132,26 @@ export default function PublishView({
     setCelebrate(true);
   };
 
+  /** 이미지 표시 자리를 실제 이미지(dataURL)로 바꾼 본문 HTML. 렌더 실패한 이미지는 표시 문구를 남긴다. */
+  async function htmlWithImages(): Promise<string> {
+    let out = html;
+    for (const it of images) {
+      const key = it.kind === "thumbnail" ? "thumb" : `s${it.sectionIndex}`;
+      const src = await renderBlob(it, settings.image).then(toDataUrl).catch(() => null);
+      if (src) out = out.replace(new RegExp(`<p data-slot="${key}"[^>]*>.*?</p>`), `<p style="text-align:center;"><img src="${src}" alt="" style="max-width:100%;"></p>`);
+    }
+    return out;
+  }
+
   async function copyBody(): Promise<boolean> {
     try {
-      // 서식(정렬·글자 크기·소제목 스타일)을 유지한 채 네이버 에디터에 붙여넣기
+      // 서식(정렬·글자 크기·소제목 스타일)과 이미지를 유지한 채 네이버 에디터에 붙여넣기.
+      // Blob 을 Promise 로 넘겨야 Safari 에서도 클릭 직후의 복사 권한이 유지된다.
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/html": new Blob([html], { type: "text/html" }),
+          "text/html": htmlWithImages()
+            .catch(() => html)
+            .then((h) => new Blob([h], { type: "text/html" })),
           "text/plain": new Blob([plainText], { type: "text/plain" }),
         }),
       ]);
@@ -216,7 +238,7 @@ export default function PublishView({
                 <Copy size={15} /> 제목 복사
               </button>
             </Step>
-            <Step n={3} done={!!done.body} title="본문 넣기" desc="본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기·정렬 같은 서식도 함께 들어갑니다.">
+            <Step n={3} done={!!done.body} title="본문 넣기" desc={`본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기·정렬 같은 서식${images.length ? "과 이미지" : ""}도 함께 들어갑니다.`}>
               <button
                 className="btn w-full"
                 onClick={async () => {
@@ -234,10 +256,10 @@ export default function PublishView({
               <Step
                 n={4}
                 done={!!done.images}
-                title={`이미지 ${images.length}장 넣기`}
+                title={`이미지가 빠졌다면 직접 넣기`}
                 desc={
                   <>
-                    본문의 <b>[이미지 1 · 썸네일]</b> 같은 표시 자리에 같은 번호의 이미지를 올리고, 표시 문구는 지워 주세요.
+                    붙여넣은 본문에 <b>[이미지 1 · 썸네일]</b> 같은 표시가 남아 있으면, 그 자리에 같은 번호의 이미지를 올리고 표시 문구는 지워 주세요.
                   </>
                 }
               >

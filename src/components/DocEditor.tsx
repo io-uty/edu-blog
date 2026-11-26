@@ -453,7 +453,9 @@ export default function DocEditor({
         <p className="label">해시태그 (쉼표 또는 공백으로 구분)</p>
         <TagInput tags={draft.hashtags} onChange={(hashtags) => onChange({ ...draft, hashtags })} />
         <p className="mt-4 text-xs text-sub">
-          {shownBrand.bookingUrl ? `본문 끝에 예약 링크가 자동으로 붙습니다: ${shownBrand.bookingUrl}` : "블로그 설정에 예약·문의 링크를 넣으면 본문 끝에 자동으로 붙습니다."}
+          {[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl].some((v) => v.trim())
+            ? `본문 끝에 자동으로 붙습니다: ${[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl].filter((v) => v.trim()).join(" · ")}`
+            : "블로그 설정에 예약 링크·전화번호·플레이스 링크를 넣으면 본문 끝에 자동으로 붙습니다."}
         </p>
       </section>
     </article>

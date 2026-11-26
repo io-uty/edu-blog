@@ -51,6 +51,8 @@ export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?
   out.push(...d.conclusion.flatMap((p) => [p, ...gap]));
   out.push(renderHashtags(d.hashtags));
   if (brand.bookingUrl) out.push(...gap, brand.bookingUrl);
+  if (brand.placePhone.trim()) out.push(...gap, `전화 ${brand.placePhone.trim()}`);
+  if (brand.placeUrl.trim()) out.push(...gap, brand.placeUrl.trim());
   return out.join("\n").trim();
 }
 
@@ -79,7 +81,9 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
     const inner = `<span style="font-size:${headPx}px;color:${headColor};">${esc(t)}</span>`;
     return P(f.headingBold ? `<b>${inner}</b>` : inner);
   };
-  const marker = (k: string) => (labels.has(k) ? [P(span(`${labels.get(k)} 이 자리에 이미지를 넣으세요`, "color:#999999;")), gap] : []);
+  // data-slot: 본문 복사 때 이 자리를 실제 이미지로 바꾼다(PublishView)
+  const marker = (k: string) =>
+    labels.has(k) ? [`<p data-slot="${k}" style="text-align:${align};">${span(`${labels.get(k)} 이 자리에 이미지를 넣으세요`, "color:#999999;")}</p>`, gap] : [];
 
   const html: string[] = [...marker("thumb"), ...(brand.greeting ? [body(brand.greeting), gap] : []), ...d.introduction.flatMap((p) => [body(p), gap])];
   d.sections.forEach((sec, i) => {
@@ -104,6 +108,11 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   // http(s)만 링크로: javascript: 주소가 미리보기에서 클릭 시 실행되지 않게
   if (/^https?:\/\//i.test(brand.bookingUrl)) html.push(gap, P(`<a href="${esc(brand.bookingUrl)}">${esc(brand.bookingUrl)}</a>`));
   else if (brand.bookingUrl) html.push(gap, body(brand.bookingUrl));
+  const phone = brand.placePhone.trim();
+  if (phone) html.push(gap, P(`<b><span style="font-size:13px;">전화 ${esc(phone)}</span></b>`));
+  // 네이버 플레이스 링크 — 에디터가 링크 카드(지도)로 바꿔 보여준다
+  const place = brand.placeUrl.trim();
+  if (/^https?:\/\//i.test(place)) html.push(gap, P(`<a href="${esc(place)}">${esc(place)}</a>`));
   return html.join("");
 }
 

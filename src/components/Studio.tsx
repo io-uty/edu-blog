@@ -33,7 +33,7 @@ import PublishView from "./PublishView";
 import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
 import { illustrationKey, renderBlob } from "./useRendered";
-import { autoLayout } from "@/lib/imageRender";
+import { autoLayout, normalizeLayout } from "@/lib/imageRender";
 import { useLock } from "@/lib/useLock";
 
 export type Route =
@@ -55,11 +55,9 @@ function parseHash(h: string): Route {
 const toHash = (r: Route) => "#/" + ("id" in r ? `${r.name}/${r.id}` : r.name);
 
 /** 레이아웃별로 사진에서 비워 둘 자리 */
-function compositionFor(layout: ImageLayout): "note" | "card" | "poster" | "side" | "plain" {
-  if (layout === "note" || layout === "card") return layout;
-  if (layout === "poster" || layout === "scene") return "poster";
-  if (layout === "bold" || layout === "summary") return "plain";
-  return "side";
+function compositionFor(layout: ImageLayout): "note" | "plain" {
+  // 클립 노트는 가운데를 종이가 덮으므로 가장자리에 소품, 나머지(폴라로이드·말풍선 배경)는 균형 잡힌 구도
+  return normalizeLayout(layout) === "clip" ? "note" : "plain";
 }
 
 const IDLE: StageState = { analysis: "idle", plan: "idle", draft: "idle", images: "idle" };

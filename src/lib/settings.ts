@@ -10,6 +10,7 @@ export const BrandSchema = z.object({
   closingHeading: z.string().max(80),
   bookingUrl: z.string().max(300),
   placePhone: z.string().max(40),
+  placeUrl: z.string().max(300).default(""), // 네이버 플레이스(지도) 링크
   titleSuffixes: z.array(z.string().max(40)).max(10),
   fixedHashtags: z.array(z.string().max(40)).max(10),
   regionHashtagGroups: z.array(z.array(z.string().max(40)).max(10)).max(10),
@@ -51,25 +52,24 @@ export interface FormatTemplate {
   imageMarkers: boolean;
 }
 
-export type ImageLayout = "note" | "card" | "poster" | "bold" | "headline" | "notice" | "checklist" | "summary" | "scene";
+/** 카드뉴스 템플릿 3종(clip·folder·bubble). 나머지는 예전에 저장된 값으로, 가장 가까운 템플릿으로 그린다. */
+export type ImageLayout = "clip" | "folder" | "bubble" | "note" | "card" | "poster" | "bold" | "headline" | "notice" | "checklist" | "summary" | "scene";
 
 /** 일러스트 그림체(이미지 생성 API 연결 시 사용) */
 export const ILLUSTRATION_STYLES = {
   photo: {
-    label: "실사 사진",
+    label: "실사",
     prompt:
       "candid documentary snapshot taken on a 35mm film camera, bright soft daylight from a window, well-exposed and airy with clean whites (never dim or gloomy), natural imperfect framing slightly off-center, realistic skin with visible pores and no retouching, everyday lived-in clutter (sticky notes, worn textbooks, a water bottle), muted natural colors, subtle film grain, moderate depth of field rather than heavy bokeh",
   },
-  render3d: {
-    label: "3D 캐릭터",
-    prompt:
-      "high-quality 3D animated film style render, soft global illumination, warm cozy lighting, detailed props and materials, appealing stylized Korean student character with natural proportions, cinematic depth of field, polished and premium look",
+  webtoon: {
+    label: "웹툰풍",
+    prompt: "Korean webtoon style illustration, clean confident line art, soft cel shading, expressive but natural characters, bright clean colors, a single panel without speech balloons",
   },
-  flat: { label: "깔끔한 플랫", prompt: "clean flat vector illustration, simple shapes, soft shadows, friendly and modern" },
-  cute: { label: "동글동글 귀여운", prompt: "cute rounded kawaii-style illustration, chubby proportions, pastel tones, soft outlines" },
-  webtoon: { label: "웹툰풍", prompt: "Korean webtoon style illustration, clean line art, soft cel shading, expressive characters" },
-  watercolor: { label: "따뜻한 수채화", prompt: "warm watercolor illustration, gentle textures, soft edges, calm atmosphere" },
-  clay: { label: "3D 클레이", prompt: "3D clay render style, rounded soft forms, playful, studio lighting" },
+  flat: {
+    label: "일러스트",
+    prompt: "warm editorial illustration, simple flat shapes with soft paper grain texture, gentle limited palette, subtle shadows, friendly and modern, no outlines-heavy cartoon look",
+  },
 } as const;
 export type IllustrationStyle = keyof typeof ILLUSTRATION_STYLES;
 
@@ -89,7 +89,7 @@ export interface ImageDesign {
 }
 
 /** 이미지 기본값을 바꿀 때 올린다. 이전 버전으로 저장된 레이아웃·그림체는 새 기본값으로 옮긴다. */
-const IMAGE_REV = 3;
+const IMAGE_REV = 4;
 
 export interface Settings {
   brand: Brand;
@@ -105,6 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
     closingHeading: AUTO_CLOSING,
     bookingUrl: "",
     placePhone: "",
+    placeUrl: "",
     titleSuffixes: [],
     fixedHashtags: [],
     regionHashtagGroups: [],
@@ -121,7 +122,7 @@ export const DEFAULT_SETTINGS: Settings = {
     imageMarkers: true,
   },
   image: {
-    layout: "note",
+    layout: "folder",
     label: "",
     logo: null,
     bg: "#F4EFE6",
@@ -170,6 +171,13 @@ export function migrateSettings(s: Settings, rev: number | undefined): Settings 
   }
   // 3: 인사말·마무리 소제목을 {학원명} 템플릿으로(학원 이름이 바뀌어도 따라감)
   if (r < 3) brand = migrateBrand(brand);
+  // 4: 카드뉴스 템플릿 3종(클립·폴더·말풍선), 그림체 3종(실사·웹툰풍·일러스트)으로 정리
+  if (r < 4) {
+    const old = image.layout as string;
+    const layout: ImageLayout = old === "note" || old === "card" ? "clip" : old === "poster" || old === "scene" || old === "bold" ? "bubble" : old === "clip" || old === "bubble" ? old : "folder";
+    const illustrationStyle: IllustrationStyle = image.illustrationStyle in ILLUSTRATION_STYLES ? image.illustrationStyle : "flat";
+    image = { ...image, layout, illustrationStyle };
+  }
   return { ...s, brand, image: { ...image, rev: IMAGE_REV } };
 }
 

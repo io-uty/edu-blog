@@ -81,3 +81,14 @@ describe("renderHtml (예약 링크 주소)", () => {
     expect(withUrl("https://example.com/booking")).toContain('href="https://example.com/booking"');
   });
 });
+
+describe("renderHtml 본문 끝 연락처", () => {
+  it("전화번호는 작은 굵은 글씨, 플레이스는 http(s)만 링크", () => {
+    const brand = { ...DEFAULT_SETTINGS.brand, placePhone: "02-123-4567", placeUrl: "https://naver.me/abc" };
+    const html = renderHtml(mockDraft("수학 공부법"), { ...DEFAULT_SETTINGS, brand });
+    expect(html).toContain('<b><span style="font-size:13px;">전화 02-123-4567</span></b>');
+    expect(html).toContain('<a href="https://naver.me/abc">');
+    const bad = renderHtml(mockDraft("수학 공부법"), { ...DEFAULT_SETTINGS, brand: { ...brand, placeUrl: "javascript:alert(1)" } });
+    expect(bad).not.toContain("javascript:");
+  });
+});
