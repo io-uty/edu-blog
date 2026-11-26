@@ -11,13 +11,16 @@ import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
 import { PixelMark } from "./Logo";
 
-const toDataUrl = (b: Blob) =>
-  new Promise<string>((ok, no) => {
-    const r = new FileReader();
-    r.onload = () => ok(r.result as string);
-    r.onerror = no;
-    r.readAsDataURL(b);
-  });
+/** 본문에 넣는 이미지는 네이버 붙여넣기 용량 한도를 넘지 않게 720px JPEG 로 줄인다(장당 수십 KB). */
+async function shrinkForPaste(b: Blob): Promise<string> {
+  const bmp = await createImageBitmap(b);
+  const sc = Math.min(1, 720 / bmp.width);
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * sc);
+  c.height = Math.round(bmp.height * sc);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.72);
+}
 
 const NAVER_WRITE_URL = "https://blog.naver.com/GoBlogWrite.naver";
 
@@ -137,19 +140,19 @@ export default function PublishView({
     let out = html;
     for (const it of images) {
       const key = it.kind === "thumbnail" ? "thumb" : `s${it.sectionIndex}`;
-      const src = await renderBlob(it, settings.image).then(toDataUrl).catch(() => null);
+      const src = await renderBlob(it, settings.image).then(shrinkForPaste).catch(() => null);
       if (src) out = out.replace(new RegExp(`<p data-slot="${key}"[^>]*>.*?</p>`), `<p style="text-align:center;"><img src="${src}" alt="" style="max-width:100%;"></p>`);
     }
     return out;
   }
 
-  async function copyBody(): Promise<boolean> {
+  async function copyBody(withImages = true): Promise<boolean> {
     try {
       // 서식(정렬·글자 크기·소제목 스타일)과 이미지를 유지한 채 네이버 에디터에 붙여넣기.
       // Blob 을 Promise 로 넘겨야 Safari 에서도 클릭 직후의 복사 권한이 유지된다.
       await navigator.clipboard.write([
         new ClipboardItem({
-          "text/html": htmlWithImages()
+          "text/html": (withImages ? htmlWithImages() : Promise.resolve(html))
             .catch(() => html)
             .then((h) => new Blob([h], { type: "text/html" })),
           "text/plain": new Blob([plainText], { type: "text/plain" }),
@@ -251,6 +254,19 @@ export default function PublishView({
               >
                 <Copy size={15} /> 본문 복사 (서식 포함)
               </button>
+              {images.length > 0 && (
+                <button
+                  className="btn btn-sm w-full"
+                  onClick={async () => {
+                    if (await copyBody(false)) {
+                      notify("이미지 없이 본문만 복사했습니다. 이미지는 아래 4단계에서 올려 주세요");
+                      mark("body");
+                    } else notify("복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.");
+                  }}
+                >
+                  붙여넣기가 안 되면: 이미지 빼고 본문만 복사
+                </button>
+              )}
             </Step>
             {images.length > 0 && (
               <Step
