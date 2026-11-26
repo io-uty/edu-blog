@@ -8,6 +8,8 @@ const API_KEY = process.env.ANTHROPIC_API_KEY;
 export const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 export const IS_MOCK = !API_KEY || process.env.LLM_MODE === "mock";
 export type Effort = "low" | "medium" | "high";
+// 문체 다듬기·문구 만들기처럼 가벼운 단계용(출력 단가가 Sonnet의 1/20)
+export const LIGHT_MODEL = process.env.ANTHROPIC_LIGHT_MODEL || "claude-haiku-5-5";
 // 기획·본문·이미지 문구는 같은 시스템 프롬프트를 캐시로 나눠 쓴다. effort가 다르면 캐시가 깨질 수 있어 한 값으로 맞춘다.
 export const MAIN_EFFORT: Effort = (process.env.LLM_EFFORT as Effort) || "medium";
 
@@ -35,17 +37,18 @@ export async function generateJson<T>(opts: {
   maxTokens?: number;
   tools?: Anthropic.ToolUnion[];
   effort?: Effort;
-  // 한 번만 쓰는 시스템 프롬프트는 캐시 쓰기 비용(1.25배)만 들므로 끈다
+  model?: string;
+  // 기본은 끔. 구조화 출력은 단계마다 스키마가 달라 접두부가 달라지므로, 실측(2026-11 로그)에서 cache_read가 항상 0이고 쓰기 비용(1.25배)만 들었다
   cache?: boolean;
 }): Promise<T> {
   if (IS_MOCK || !client) return opts.schema.parse(opts.mock());
   // Claude Sonnet 5.5 는 사고(thinking)가 항상 켜져 있고 그 토큰도 max_tokens 에 포함된다.
   // 한도가 낮으면 JSON이 중간에 잘리므로 넉넉히 잡는다(실제 과금은 사용량 기준).
   const maxTokens = Math.max(opts.maxTokens ?? 0, 16000);
+  const model = opts.model ?? MODEL;
   const effort = opts.effort ?? MAIN_EFFORT;
-  // 시스템 프롬프트 끝에 캐시 지점을 둔다: 같은 학원·같은 5분 안의 다음 호출은 이 부분을 0.05배 가격으로 읽는다
   const system: Anthropic.TextBlockParam[] = [
-    { type: "text", text: opts.system, ...(opts.cache !== false && { cache_control: { type: "ephemeral" as const } }) },
+    { type: "text", text: opts.system, ...(opts.cache && { cache_control: { type: "ephemeral" as const } }) },
   ];
   const logUsage = (u: Anthropic.Usage) =>
     console.info(
@@ -55,7 +58,7 @@ export async function generateJson<T>(opts: {
   // 1) 구조화 출력: API가 스키마에 맞는 JSON만 내도록 강제한다(문법이 깨진 JSON 방지).
   try {
     const res = await client.messages.parse({
-      model: MODEL,
+      model,
       max_tokens: maxTokens,
       system,
       messages: [{ role: "user", content: opts.user }],
@@ -78,7 +81,7 @@ export async function generateJson<T>(opts: {
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await client.messages.create({
-      model: MODEL,
+      model,
       max_tokens: maxTokens,
       system,
       messages,

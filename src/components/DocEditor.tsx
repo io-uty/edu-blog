@@ -6,6 +6,7 @@ import type { Draft } from "@/lib/schemas";
 import { resolveBrand, type Settings } from "@/lib/settings";
 import { displayName, type TenantProfile } from "@/lib/tenant";
 import { sortImages, type ImageItem } from "@/lib/store";
+import { BOX_COLORS, FONTS, SIZES, TEXT_COLORS, clearFmt, stripFmt, wrapFmt, type FmtKind } from "@/lib/richtext";
 import { ImageSlot, type ImageActions } from "./images";
 
 const join = (ps: string[]) => ps.join("\n\n");
@@ -165,6 +166,22 @@ export default function DocEditor({
     }
   }
 
+  /** 선택 영역에 서식 적용(kind 없으면 서식 지우기). 적용 뒤에도 같은 범위를 선택 상태로 둔다. */
+  function applyFmt(kind: FmtKind | null, val = "") {
+    if (!sel) return;
+    const f = fields[sel.field];
+    const r = kind ? wrapFmt(f.get(), sel.start, sel.end, kind, val) : clearFmt(f.get(), sel.start, sel.end);
+    f.set(r.text);
+    setSel({ ...sel, end: r.end });
+    // 값이 바뀌면 브라우저가 커서를 끝으로 옮겨 선택이 풀리므로, 새 범위를 다시 선택해 툴바를 유지한다
+    const { field, start } = sel;
+    requestAnimationFrame(() => {
+      const ta = document.querySelector<HTMLTextAreaElement>(`[data-field="${field}"] textarea`);
+      ta?.focus();
+      ta?.setSelectionRange(start, r.end);
+    });
+  }
+
   async function runRefine(action: Action) {
     if (!sel) return;
     const original = fields[sel.field].get().slice(sel.start, sel.end);
@@ -174,7 +191,7 @@ export default function DocEditor({
       const r = await fetch("/api/refine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, text: original, brand: settings.brand, tenant }),
+        body: JSON.stringify({ action, text: stripFmt(original), brand: settings.brand, tenant }),
       });
       const j = await r.json().catch(() => ({}));
       if (id !== reqId.current) return;
@@ -209,13 +226,68 @@ export default function DocEditor({
   const renderBody = (field: string) => {
     const active = sel?.field === field;
     return (
-      <div>
+      <div data-field={field}>
         <AutoArea
           value={fields[field].get()}
           onChange={fields[field].set}
           onSelect={(s, e) => onFieldSelect(field, s, e)}
           className="doc-p"
         />
+        {active && !refine && (
+          <div
+            className="mt-1 flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-sm"
+            onMouseDown={(e) => e.preventDefault()}
+            role="toolbar"
+            aria-label="선택한 글자 서식"
+          >
+            <button className="btn btn-sm font-bold" title="진하게" onClick={() => applyFmt("b")}>가</button>
+            <button className="btn btn-sm underline" title="밑줄" onClick={() => applyFmt("u")}>가</button>
+            {/* select는 mousedown을 막으면 열리지 않아 전파만 끊는다(선택 범위는 sel 상태에 있다) */}
+            <select
+              className="btn btn-sm"
+              aria-label="글꼴"
+              value=""
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => e.target.value && applyFmt("f", e.target.value)}
+            >
+              <option value="">글꼴</option>
+              {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <select
+              className="btn btn-sm"
+              aria-label="글자 크기"
+              value=""
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => e.target.value && applyFmt("s", e.target.value)}
+            >
+              <option value="">크기</option>
+              {SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span className="ml-1 text-xs text-sub">글자색</span>
+            {TEXT_COLORS.map((c) => (
+              <button
+                key={c}
+                className="h-5 w-5 rounded-full border border-line"
+                style={{ background: c }}
+                title={`글자색 ${c}`}
+                aria-label={`글자색 ${c}`}
+                onClick={() => applyFmt("c", c)}
+              />
+            ))}
+            <span className="ml-1 text-xs text-sub">배경색</span>
+            {BOX_COLORS.map((c) => (
+              <button
+                key={c}
+                className="h-5 w-5 rounded border border-line"
+                style={{ background: c }}
+                title={`글자 박스색 ${c}`}
+                aria-label={`글자 박스색 ${c}`}
+                onClick={() => applyFmt("h", c)}
+              />
+            ))}
+            <button className="btn btn-sm btn-ghost ml-auto" onClick={() => applyFmt(null)}>서식 지우기</button>
+          </div>
+        )}
         {active && !refine && (
           <div
             className="mt-1 flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-sm"

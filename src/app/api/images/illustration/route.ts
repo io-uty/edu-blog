@@ -13,8 +13,8 @@ export const maxDuration = 120;
 // OPENAI_API_KEY 가 있을 때만 동작한다. 모델은 IMAGE_MODEL(기본 gpt-image-2).
 const KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.IMAGE_MODEL || "gpt-image-2";
-// 원가 때문에 기본은 medium. 고품질이 필요하면 IMAGE_QUALITY=high
-const QUALITY = process.env.IMAGE_QUALITY || "medium";
+// 원가 때문에 기본은 low. 더 높이려면 IMAGE_QUALITY=medium|high
+const QUALITY = process.env.IMAGE_QUALITY || "low";
 
 const Body = z.object({
   scene: z.string().trim().min(3).max(600),

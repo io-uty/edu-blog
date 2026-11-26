@@ -2,6 +2,7 @@ import { BANNED_PHRASES, LENGTH_TARGET, MAX_TABLES, SECTION_RANGE, TOPIC_HASHTAG
 import { DEFAULT_SETTINGS, type Brand } from "./settings";
 import { aiTells } from "./humanize";
 import { bodyCharCount } from "./render";
+import { stripFmt } from "./richtext";
 import type { Draft } from "./schemas";
 
 export type Severity = "error" | "warning" | "info";
@@ -38,7 +39,9 @@ export function checkQuality(d: Draft, brand: Brand = DEFAULT_SETTINGS.brand, ex
     ...d.sections.flatMap((s) => [s.heading, ...s.paragraphs, ...(s.bullets ?? []), s.example?.text ?? ""]),
     ...d.sections.flatMap((s) => (s.table ? [...s.table.headers, ...s.table.rows.flat()] : [])),
     ...d.conclusion,
-  ].join("\n");
+  ]
+    .map(stripFmt)
+    .join("\n");
 
   for (const phrase of [...BANNED_PHRASES, ...extraBanned]) {
     if (!bodyText.includes(phrase)) continue;
@@ -75,7 +78,7 @@ export function checkQuality(d: Draft, brand: Brand = DEFAULT_SETTINGS.brand, ex
   const tables = d.sections.filter((s) => s.table).length;
   if (tables > MAX_TABLES) issues.push({ code: "TABLE_COUNT", severity: "warning", message: `표 ${tables}개 (최대 ${MAX_TABLES}개)` });
 
-  const lens = d.sections.map((s) => [...s.paragraphs, ...(s.bullets ?? [])].join("").length);
+  const lens = d.sections.map((s) => stripFmt([...s.paragraphs, ...(s.bullets ?? [])].join("")).length);
   if (Math.max(...lens) > Math.min(...lens) * 2.5)
     issues.push({ code: "SECTION_BALANCE", severity: "warning", message: `소주제 길이 불균형 (${lens.join(" / ")}자)` });
 

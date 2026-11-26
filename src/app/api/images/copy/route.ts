@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { IS_MOCK, generateJson, toUserMessage } from "@/lib/llm";
+import { IS_MOCK, LIGHT_MODEL, generateJson, toUserMessage } from "@/lib/llm";
 import { ImageCopySchema, fallbackCopy, type ImageTarget } from "@/lib/imageCopy";
 import { systemPrompt } from "@/lib/prompts";
 import { DraftSchema } from "@/lib/schemas";
+import { stripFmt } from "@/lib/richtext";
 import { getCtx } from "@/lib/requestCtx";
 import { DAY, allow, tooMany } from "@/lib/rateLimit";
 import { logEvent } from "@/lib/usage";
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
 
 주제: ${topic}
 콘텐츠 유형: ${contentType}
-본문: ${JSON.stringify(draft)}
+본문(소제목과 핵심 항목만): ${JSON.stringify({ title: draft.title, sections: draft.sections.map((s) => ({ heading: s.heading, bullets: s.bullets, lead: stripFmt(s.paragraphs[0] ?? "").slice(0, 120) })) })}
 
 만들 이미지(순서대로):
 ${valid.map((t, i) => `${i + 1}. ${t.kind === "thumbnail" ? "썸네일(글 전체 대표)" : `소주제 ${t.sectionIndex! + 1} "${draft.sections[t.sectionIndex!].heading}"`}`).join("\n")}
@@ -97,6 +98,8 @@ JSON 형식: {"items": [{"use": true, "eyebrow": "", "title": [""], "highlight":
       schema: OutSchema,
       mock,
       maxTokens: 4000,
+      model: LIGHT_MODEL,
+      effort: "low",
     });
     const rows = pick(out.items);
     if (got.session?.tenantId && !IS_MOCK)

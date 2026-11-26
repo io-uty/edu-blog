@@ -1,5 +1,5 @@
 import "server-only";
-import { generateJson } from "./llm";
+import { generateJson, LIGHT_MODEL } from "./llm";
 import { mockAnalysis, mockDraft, mockPlan } from "./mock";
 import { applyPolish, PolishSchema, polishInput } from "./humanize";
 import { analysisPrompt, draftPrompt, planPrompt, polishPrompt, polishSystem, systemPrompt, type PromptCtx } from "./prompts";
@@ -23,7 +23,7 @@ export function runAnalysis(i: PipelineInput) {
     mock: () => mockAnalysis(i.topic),
     maxTokens: 1500,
     // 일정·제도·통계처럼 확인이 필요한 사실만 공식 출처에서 찾아본다
-    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 4 }],
+    tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 2 }],
   });
 }
 
@@ -56,9 +56,9 @@ export async function runPolish(i: PipelineInput, draft: Draft): Promise<Draft> 
     schema: PolishSchema,
     mock: () => input,
     maxTokens: 8000,
-    // 문체만 고치는 단계라 깊게 생각할 필요가 없다. 시스템 프롬프트도 이 단계에서만 쓴다.
+    // 문체만 고치는 단계라 깊게 생각할 필요가 없다.
+    model: LIGHT_MODEL,
     effort: "low",
-    cache: false,
   });
   return applyPolish(draft, out);
 }
