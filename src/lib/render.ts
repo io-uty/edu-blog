@@ -1,5 +1,6 @@
 import type { Draft } from "./schemas";
 import { DEFAULT_SETTINGS, resolveBrand, type FormatTemplate, type Settings } from "./settings";
+import { fmtHtml, stripFmt } from "./richtext";
 
 /** 본문에 이미지가 들어갈 위치(썸네일 여부, 이미지가 있는 소주제 번호) */
 export interface ImageSlots {
@@ -53,7 +54,7 @@ export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?
   if (brand.bookingUrl) out.push(...gap, brand.bookingUrl);
   if (brand.placePhone.trim()) out.push(...gap, `전화 ${brand.placePhone.trim()}`);
   if (brand.placeUrl.trim()) out.push(...gap, brand.placeUrl.trim());
-  return out.join("\n").trim();
+  return stripFmt(out.join("\n").trim());
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -74,7 +75,7 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   const labels = f.imageMarkers ? slotLabels(d, slots) : new Map<string, string>();
 
   const P = (inner: string) => `<p style="text-align:${align};">${inner}</p>`;
-  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${extra}">${esc(t)}</span>`;
+  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${extra}">${fmtHtml(esc(t))}</span>`;
   const body = (t: string) => P(span(t));
   const gap = f.blankLineBetween ? "<p><br></p>" : "";
   const heading = (t: string) => {
@@ -129,5 +130,5 @@ export function bodyCharCount(d: Draft): number {
     ]),
     ...d.conclusion,
   ];
-  return parts.join("\n").length;
+  return stripFmt(parts.join("\n")).length;
 }

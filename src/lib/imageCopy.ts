@@ -1,6 +1,7 @@
 // 이미지 안에 들어갈 문구(글자는 코드로 렌더링한다). 클라이언트·서버 공용.
 import { z } from "zod";
 import type { Draft } from "./schemas";
+import { stripFmt } from "./richtext";
 
 export const ImageCopySchema = z.object({
   eyebrow: z.string().max(30), // 상단 작은 배지(예: 과목명, POINT 01)
@@ -87,7 +88,7 @@ export function fallbackCopy(d: Draft, t: ImageTarget, contentType: string): Ima
     sub: "",
     points: (s.bullets ?? []).slice(0, 3).map((b) => cut(b, 14)),
     // 본문의 체크 항목(없으면 문단)을 그대로 정리 카드 항목으로 쓴다
-    items: (s.bullets && s.bullets.length ? s.bullets : s.paragraphs).slice(0, 4).map(toItem),
+    items: (s.bullets && s.bullets.length ? s.bullets : s.paragraphs).slice(0, 4).map((x) => toItem(stripFmt(x))),
     visual: "scene",
     scene: "Close-up of a student's hands writing in a study planner on a desk, warm lamp light, shallow depth of field.",
   };

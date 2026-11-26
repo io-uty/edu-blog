@@ -4,6 +4,7 @@
 // 3) aiTells: 남은 AI 티를 세는 규칙 기반 검사(품질 패널 표시용)
 import { z } from "zod";
 import type { Draft } from "./schemas";
+import { stripFmt } from "./richtext";
 
 export const HUMANIZE_RULES = `
 [AI 티 없애기 — 실측으로 사람 글과 갈리는 패턴]
@@ -102,7 +103,7 @@ function applyPolishRaw(d: Draft, p: Polish): Draft {
 
 /** 남은 AI 티(규칙 기반). 품질 패널에 '자연스러움' 항목으로 보여준다. */
 export function aiTells(d: Draft): string[] {
-  const paras = [...d.introduction, ...d.sections.flatMap((s) => s.paragraphs), ...d.conclusion];
+  const paras = [...d.introduction, ...d.sections.flatMap((s) => s.paragraphs), ...d.conclusion].map(stripFmt);
   const text = paras.join("\n");
   const count = (re: RegExp) => (text.match(re) ?? []).length;
   const out: string[] = [];

@@ -1,9 +1,10 @@
 import type { Draft } from "./schemas";
+import { stripFmt } from "./richtext";
 
 /** 검사 결과의 문구(excerpt)가 들어 있는 본문 블록 id를 찾는다. */
 export function findBlock(d: Draft, excerpt?: string): string | null {
   if (!excerpt) return null;
-  const has = (t: string) => t.includes(excerpt);
+  const has = (t: string) => stripFmt(t).includes(excerpt);
   if (has(d.title)) return "blk-title";
   if (d.introduction.some(has)) return "blk-intro";
   for (let i = 0; i < d.sections.length; i++) {
