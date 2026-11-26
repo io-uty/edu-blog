@@ -426,7 +426,6 @@ export default function Studio() {
           brand: settings.brand,
           tenant,
           resume: resume ? cache.current : undefined,
-          requestId: newId(), // 시도마다 새 키: 같은 시도의 재전송만 중복 차감되지 않는다
         }),
       });
       if (res.status === 402) {

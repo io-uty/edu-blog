@@ -23,7 +23,6 @@ const BodySchema = z.object({
   regionIndex: z.number().int().min(0).nullable().optional(),
   brand: z.unknown().optional(),
   tenant: z.unknown().optional(),
-  requestId: z.string().uuid().optional(), // 같은 요청의 재전송은 한 번만 차감
 });
 
 // NDJSON 스트림으로 단계별 진행 상태를 내려준다.
@@ -37,7 +36,8 @@ export async function POST(req: Request) {
   // 사용량: 서버에서만 계산·차감한다. 실패하면 아래에서 되돌린다.
   let chargedKey: string | null = null;
   if (session?.tenantId && !IS_MOCK) {
-    const key = `gen:${parsed.data.requestId ?? randomUUID()}`;
+    // 키는 서버가 만든다: 클라이언트 키를 쓰면 같은 키 재전송이 "이미 차감됨"으로 통과해 한도 없이 생성된다
+    const key = `gen:${randomUUID()}`;
     try {
       const r = await consume(session.tenantId, session.user.id, "content", key);
       if (!r.allowed)

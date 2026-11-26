@@ -101,7 +101,9 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   if (brand.closingHeading) html.push(heading(brand.closingHeading), gap);
   html.push(...d.conclusion.flatMap((p) => [body(p), gap]));
   html.push(body(renderHashtags(d.hashtags)));
-  if (brand.bookingUrl) html.push(gap, P(`<a href="${esc(brand.bookingUrl)}">${esc(brand.bookingUrl)}</a>`));
+  // http(s)만 링크로: javascript: 주소가 미리보기에서 클릭 시 실행되지 않게
+  if (/^https?:\/\//i.test(brand.bookingUrl)) html.push(gap, P(`<a href="${esc(brand.bookingUrl)}">${esc(brand.bookingUrl)}</a>`));
+  else if (brand.bookingUrl) html.push(gap, body(brand.bookingUrl));
   return html.join("");
 }
 

@@ -4,6 +4,7 @@ import { nameMatches } from "@/lib/bank";
 import { allow } from "@/lib/rateLimit";
 import { renderHtml } from "@/lib/render";
 import { mockDraft } from "@/lib/mock";
+import { DEFAULT_SETTINGS } from "@/lib/settings";
 
 describe("assertPublicUrl (SSRF 방어)", () => {
   // IP 직접 입력은 DNS 조회 없이 검사된다
@@ -68,5 +69,15 @@ describe("renderHtml (XSS 이스케이프)", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("<img");
     expect(html).toContain("&lt;script&gt;");
+  });
+});
+
+describe("renderHtml (예약 링크 주소)", () => {
+  const withUrl = (bookingUrl: string) => renderHtml(mockDraft("주제"), { ...DEFAULT_SETTINGS, brand: { ...DEFAULT_SETTINGS.brand, bookingUrl } });
+  it("javascript: 주소는 링크로 만들지 않는다", () => {
+    expect(withUrl("javascript:alert(1)")).not.toContain("href=");
+  });
+  it("https 주소는 링크로 만든다", () => {
+    expect(withUrl("https://example.com/booking")).toContain('href="https://example.com/booking"');
   });
 });

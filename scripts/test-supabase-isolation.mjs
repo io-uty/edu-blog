@@ -55,7 +55,8 @@ try {
   const r2 = await B.from("projects").select("id").eq("tenant_id", ta);
   check(!r2.error && r2.data.length === 0, "B 가 tenant_id 를 지정해도 A 콘텐츠가 0건");
   const r3 = await B.from("projects").update({ title: "변조" }).eq("id", pa.id).select("id");
-  check(!r3.error && r3.data.length === 0, "B 는 A 의 콘텐츠를 수정할 수 없다");
+  const r3b = await admin.from("projects").select("title").eq("id", pa.id).single();
+  check(r3b.data?.title !== "변조", `B 는 A 의 콘텐츠를 수정할 수 없다${r3.error ? ` (${r3.error.code} ${r3.error.message})` : ` (${r3.data.length}행)`}`);
   const r4 = await B.from("projects").insert({ tenant_id: ta, topic: "끼워넣기", content_type: "x" });
   check(!!r4.error, "B 는 A 학원으로 콘텐츠를 만들 수 없다");
   const r5 = await B.from("tenant_brands").select("tenant_id");
@@ -106,6 +107,42 @@ try {
 
   const r13 = await anonClient().from("projects").select("id");
   check(denied(r13), `로그인하지 않으면 콘텐츠를 볼 수 없다${r13.error ? ` (${r13.error.code})` : ""}`);
+
+  // ── 개인정보: 이름·전화·이메일·인증번호·입금자명은 로그인 사용자도 직접 읽을 수 없다 ──
+  const phoneA = `010${String(stamp).slice(-8)}`;
+  const pr = await admin.from("profiles").insert({ user_id: users[0].id, name: "격리A", phone: phoneA, email: users[0].email, login_id: `iso_a_${stamp}` });
+  check(!pr.error, "준비: A 가입 정보 저장");
+  await admin.from("phone_verifications").upsert({ phone: phoneA, code_hash: "x", expires_at: new Date(Date.now() + 60_000).toISOString() });
+  for (const [who, c] of [["A(본인)", A], ["B(남)", B], ["비로그인", anonClient()]]) {
+    for (const t of ["profiles", "phone_verifications", "deposit_events", "admin_audit"]) {
+      const r = await c.from(t).select("*").limit(1);
+      check(denied(r), `${who}는 ${t} 를 읽을 수 없다${r.error ? ` (${r.error.code})` : ""}`);
+    }
+  }
+  const p1 = await B.from("payments").select("order_id").eq("tenant_id", ta);
+  check(denied(p1), "B 는 A 학원의 결제(입금자명)를 볼 수 없다");
+  const m1 = await B.from("tenant_members").select("user_id").eq("tenant_id", ta);
+  check(denied(m1), "B 는 A 학원의 회원 목록을 볼 수 없다");
+  const pa1 = await B.from("platform_admins").select("user_id");
+  check(denied(pa1), "일반 사용자는 운영자 목록을 볼 수 없다");
+  const v1 = await A.rpc("verify_phone", { p_phone: phoneA, p_hash: "x" });
+  check(!!v1.error, "사용자는 인증번호 확인 함수를 직접 호출할 수 없다");
+  // 학원 관리자도 구독 상태는 직접 바꿀 수 없다(20261126000001 적용 후)
+  const s1 = await A.from("tenants").update({ subscription_status: "active" }).eq("id", ta).select("id");
+  check(!!s1.error || s1.data.length === 0, `학원 관리자는 구독 상태를 직접 바꿀 수 없다${s1.error ? ` (${s1.error.code})` : ""}`);
+  const n1 = await A.from("tenants").update({ branch_name: "본점" }).eq("id", ta).select("id");
+  check(!n1.error && n1.data.length === 1, "학원 관리자는 학원 정보(지점명)는 고칠 수 있다");
+  // 편집자는 블로그 설정(예약 링크 등)을 바꿀 수 없다(20261126000001 적용 후)
+  const emailE = `bbolog-isolation-e-${stamp}@example.com`;
+  const { data: uE } = await admin.auth.admin.createUser({ email: emailE, password: `T-${stamp}-e-pw!`, email_confirm: true });
+  users.push({ id: uE.user.id, email: emailE, password: "" });
+  await admin.from("tenant_members").insert({ tenant_id: ta, user_id: uE.user.id, role: "editor" });
+  const E = anonClient();
+  await E.auth.signInWithPassword({ email: emailE, password: `T-${stamp}-e-pw!` });
+  const e1 = await E.from("tenant_brands").update({ brand_guidelines: { bookingUrl: "javascript:alert(1)" } }).eq("tenant_id", ta).select("tenant_id");
+  check(!!e1.error || e1.data.length === 0, "편집자는 블로그 설정을 직접 바꿀 수 없다");
+  const e2 = await E.from("projects").select("id").eq("id", pa.id);
+  check(!e2.error && e2.data.length === 1, "편집자는 자기 학원 콘텐츠는 본다");
 } catch (e) {
   console.error("테스트 준비 중 오류:", e.message ?? e);
   failed++;

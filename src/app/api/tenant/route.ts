@@ -52,6 +52,7 @@ export async function PATCH(req: Request) {
   const s = await getSession();
   if (!s) return UNAUTHORIZED();
   if (!s.tenantId) return Response.json({ error: "학원 정보를 먼저 등록해 주세요." }, { status: 403 });
+  if (s.role === "editor") return Response.json({ error: "블로그 설정은 관리자만 수정할 수 있습니다." }, { status: 403 });
   const p = z.object({ settings: SettingsInputSchema }).safeParse(await req.json().catch(() => null));
   if (!p.success) return Response.json({ error: "설정 형식을 확인해 주세요." }, { status: 400 });
   try {
