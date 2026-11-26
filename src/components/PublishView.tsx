@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Copy, Dot, Download, ExternalLink, Loader2 } from "lucide-react";
-import { HUMAN_REVIEW_NOTICE, buildChecks } from "@/lib/checks";
+import { ArrowLeft, Check, Copy, Download, ExternalLink, Loader2 } from "lucide-react";
 import { renderHashtags } from "@/lib/render";
 import type { Settings } from "@/lib/settings";
-import { formatTime, imagePosition, sortImages, type DocRecord, type ImageItem, type Quality } from "@/lib/store";
+import { formatTime, imagePosition, sortImages, type DocRecord, type ImageItem } from "@/lib/store";
 import { buildZip, imageFileName, saveBlob } from "./exporter";
 import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
@@ -86,7 +85,6 @@ function Step({
 export default function PublishView({
   doc,
   settings,
-  quality,
   html,
   plainText,
   onBack,
@@ -97,7 +95,6 @@ export default function PublishView({
 }: {
   doc: DocRecord;
   settings: Settings;
-  quality: Quality;
   html: string;
   plainText: string;
   onBack: () => void;
@@ -107,7 +104,6 @@ export default function PublishView({
   track?: (type: string, kind?: string) => void;
 }) {
   const tags = renderHashtags(doc.draft.hashtags);
-  const checks = buildChecks(quality);
   const images = sortImages(doc.images);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const mark = (k: string) => setDone((d) => ({ ...d, [k]: true }));
@@ -333,21 +329,7 @@ export default function PublishView({
           </ol>
 
           <section className="border-t border-line bg-bg2 px-5 py-4">
-            <p className="label">검토</p>
-            <ul className="text-[14px]">
-              {checks.map((c) => (
-                <li key={c.key} className="flex items-center gap-2 py-1">
-                  {c.ok ? <Check size={14} className="text-ok" /> : <Dot size={16} className="-mx-px" />}
-                  <span className="flex-1">{c.label}</span>
-                  <span className={c.ok ? "text-sub" : ""}>{c.value}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-xs text-sub">
-              {doc.mock ? "샘플 데이터는 게시하지 마세요. " : ""}
-              {HUMAN_REVIEW_NOTICE}
-            </p>
-            <button className="btn btn-sm mt-3 w-full" disabled={!!zipping} onClick={() => zip("all")}>
+            <button className="btn btn-sm w-full" disabled={!!zipping} onClick={() => zip("all")}>
               {zipping === "all" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 글·이미지 전체 백업 (.zip)
             </button>
           </section>

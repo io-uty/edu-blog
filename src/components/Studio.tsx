@@ -769,7 +769,6 @@ export default function Studio() {
       <PublishView
         doc={doc}
         settings={settings}
-        quality={derived.quality}
         html={derived.html}
         plainText={derived.plainText}
         onBack={() => go({ name: "edit", id: doc.id })}

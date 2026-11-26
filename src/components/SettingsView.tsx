@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { shrinkImage } from "@/lib/imageRender";
+import { FONTS } from "@/lib/richtext";
 import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAME_TOKEN, resolveBrand, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 import { displayName, type TenantProfile } from "@/lib/tenant";
@@ -234,6 +235,23 @@ export default function SettingsView({
                 ))}
               </select>
             </Field>
+            <Field label="글꼴" hint="본문·소제목 공통">
+              <select className="field h-9 w-[200px] py-0" value={f.fontFamily} onChange={(e) => setFormat({ fontFamily: e.target.value })}>
+                <option value="">에디터 기본</option>
+                {FONTS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="본문 글자색·굵기">
+              <div className="flex flex-wrap items-center gap-3">
+                <ColorInput value={f.bodyColor || "#000000"} onChange={(v) => setFormat({ bodyColor: v })} />
+                {f.bodyColor && <button className="btn btn-sm" onClick={() => setFormat({ bodyColor: "" })}>기본색으로</button>}
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={f.bodyBold} onChange={(e) => setFormat({ bodyBold: e.target.checked })} /> 굵게
+                </label>
+              </div>
+            </Field>
             <Field label="소제목">
               <div className="flex flex-wrap items-center gap-3">
                 <select className="field h-9 w-[120px] py-0" value={f.headingSize} onChange={(e) => setFormat({ headingSize: Number(e.target.value) })}>
@@ -245,6 +263,15 @@ export default function SettingsView({
                 <label className="flex items-center gap-1.5">
                   <input type="checkbox" checked={f.headingBold} onChange={(e) => setFormat({ headingBold: e.target.checked })} /> 굵게
                 </label>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <span className="text-xs text-sub">박스색</span>
+                <ColorInput value={f.headingBg || "#fff59d"} onChange={(v) => setFormat({ headingBg: v })} />
+                {f.headingBg ? (
+                  <button className="btn btn-sm" onClick={() => setFormat({ headingBg: "" })}>박스 없음</button>
+                ) : (
+                  <span className="text-xs text-sub">지금은 박스 없음 · 색을 고르면 적용됩니다</span>
+                )}
               </div>
             </Field>
             <Field label="소제목 앞 표시">
@@ -272,9 +299,14 @@ export default function SettingsView({
               </div>
             </Field>
             <Field label="미리보기">
-              <div className="rounded-2xl border border-line px-5 py-4" style={{ textAlign: f.align }}>
+              <div
+                className="rounded-2xl border border-line px-5 py-4"
+                style={{ textAlign: f.align, fontFamily: f.fontFamily ? `'${f.fontFamily}', sans-serif` : undefined, color: f.bodyColor || undefined, fontWeight: f.bodyBold ? 700 : undefined }}
+              >
                 <p style={{ fontSize: f.headingSize, color: f.headingColor, fontWeight: f.headingBold ? 700 : 400, lineHeight: 1.5 }}>
-                  {f.headingPrefix === "number" ? "1. " : f.headingPrefix === "dash" ? "- " : ""}보기를 보기 전에 빈칸의 역할부터 정합니다
+                  <span style={{ backgroundColor: f.headingBg || undefined }}>
+                    {f.headingPrefix === "number" ? "1. " : f.headingPrefix === "dash" ? "- " : ""}보기를 보기 전에 빈칸의 역할부터 정합니다
+                  </span>
                 </p>
                 {f.blankLineBetween && <br />}
                 <p style={{ fontSize: bodyPx, lineHeight: 1.8 }}>

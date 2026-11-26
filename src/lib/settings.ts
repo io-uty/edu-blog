@@ -46,6 +46,10 @@ export interface FormatTemplate {
   headingSize: number;
   headingColor: string;
   headingBold: boolean;
+  headingBg: string; // 소제목 글자 박스색 ("" = 없음)
+  fontFamily: string; // 본문·소제목 글꼴 ("" = 에디터 기본)
+  bodyColor: string; // 본문 글자색 ("" = 에디터 기본)
+  bodyBold: boolean;
   headingPrefix: "number" | "dash" | "none";
   listMarker: string;
   blankLineBetween: boolean;
@@ -116,6 +120,10 @@ export const DEFAULT_SETTINGS: Settings = {
     headingSize: 24,
     headingColor: "#8c8c8c",
     headingBold: true,
+    headingBg: "",
+    fontFamily: "",
+    bodyColor: "",
+    bodyBold: false,
     headingPrefix: "number",
     listMarker: "-",
     blankLineBetween: true,

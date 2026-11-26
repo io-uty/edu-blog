@@ -1,6 +1,6 @@
 import type { Draft } from "./schemas";
 import { DEFAULT_SETTINGS, resolveBrand, type FormatTemplate, type Settings } from "./settings";
-import { fmtHtml, stripFmt } from "./richtext";
+import { FONTS, fmtHtml, stripFmt } from "./richtext";
 
 /** 본문에 이미지가 들어갈 위치(썸네일 여부, 이미지가 있는 소주제 번호) */
 export interface ImageSlots {
@@ -73,13 +73,16 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   const headPx = size(f.headingSize, 24);
   const headColor = color(f.headingColor, "#8c8c8c");
   const labels = f.imageMarkers ? slotLabels(d, slots) : new Map<string, string>();
+  const font = FONTS.includes(f.fontFamily) ? `font-family:'${f.fontFamily}';` : "";
+  const bodyColor = color(f.bodyColor, "") ? `color:${f.bodyColor};` : "";
+  const headBg = color(f.headingBg, "") ? `background-color:${f.headingBg};` : "";
 
   const P = (inner: string) => `<p style="text-align:${align};">${inner}</p>`;
-  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${extra}">${fmtHtml(esc(t))}</span>`;
-  const body = (t: string) => P(span(t));
+  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${font}${bodyColor}${extra}">${fmtHtml(esc(t))}</span>`;
+  const body = (t: string) => P(f.bodyBold ? `<b>${span(t)}</b>` : span(t));
   const gap = f.blankLineBetween ? "<p><br></p>" : "";
   const heading = (t: string) => {
-    const inner = `<span style="font-size:${headPx}px;color:${headColor};">${esc(t)}</span>`;
+    const inner = `<span style="font-size:${headPx}px;color:${headColor};${font}${headBg}">${esc(t)}</span>`;
     return P(f.headingBold ? `<b>${inner}</b>` : inner);
   };
   // data-slot: 본문 복사 때 이 자리를 실제 이미지로 바꾼다(PublishView)
