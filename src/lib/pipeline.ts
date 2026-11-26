@@ -56,6 +56,9 @@ export async function runPolish(i: PipelineInput, draft: Draft): Promise<Draft> 
     schema: PolishSchema,
     mock: () => input,
     maxTokens: 8000,
+    // 문체만 고치는 단계라 깊게 생각할 필요가 없다. 시스템 프롬프트도 이 단계에서만 쓴다.
+    effort: "low",
+    cache: false,
   });
   return applyPolish(draft, out);
 }

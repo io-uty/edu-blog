@@ -7,6 +7,9 @@ import type { z } from "zod";
 const API_KEY = process.env.ANTHROPIC_API_KEY;
 export const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
 export const IS_MOCK = !API_KEY || process.env.LLM_MODE === "mock";
+export type Effort = "low" | "medium" | "high";
+// 기획·본문·이미지 문구는 같은 시스템 프롬프트를 캐시로 나눠 쓴다. effort가 다르면 캐시가 깨질 수 있어 한 값으로 맞춘다.
+export const MAIN_EFFORT: Effort = (process.env.LLM_EFFORT as Effort) || "medium";
 
 const client = IS_MOCK ? null : new Anthropic({ apiKey: API_KEY });
 
@@ -31,22 +34,35 @@ export async function generateJson<T>(opts: {
   mock: () => T;
   maxTokens?: number;
   tools?: Anthropic.ToolUnion[];
+  effort?: Effort;
+  // 한 번만 쓰는 시스템 프롬프트는 캐시 쓰기 비용(1.25배)만 들므로 끈다
+  cache?: boolean;
 }): Promise<T> {
   if (IS_MOCK || !client) return opts.schema.parse(opts.mock());
   // Claude Sonnet 5.5 는 사고(thinking)가 항상 켜져 있고 그 토큰도 max_tokens 에 포함된다.
   // 한도가 낮으면 JSON이 중간에 잘리므로 넉넉히 잡는다(실제 과금은 사용량 기준).
   const maxTokens = Math.max(opts.maxTokens ?? 0, 16000);
+  const effort = opts.effort ?? MAIN_EFFORT;
+  // 시스템 프롬프트 끝에 캐시 지점을 둔다: 같은 학원·같은 5분 안의 다음 호출은 이 부분을 0.05배 가격으로 읽는다
+  const system: Anthropic.TextBlockParam[] = [
+    { type: "text", text: opts.system, ...(opts.cache !== false && { cache_control: { type: "ephemeral" as const } }) },
+  ];
+  const logUsage = (u: Anthropic.Usage) =>
+    console.info(
+      `[llm:usage] effort=${effort} in=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0} out=${u.output_tokens}`,
+    );
 
   // 1) 구조화 출력: API가 스키마에 맞는 JSON만 내도록 강제한다(문법이 깨진 JSON 방지).
   try {
     const res = await client.messages.parse({
       model: MODEL,
       max_tokens: maxTokens,
-      system: opts.system,
+      system,
       messages: [{ role: "user", content: opts.user }],
       ...(opts.tools && { tools: opts.tools }),
-      output_config: { format: zodOutputFormat(opts.schema as z.ZodType<T>) },
+      output_config: { format: zodOutputFormat(opts.schema as z.ZodType<T>), effort },
     });
+    logUsage(res.usage);
     if (res.stop_reason === "refusal") throw new Error("모델이 요청을 거절했습니다.");
     if (res.stop_reason === "max_tokens") throw new Error("응답이 길이 한도에서 잘렸습니다.");
     if (res.parsed_output != null) return opts.schema.parse(res.parsed_output);
@@ -64,10 +80,12 @@ export async function generateJson<T>(opts: {
     const res = await client.messages.create({
       model: MODEL,
       max_tokens: maxTokens,
-      system: opts.system,
+      system,
       messages,
       ...(opts.tools && { tools: opts.tools }),
+      output_config: { effort },
     });
+    logUsage(res.usage);
     const text = res.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
