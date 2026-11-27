@@ -10,6 +10,7 @@ export type StageState = { analysis: StageStatus; plan: StageStatus; draft: Stag
 export interface Form {
   topic: string;
   contentType: string;
+  memo: string;
   regionIndex: number | null;
   images: boolean;
 }
@@ -138,6 +139,17 @@ export default function ComposeView({
             <option key={t}>{t}</option>
           ))}
         </select>
+
+        <label htmlFor="memo" className="sr-only">현장 메모</label>
+        <textarea
+          id="memo"
+          className="field mt-3 min-h-[64px] w-full resize-y bg-white/80 text-[14px]"
+          value={form.memo}
+          maxLength={500}
+          disabled={busy}
+          onChange={(e) => setForm({ ...form, memo: e.target.value })}
+          placeholder="(선택) 현장 메모: 이번 주 수업·상담에서 있었던 일을 한두 줄 적으면 그 이야기를 중심으로 씁니다. 예) 중3 반 절반이 근의 공식에서 부호를 틀림"
+        />
 
         {!form.topic.trim() && !busy && exampleTopics.length > 0 && (
           <div className="mt-5 flex flex-wrap justify-center gap-2">

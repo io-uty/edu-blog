@@ -19,7 +19,11 @@ ${lines([
   line("학원 소개", t.description),
   line("학원 특징", t.features),
   line("강사진", t.instructors),
-])}`;
+])}${b.narrator.trim() ? `
+
+[글쓴이 시점]
+- 이 글은 "${b.narrator.trim()}"이(가) 직접 쓴다. "우리 반에서는", "상담하다 보면"처럼 이 사람이 현장에서 보고 겪는 시점으로 쓴다.
+- 시점만 빌린다. 등록 정보·현장 메모에 없는 경력·성과·학생 사례는 지어내지 않는다.` : ""}`;
 }
 
 export function tenantStyleBlock(t: TenantProfile) {

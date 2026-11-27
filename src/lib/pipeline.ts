@@ -10,15 +10,20 @@ export type StageName = "analysis" | "plan" | "draft";
 export interface PipelineInput {
   topic: string;
   contentType: string;
+  memo?: string; // 현장 메모(이번 수업에서 있었던 일 등)
   ctx: PromptCtx;
   // 중간 실패 시 이미 완료된 단계 결과를 넘겨 이어서 생성
   resume?: { analysis?: Analysis; plan?: Plan };
 }
 
+/** 주제에 현장 메모를 붙인다. 메모가 있으면 글의 중심 소재가 된다. */
+const subject = (i: PipelineInput) =>
+  i.memo?.trim() ? `${i.topic}\n현장 메모(이 학원에서 실제로 있었던 일 — 글의 중심 소재로 삼고, 적힌 내용 이상의 사실·숫자·학생 이야기는 지어내지 않는다): ${i.memo.trim()}` : i.topic;
+
 export function runAnalysis(i: PipelineInput) {
   return generateJson({
     system: systemPrompt(i.ctx),
-    user: analysisPrompt(i.topic, i.contentType, i.ctx),
+    user: analysisPrompt(subject(i), i.contentType, i.ctx),
     schema: AnalysisSchema,
     mock: () => mockAnalysis(i.topic),
     maxTokens: 1500,
@@ -30,7 +35,7 @@ export function runAnalysis(i: PipelineInput) {
 export function runPlan(i: PipelineInput, analysis: Analysis) {
   return generateJson({
     system: systemPrompt(i.ctx),
-    user: planPrompt(i.topic, i.contentType, analysis, i.ctx),
+    user: planPrompt(subject(i), i.contentType, analysis, i.ctx),
     schema: PlanSchema,
     mock: () => mockPlan(i.topic),
     maxTokens: 2500,
@@ -40,7 +45,7 @@ export function runPlan(i: PipelineInput, analysis: Analysis) {
 export function runDraft(i: PipelineInput, analysis: Analysis, plan: Plan): Promise<Draft> {
   return generateJson({
     system: systemPrompt(i.ctx),
-    user: draftPrompt(i.topic, i.contentType, analysis, plan, i.ctx),
+    user: draftPrompt(subject(i), i.contentType, analysis, plan, i.ctx),
     schema: DraftSchema,
     mock: () => mockDraft(i.topic),
     maxTokens: 6000,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { addPhoto, getPhoto, listPhotoIds, MAX_PHOTOS, removePhoto } from "@/lib/photos";
 import { shrinkImage } from "@/lib/imageRender";
 import { FONTS } from "@/lib/richtext";
 import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAME_TOKEN, resolveBrand, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
@@ -108,6 +109,67 @@ function ColorInput({ value, onChange, palette = PEN }: { value: string; onChang
       <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-10 cursor-pointer border border-line bg-white p-0.5" />
       <input className="field h-9 w-[110px] font-mono text-xs" value={value} onChange={(e) => onChange(e.target.value)} />
     </span>
+  );
+}
+
+/** 학원 사진 보관함: 올려 둔 사진을 이미지 배경으로 쓰고 AI 그림 생성을 건너뛴다. */
+function PhotoLibrary({ notify }: { notify: (m: string) => void }) {
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const reload = async () => {
+    const ids = await listPhotoIds();
+    setPhotos((await Promise.all(ids.map(async (id) => ({ id, url: (await getPhoto(id)) ?? "" })))).filter((p) => p.url));
+  };
+  useEffect(() => {
+    reload();
+  }, []);
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {photos.map((p) => (
+          <span key={p.id} className="group relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.url} alt="" className="h-16 w-16 rounded-lg border border-line object-cover" />
+            <button
+              type="button"
+              aria-label="사진 삭제"
+              className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-ink text-[11px] leading-5 text-white"
+              onClick={async () => {
+                await removePhoto(p.id);
+                reload();
+              }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {photos.length < MAX_PHOTOS && (
+          <label className={`flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line text-xs text-sub ${busy ? "opacity-50" : ""}`}>
+            {busy ? "저장 중" : "+ 추가"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              hidden
+              disabled={busy}
+              onChange={async (e) => {
+                const files = [...(e.target.files ?? [])].slice(0, MAX_PHOTOS - photos.length);
+                e.target.value = "";
+                setBusy(true);
+                let failed = 0;
+                for (const f of files) if (!(await addPhoto(f))) failed++;
+                setBusy(false);
+                if (failed) notify(`사진 ${failed}장을 저장하지 못했습니다.`);
+                reload();
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs leading-5 text-sub">
+        사진이 있으면 새 이미지는 AI 그림 대신 이 사진 위에 글을 얹어 만듭니다(생성권 차감 없음). 이 브라우저에만 저장됩니다. 최대 {MAX_PHOTOS}장.
+      </p>
+    </div>
   );
 }
 
@@ -394,6 +456,9 @@ export default function SettingsView({
                 <Field label="포인트색" hint="요약 문구">
                   <ColorInput value={im.point} onChange={(v) => setImage({ point: v })} />
                 </Field>
+                <Field label="학원 사진" hint="교실·자습실·수업 장면 등">
+                  <PhotoLibrary notify={notify} />
+                </Field>
                 <Field label="일러스트 그림체" hint="이미지 API 연결 후 그림에 적용됩니다">
                   <div className="flex flex-wrap gap-1">
                     {(Object.keys(ILLUSTRATION_STYLES) as IllustrationStyle[]).map((k) => (
@@ -431,6 +496,9 @@ export default function SettingsView({
           <Section id="set-brand" title="인사말·예약 링크" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
             <Field label="작성자">
               <input className="field" value={b.author} onChange={(e) => setBrand({ author: e.target.value })} />
+            </Field>
+            <Field label="글쓴이 시점" hint="AI가 이 사람의 눈으로 씁니다. 비우면 학원 공식 안내 말투">
+              <input className="field" value={b.narrator} maxLength={200} placeholder="예: 원장이 직접 / 10년 차 중등 수학 강사" onChange={(e) => setBrand({ narrator: e.target.value })} />
             </Field>
             <Field label="인사말" hint="본문 맨 앞에 들어갑니다">
               <input className="field" value={b.greeting} onChange={(e) => setBrand({ greeting: e.target.value })} />

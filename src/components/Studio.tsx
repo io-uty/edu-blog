@@ -33,6 +33,7 @@ import PublishView from "./PublishView";
 import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
 import { illustrationKey } from "./useRendered";
+import { getPhoto, listPhotoIds, pickPhoto } from "@/lib/photos";
 import { autoLayout, normalizeLayout } from "@/lib/imageRender";
 import { useLock } from "@/lib/useLock";
 
@@ -69,6 +70,11 @@ const allTargets = (d: Draft): ImageTarget[] => [
 
 export default function Studio() {
   const [route, setRoute] = useState<Route>({ name: "compose" });
+  // 학원 사진 보관함에 사진이 있는지(설정에서 바꿀 수 있으니 화면이 바뀔 때마다 다시 확인)
+  const [hasPhotos, setHasPhotos] = useState(false);
+  useEffect(() => {
+    listPhotoIds().then((ids) => setHasPhotos(ids.length > 0));
+  }, [route.name]);
   const [ready, setReady] = useState(false);
   const [docs, setDocs] = useState<DocRecord[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -81,7 +87,7 @@ export default function Studio() {
   const [busyMap, setBusyMap] = useState<Record<string, boolean>>({});
   const [openImage, setOpenImage] = useState<string | null>(null);
 
-  const [form, setForm] = useState<Form>({ topic: "", contentType: "", regionIndex: null, images: true });
+  const [form, setForm] = useState<Form>({ topic: "", contentType: "", memo: "", regionIndex: null, images: true });
   const [busy, setBusy] = useState(false);
   const [runBuy] = useLock();
   const [stages, setStages] = useState<StageState>(IDLE);
@@ -346,6 +352,18 @@ export default function Studio() {
       if (!item) return;
       setBusyKey(`ill:${itemId}`, true);
       try {
+        // 학원 사진이 있으면 AI 생성 대신 사진을 쓴다(이 글에서 아직 안 쓴 사진 우선)
+        const ids = await listPhotoIds();
+        if (ids.length) {
+          const doc = docsRef.current.find((d) => d.id === docId);
+          const used = (doc?.images ?? []).filter((x) => x.id !== itemId).map((x) => x.photoId ?? "");
+          const pid = pickPhoto(ids, used)!;
+          const url = await getPhoto(pid);
+          if (url && (await idbSet(illustrationKey(itemId), url))) {
+            patchImages(docId, (imgs) => imgs.map((x) => (x.id === itemId ? { ...x, illustration: "ready", photoId: pid, updatedAt: Date.now() } : x)));
+            return;
+          }
+        }
         const r = await fetch("/api/images/illustration", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -360,7 +378,7 @@ export default function Studio() {
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.dataUrl) return notify(j.error || "일러스트를 만들지 못했습니다.");
         if (!(await idbSet(illustrationKey(itemId), j.dataUrl))) return notify("일러스트를 저장하지 못했습니다.");
-        patchImages(docId, (imgs) => imgs.map((x) => (x.id === itemId ? { ...x, illustration: "ready", updatedAt: Date.now() } : x)));
+        patchImages(docId, (imgs) => imgs.map((x) => (x.id === itemId ? { ...x, illustration: "ready", photoId: undefined, updatedAt: Date.now() } : x)));
       } catch {
         notify("이미지 서버에 연결하지 못했습니다.");
       } finally {
@@ -373,7 +391,7 @@ export default function Studio() {
   const makeActions = (doc: DocRecord): ImageActions => ({
     design: settings.image,
     busy: busyMap,
-    illustrationEnabled: api.illustration,
+    illustrationEnabled: api.illustration || hasPhotos,
     aiEnabled: true,
     regenerate: async (t) => {
       const err = await requestCopy(doc.id, [{ kind: t.kind, sectionIndex: t.sectionIndex }]);
@@ -420,6 +438,7 @@ export default function Studio() {
         body: JSON.stringify({
           topic: input.topic,
           contentType: input.contentType,
+          memo: input.memo.trim() || undefined,
           regionIndex: input.regionIndex,
           brand: settings.brand,
           tenant,
@@ -531,7 +550,7 @@ export default function Studio() {
   // 일러스트 API가 있으면 새로 만든 이미지에 일러스트를 차례로 붙인다(백그라운드)
   const autoIllustrated = useRef(new Set<string>());
   useEffect(() => {
-    if (!api.illustration) return;
+    if (!api.illustration && !hasPhotos) return;
     for (const d of docs) {
       for (const it of d.images ?? []) {
         // 내용 정리 카드는 사진을 쓰지 않으므로 그림을 만들지 않는다(이미지 생성권 절약)
@@ -540,7 +559,7 @@ export default function Studio() {
         illustrate(d.id, it.id);
       }
     }
-  }, [docs, api.illustration, illustrate]);
+  }, [docs, api.illustration, hasPhotos, illustrate]);
 
   // ---------- 편집 ----------
   const onDraftChange = useCallback(

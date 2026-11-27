@@ -6,6 +6,7 @@ import { z } from "zod";
 export const BrandSchema = z.object({
   name: z.string().max(60),
   author: z.string().max(60),
+  narrator: z.string().max(200).default(""), // 글쓴이 시점(예: 원장이 직접, 10년 차 수학 강사)
   greeting: z.string().max(200),
   closingHeading: z.string().max(80),
   bookingUrl: z.string().max(300),
@@ -105,6 +106,7 @@ export const DEFAULT_SETTINGS: Settings = {
   brand: {
     name: "",
     author: "",
+    narrator: "",
     greeting: AUTO_GREETING,
     closingHeading: AUTO_CLOSING,
     bookingUrl: "",

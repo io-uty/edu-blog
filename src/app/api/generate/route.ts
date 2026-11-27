@@ -19,6 +19,7 @@ export const maxDuration = 300;
 const BodySchema = z.object({
   topic: z.string().trim().min(2).max(200),
   contentType: z.string().trim().min(1).max(40),
+  memo: z.string().trim().max(500).optional(),
   resume: z.object({ analysis: AnalysisSchema.optional(), plan: PlanSchema.optional() }).optional(),
   regionIndex: z.number().int().min(0).nullable().optional(),
   brand: z.unknown().optional(),
