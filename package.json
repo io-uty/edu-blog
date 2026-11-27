@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ext:zip": "rm -f ddookddak-extension.zip && cd extension && zip -rq ../ddookddak-extension.zip . -x README.md '*.DS_Store'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.10.0",

@@ -45,8 +45,17 @@
   async function run() {
     const titleEl = await waitFor(() => document.querySelector(TITLE_SEL), 30000);
     if (!titleEl) return; // 글쓰기 에디터가 없는 프레임
-    const { bbologPending: p } = await chrome.storage.local.get("bbologPending");
-    if (!p || Date.now() - p.at > MAX_AGE) return;
+    // 앱이 탭을 먼저 열고 이미지를 준비한 뒤 보내므로, 보관본이 들어올 때까지 잠시 기다린다
+    const fresh = async () => {
+      const { bbologPending: v } = await chrome.storage.local.get("bbologPending");
+      return v && Date.now() - v.at <= MAX_AGE ? v : null;
+    };
+    let p = await fresh();
+    for (let i = 0; !p && i < 75; i++) {
+      await sleep(400);
+      p = await fresh();
+    }
+    if (!p) return;
 
     await waitFor(() => !popupOpen(), 120000);
     // 다른 프레임이 먼저 처리했는지 다시 확인하고 바로 지운다(중복 방지)
@@ -62,7 +71,7 @@
       paste(bodyEl, { "text/html": p.html, "text/plain": p.plainText });
       await sleep(1200);
       const filled = (document.querySelector(".se-main-container")?.innerText || "").trim().length > 20;
-      banner(filled ? "뚝딱: 제목과 본문을 넣었습니다. 이미지와 서식을 확인해 주세요." : "뚝딱: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
+      banner(filled ? "뚝딱: 제목·본문·이미지를 넣었습니다. 확인 후 발행해 주세요." : "뚝딱: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
     } catch {
       banner("뚝딱: 자동 입력이 되지 않았습니다. 본문 칸을 클릭하고 붙여넣기(⌘V / Ctrl+V) 하세요. 본문은 이미 복사되어 있습니다.");
     }

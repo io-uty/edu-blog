@@ -1,20 +1,47 @@
 {
   "manifest_version": 3,
-  "name": "뚝딱 네이버 붙여넣기",
-  "version": "0.1.0",
-  "description": "뚝딱에서 '네이버 글쓰기 열고 붙여넣기'를 누르면 네이버 블로그 글쓰기 화면에 제목과 본문을 자동으로 넣습니다.",
-  "permissions": ["storage"],
+  "name": "뚝딱 - 네이버 블로그로 보내기",
+  "version": "0.3.0",
+  "description": "뚝딱에서 '네이버로 보내기'를 누르면 네이버 블로그 글쓰기 화면에 제목·본문·이미지를 자동으로 넣습니다.",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "scripting"
+  ],
   "content_scripts": [
     {
-      "matches": ["http://localhost/*", "http://127.0.0.1/*"],
-      "js": ["app-bridge.js"],
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://edu-blog-studio.vercel.app/*"
+      ],
+      "js": [
+        "app-bridge.js"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://blog.naver.com/*"],
-      "js": ["naver-paste.js"],
+      "matches": [
+        "https://blog.naver.com/*"
+      ],
+      "js": [
+        "naver-paste.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true
     }
-  ]
+  ],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "https://edu-blog-studio.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
