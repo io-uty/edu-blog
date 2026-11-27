@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Upload } from "lucide-react";
+import { Check, Loader2, Plus, Upload, X } from "lucide-react";
 import { verticalOf } from "@/lib/prompt/verticals";
 import { useLock } from "@/lib/useLock";
 import {
   ACADEMY_TYPES,
+  GRADE_LEVELS,
   TenantProfileSchema,
   displayName,
   type AcademyType,
@@ -77,6 +78,38 @@ function ListInput({
     onBlur: () => setText(null),
   };
   return sep === "line" ? <textarea rows={rows} {...common} /> : <input {...common} />;
+}
+
+/** 주소를 한 칸에 하나씩 넣고, 칸을 더하거나 뺀다 */
+function UrlList({ value, onChange, max = 6 }: { value: string[]; onChange: (v: string[]) => void; max?: number }) {
+  // 빈 칸도 화면에는 남겨 두되, 저장 값에서는 뺀다
+  const [rows, setRows] = useState<string[]>(value.length ? value : [""]);
+  // 홈페이지 분석처럼 밖에서 값이 바뀌면 칸을 다시 맞춘다(입력 중에는 같으므로 그대로)
+  const clean = rows.map((x) => x.trim()).filter(Boolean);
+  if (clean.join("\n") !== value.join("\n")) setRows(value.length ? value : [""]);
+  const update = (next: string[]) => {
+    setRows(next);
+    onChange(next.map((x) => x.trim()).filter(Boolean));
+  };
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r, i) => (
+        <div key={i} className="flex gap-1.5">
+          <input className="field" value={r} placeholder="https://" onChange={(e) => update(rows.map((x, j) => (j === i ? e.target.value : x)))} />
+          {rows.length > 1 && (
+            <button type="button" className="btn btn-sm shrink-0" aria-label="이 주소 빼기" onClick={() => update(rows.filter((_, j) => j !== i))}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+      ))}
+      {rows.length < max && (
+        <button type="button" className="btn btn-sm" onClick={() => setRows([...rows, ""])}>
+          <Plus size={13} /> 주소 추가
+        </button>
+      )}
+    </div>
+  );
 }
 
 function Row({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
@@ -187,25 +220,30 @@ export default function OnboardingView({
 
   const analyzeStyle = () =>
     runStyle(async () => {
-      const all = [...samples, ...(paste.trim().length >= 200 ? [{ name: "붙여넣은 글", text: paste.trim() }] : [])].slice(0, 3);
-      if (!all.length) return notify("기존 블로그 글을 올리거나 붙여넣어 주세요(200자 이상).");
+      // 주소만 적은 줄은 서버가 읽고, 나머지는 붙여 넣은 글로 쓴다
+      const lines = paste.split("\n").map((x) => x.trim());
+      const urls = lines.filter((x) => /^https?:\/\/\S+$/i.test(x)).slice(0, 3);
+      const text = lines.filter((x) => !urls.includes(x)).join("\n").trim();
+      const all = [...samples, ...(text.length >= 200 ? [{ name: "붙여넣은 글", text }] : [])].slice(0, 3);
+      if (!all.length && !urls.length) return notify("기존 블로그 글 주소나 내용을 붙여 넣어 주세요(내용은 200자 이상).");
       try {
         const r = await fetch("/api/tenant/analyze-style", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ samples: all.map((s) => ({ ...s, text: s.text.slice(0, 15000) })) }),
+          body: JSON.stringify({ samples: all.map((s) => ({ ...s, text: s.text.slice(0, 15000) })), urls: urls.slice(0, 3 - all.length) }),
         });
-        const j = (await r.json().catch(() => ({}))) as { profile?: StyleProfile | null; excerpts?: string[]; error?: string };
+        const j = (await r.json().catch(() => ({}))) as { profile?: StyleProfile | null; excerpts?: string[]; read?: string[]; failed?: string[]; error?: string };
         if (!r.ok) return notify(j.error || "문체를 분석하지 못했습니다.");
         set({
           styleProfile: j.profile ?? null,
           styleExcerpts: j.excerpts ?? [],
           sources: [
-            ...all.map((s): Source => ({ url: s.name, type: "blog_sample", checkedAt: Date.now(), robots: "n/a", consent: true, fields: ["문체"] })),
+            ...(j.read ?? all.map((s) => s.name)).map((name): Source => ({ url: name, type: "blog_sample", checkedAt: Date.now(), robots: "n/a", consent: true, fields: ["문체"] })),
             ...t.sources.filter((s) => s.type !== "blog_sample"),
           ].slice(0, 20),
         });
-        notify(j.profile ? "문체를 분석했습니다" : "글을 저장했습니다(샘플 모드라 분석은 생략)");
+        const skipped = j.failed?.length ? ` · 읽지 못한 주소: ${j.failed.join(" / ")}` : "";
+        notify((j.profile ? "문체를 분석했습니다" : "글을 저장했습니다(샘플 모드라 분석은 생략)") + skipped);
       } catch {
         notify("서버에 연결하지 못했습니다.");
       }
@@ -255,6 +293,24 @@ export default function OnboardingView({
               />
             )}
           </Row>
+          <Row label="가르치는 학년" hint="여러 개 고를 수 있어요">
+            <div className="flex flex-wrap gap-1">
+              {GRADE_LEVELS.map((g) => {
+                const on = t.grades.includes(g);
+                return (
+                  <button
+                    key={g}
+                    type="button"
+                    aria-pressed={on}
+                    className={`btn btn-sm ${on ? "border-ink font-semibold" : ""}`}
+                    onClick={() => set({ grades: on ? t.grades.filter((x) => x !== g) : GRADE_LEVELS.filter((x) => x === g || t.grades.includes(x)) })}
+                  >
+                    {on && <Check size={12} />} {g}
+                  </button>
+                );
+              })}
+            </div>
+          </Row>
           <Row label="학원명" required>
             <input className="field" value={t.name} onChange={(e) => set({ name: e.target.value })} placeholder="예) 바른영어학원" />
           </Row>
@@ -275,7 +331,7 @@ export default function OnboardingView({
                   <label className="flex items-start gap-2 text-xs leading-5">
                     <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                     <span>
-                      공식 홈페이지의 공개 페이지를 읽어 학원 정보를 찾는 데 동의합니다. robots.txt 에서 허용한 페이지만 읽고, 로그인이 필요한 페이지는 읽지 않습니다. 페이지에서 찾지 못한 정보는 채우지 않습니다.
+                      학원 홈페이지에서 누구나 볼 수 있는 페이지를 읽어 학원 정보를 찾는 데 동의합니다. 홈페이지가 읽지 말라고 표시한 페이지와 로그인해야 보이는 페이지는 읽지 않고, 페이지에 없는 정보는 지어내지 않습니다.
                     </span>
                   </label>
                   <button className="btn btn-sm mt-2" disabled={!consent || siteBusy} onClick={analyzeSite}>
@@ -284,7 +340,7 @@ export default function OnboardingView({
                   {site && (
                     <div className="mt-3 space-y-2 text-xs">
                       <p className="text-sub">
-                        확인 {new Date(site.checkedAt).toLocaleString("ko-KR")} · robots.txt {site.robots === "allowed" ? "확인" : site.robots === "missing" ? "없음(허용으로 간주)" : "확인 불가"} · 읽은 페이지{" "}
+                        확인 {new Date(site.checkedAt).toLocaleString("ko-KR")} · 읽기 허용 여부 {site.robots === "allowed" ? "확인함" : site.robots === "missing" ? "표시 없음(허용으로 봄)" : "확인 못 함"} · 읽은 페이지{" "}
                         {site.pages.filter((p) => p.ok).length}/{site.pages.length}
                       </p>
                       {site.pages.filter((p) => !p.ok).map((p) => (
@@ -336,28 +392,28 @@ export default function OnboardingView({
 
           <details className="py-3" open={more} onToggle={(e) => setMore(e.currentTarget.open)}>
             <summary className="cursor-pointer select-none py-2 text-[14px] font-semibold">
-              자세한 정보 <span className="font-normal text-sub">(선택 · 입력할수록 글이 정확해집니다)</span>
+              추가 입력하기 <span className="font-normal text-sub">(선택 · 채울수록 우리 학원에 맞는 글이 나와요)</span>
             </summary>
             <div className="divide-y divide-bg2">
-              <Row label="학원 소개">
+              <Row label="학원 소개" hint="어떤 학원인지 두세 문장으로">
                 <textarea className="field resize-none" rows={3} value={t.description} onChange={(e) => set({ description: e.target.value })} />
               </Row>
-              <Row label="학원의 특징" hint="한 줄에 하나 · 글에 적힌 그대로만 쓰입니다">
+              <Row label="학원의 특징" hint="다른 학원과 다른 점 · 한 줄에 하나 · 적은 내용만 글에 씁니다">
                 <ListInput value={t.features} onChange={(x) => set({ features: x })} />
               </Row>
               <Row label="강사진" hint="한 줄에 한 명 (예: 김OO · 영어 문법)">
                 <ListInput value={t.instructors} onChange={(x) => set({ instructors: x })} />
               </Row>
-              <Row label="교육 과정" hint="한 줄에 하나">
+              <Row label="운영하는 수업" hint="반·과정 이름 · 한 줄에 하나 (예: 중2 내신반)">
                 <ListInput value={t.courses} onChange={(x) => set({ courses: x })} />
               </Row>
-              <Row label="블로그·SNS 주소" hint="한 줄에 하나">
-                <ListInput value={t.sns} onChange={(x) => set({ sns: x })} rows={2} />
+              <Row label="블로그·SNS 주소" hint="한 칸에 주소 하나">
+                <UrlList value={t.sns} onChange={(x) => set({ sns: x })} />
               </Row>
-              <Row label="주요 타깃 고객">
+              <Row label="주로 읽을 사람" hint="글을 읽을 사람 (예: 중학생 자녀를 둔 학부모)">
                 <input className="field" value={t.targetAudience} onChange={(e) => set({ targetAudience: e.target.value })} placeholder={v.defaultAudience} />
               </Row>
-              <Row label="기본 문체">
+              <Row label="글 말투" hint="글을 어떤 말투로 쓸지">
                 <select
                   className="field h-9 py-0"
                   value={TONES.includes(t.tone) ? t.tone : t.tone ? "__custom" : TONES[0]}
@@ -372,7 +428,7 @@ export default function OnboardingView({
                   <input className="field mt-2" value={t.tone.trimStart()} onChange={(e) => set({ tone: e.target.value })} placeholder="원하는 말투를 설명해 주세요" />
                 )}
               </Row>
-              <Row label="콘텐츠 주제" hint="자주 쓸 주제를 고르거나 추가">
+              <Row label="자주 쓸 글 주제" hint="새 글 화면에 예시로 보여 줍니다 · 고르거나 직접 추가">
                 <div className="flex flex-wrap gap-1">
                   {[...new Set([...v.defaultTopics, ...t.topics])].map((x) => {
                     const on = t.topics.includes(x);
@@ -399,13 +455,10 @@ export default function OnboardingView({
                   }}
                 />
               </Row>
-              <Row label="지역 SEO 키워드" hint="쉼표로 구분">
+              <Row label="동네 검색어" hint="학부모가 학원을 찾을 때 검색창에 치는 동네 이름이에요. 글에 한두 번 자연스럽게 넣어 검색에 잘 걸리게 합니다 · 쉼표로 구분">
                 <ListInput sep="comma" value={t.seoKeywords} onChange={(x) => set({ seoKeywords: x })} placeholder={v.seoPatterns.join(", ")} />
               </Row>
-              <Row label="금지 표현" hint="쉼표로 구분 · 글에서 쓰지 않고 검사도 합니다">
-                <ListInput sep="comma" value={t.prohibited} onChange={(x) => set({ prohibited: x })} placeholder="예) 최고, 1등" />
-              </Row>
-              <Row label="기존 블로그 글" hint="최대 3개 · .txt/.md 또는 붙여넣기 · 문체만 분석합니다">
+              <Row label="기존 블로그 글" hint="최대 3개 · 글 주소나 글 내용을 붙여 넣으면 그 말투를 따라 씁니다(내용은 가져오지 않아요)">
                 <div className="space-y-2">
                   <label className="btn btn-sm cursor-pointer">
                     <Upload size={13} /> 파일 올리기
@@ -424,7 +477,7 @@ export default function OnboardingView({
                       ))}
                     </ul>
                   )}
-                  <textarea className="field resize-none" rows={3} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder="또는 블로그 글 하나를 여기에 붙여넣기" />
+                  <textarea className="field resize-none" rows={4} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={"글 주소를 한 줄에 하나씩 붙여 넣거나, 글 내용을 그대로 붙여 넣으세요\n예) https://myacademy.tistory.com/12\n(네이버 블로그는 주소로 읽을 수 없어 글 내용을 붙여 넣어야 해요)"} />
                   <button className="btn btn-sm" disabled={styleBusy} onClick={analyzeStyle}>
                     {styleBusy && <Loader2 size={13} className="animate-spin" />} 문체 분석
                   </button>

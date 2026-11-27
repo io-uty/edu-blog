@@ -3,15 +3,18 @@
 import { z } from "zod";
 
 export const ACADEMY_TYPES = [
-  "편입학원",
   "영어학원",
   "수학학원",
   "입시학원",
   "국어학원",
   "과학학원",
   "어학원",
+  "편입학원",
   "기타 교육기관",
 ] as const;
+
+/** 가르치는 학년(복수 선택) */
+export const GRADE_LEVELS = ["유아", "초등", "중등", "고등", "성인·대학"] as const;
 export type AcademyType = (typeof ACADEMY_TYPES)[number];
 
 const str = (n: number) => z.string().trim().max(n);
@@ -44,6 +47,7 @@ export type Source = z.infer<typeof SourceSchema>;
 export const TenantProfileSchema = z.object({
   academyType: z.enum(ACADEMY_TYPES),
   academyTypeCustom: str(40),
+  grades: z.array(z.enum(GRADE_LEVELS)).max(GRADE_LEVELS.length).default([]),
   name: str(60).min(1),
   branch: str(40),
   homepage: str(300),
@@ -68,6 +72,7 @@ export type TenantProfile = z.infer<typeof TenantProfileSchema>;
 export const EMPTY_TENANT: TenantProfile = {
   academyType: "기타 교육기관",
   academyTypeCustom: "",
+  grades: [],
   name: "",
   branch: "",
   homepage: "",

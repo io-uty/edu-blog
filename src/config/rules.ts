@@ -26,7 +26,7 @@ export const BANNED_PHRASES = [
 ];
 
 // 네이버 블로그 학습 정보 글 기준 분량(인사말·태그 제외)
-export const LENGTH_TARGET = { min: 2500, max: 4000 };
+export const LENGTH_TARGET = { min: 1500, max: 2800 };
 export const TOPIC_HASHTAG_COUNT = 3; // AI가 만드는 주제 태그 수(고정·지역 태그는 학원 설정에서 붙임)
-export const SECTION_RANGE = { min: 3, max: 5 };
+export const SECTION_RANGE = { min: 3, max: 4 };
 export const MAX_TABLES = 2;

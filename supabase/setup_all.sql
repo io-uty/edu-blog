@@ -703,3 +703,6 @@ end;
 $$;
 revoke all on function public.hit_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.hit_rate_limit(text, integer, integer) to service_role;
+
+-- 20261127000001_grade_levels
+alter table public.tenant_content_settings add column if not exists grade_levels text[] not null default '{}';

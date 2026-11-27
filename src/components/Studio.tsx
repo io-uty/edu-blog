@@ -34,6 +34,7 @@ import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
 import { illustrationKey } from "./useRendered";
 import { getPhoto, listPhotoIds, pickPhoto } from "@/lib/photos";
+import { MAX_RECENT, postExcerpt } from "@/lib/prompt/tenant";
 import { autoLayout, normalizeLayout } from "@/lib/imageRender";
 import { useLock } from "@/lib/useLock";
 
@@ -442,6 +443,13 @@ export default function Studio() {
           regionIndex: input.regionIndex,
           brand: settings.brand,
           tenant,
+          // 로컬 모드용(로그인 시 서버가 DB에서 직접 읽음): 발행 완료한 최근 글
+          recent: docs
+            .filter((d) => d.status === "published_confirmed" && !d.mock)
+            .sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
+            .slice(0, MAX_RECENT)
+            .map((d) => postExcerpt(d.draft))
+            .filter(Boolean),
           resume: resume ? cache.current : undefined,
         }),
       });

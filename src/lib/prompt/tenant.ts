@@ -1,4 +1,5 @@
 // 2) 학원별 브랜드 정보 · 4) 학원별 문체 — 테넌트 설정에서만 만든다. 다른 학원 값이 섞이지 않는다.
+import { z } from "zod";
 import type { Brand } from "../settings";
 import { displayName, type TenantProfile } from "../tenant";
 
@@ -13,6 +14,7 @@ export function tenantBrandBlock(t: TenantProfile, b: Brand) {
 ${lines([
   line("학원명", displayName(t)),
   line("학원 유형", t.academyType === "기타 교육기관" && t.academyTypeCustom ? t.academyTypeCustom : t.academyType),
+  line("가르치는 학년", t.grades),
   line("작성자 표기", b.author),
   line("위치", t.location),
   line("주요 교육 과정", t.courses),
@@ -56,4 +58,26 @@ export function tenantStyleBlock(t: TenantProfile) {
     );
   }
   return lines(parts);
+}
+
+// ---------- 최근 발행 글(학원 블로그의 흐름을 이어 가기 위한 참고) ----------
+
+export const RecentPostSchema = z.object({ title: z.string().trim().max(120), excerpt: z.string().trim().max(800) });
+export type RecentPost = z.infer<typeof RecentPostSchema>;
+export const MAX_RECENT = 3;
+
+type DraftLike = { title?: string; introduction?: string[]; sections?: { heading?: string; paragraphs?: string[] }[] } | null | undefined;
+
+/** 발행한 글에서 문체가 드러나는 앞부분(도입 + 첫 소주제)만 잘라 낸다. */
+export function postExcerpt(d: DraftLike): RecentPost | null {
+  if (!d?.title) return null;
+  const s = d.sections?.[0];
+  const text = [...(d.introduction ?? []), s?.heading ?? "", ...(s?.paragraphs ?? [])].filter(Boolean).join("\n");
+  return text ? { title: d.title.slice(0, 120), excerpt: text.slice(0, 800) } : null;
+}
+
+export function recentPostsBlock(posts: RecentPost[] = []) {
+  if (!posts.length) return "";
+  return `[이 학원이 최근 발행한 글 — 같은 블로그의 다음 글처럼 말투·호흡을 이어 간다. 이미 다룬 내용·예시·문장은 반복하지 않고, 사실 정보로 인용하지 않는다]
+${posts.map((p, i) => `<recent_${i + 1} title="${p.title.replace(/"/g, "'")}">\n${p.excerpt}\n</recent_${i + 1}>`).join("\n")}`;
 }
