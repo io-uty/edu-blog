@@ -2,25 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, ChevronDown, Copy, Download, ExternalLink, Loader2, Puzzle, Send } from "lucide-react";
-import { renderHashtags } from "@/lib/render";
+import { renderHashtags, renderHtml } from "@/lib/render";
+import { slotsOf } from "@/lib/derive";
 import type { Settings } from "@/lib/settings";
 import { formatTime, imagePosition, sortImages, type DocRecord, type ImageItem } from "@/lib/store";
-import { greetingSticker } from "@/lib/extras";
 import { buildZip, imageFileName, renderFile, saveBlob } from "./exporter";
 import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
 import { PixelMark } from "./Logo";
 
 /** 본문에 넣는 이미지는 네이버 붙여넣기 용량 한도를 넘지 않게 720px JPEG 로 줄인다(장당 수십 KB). */
-async function shrinkForPaste(b: Blob): Promise<string> {
+async function shrinkForPaste(b: Blob, type: "image/jpeg" | "image/png" = "image/jpeg"): Promise<string> {
   const bmp = await createImageBitmap(b);
   const sc = Math.min(1, 720 / bmp.width);
   const c = document.createElement("canvas");
   c.width = Math.round(bmp.width * sc);
   c.height = Math.round(bmp.height * sc);
   c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.72);
+  return c.toDataURL(type, 0.72);
 }
+
+/** 확장이 찾아서 이미지로 바꿀 본문 속 자리 표시 */
+const imageToken = (n: number) => `[[뚝딱 이미지 ${n}]]`;
 
 const NAVER_WRITE_URL = "https://blog.naver.com/GoBlogWrite.naver";
 /** 크롬 웹스토어 등록 후 받는 상세 페이지 주소. 비어 있으면 설치 안내를 숨긴다. */
@@ -155,9 +158,7 @@ export default function PublishView({
 
   /** 이미지 표시 자리를 실제 이미지(dataURL)로 바꾼 본문 HTML. 렌더 실패한 이미지는 표시 문구를 남긴다. */
   async function htmlWithImages(): Promise<string> {
-    // 맨 위 인사 스티커
-    const sticker = await greetingSticker(doc.id, settings.image).then(shrinkForPaste).catch(() => null);
-    let out = sticker ? `<p style="text-align:center;"><img src="${sticker}" alt="" style="max-width:260px;"></p>${html}` : html;
+    let out = html;
     for (const it of images) {
       const key = it.kind === "thumbnail" ? "thumb" : `s${it.sectionIndex}`;
       const src = await renderBlob(it, settings.image).then(shrinkForPaste).catch(() => null);
@@ -166,11 +167,35 @@ export default function PublishView({
     return out;
   }
 
+  /**
+   * 확장용 본문: 이미지 자리에 [[뚝딱 이미지 n]] 표시만 두고 이미지는 따로 넘긴다.
+   * 네이버 에디터는 붙여넣은 HTML 속 이미지 데이터를 버리므로, 확장이 자리마다 이미지 한 장씩 실제 ⌘V 로 넣는다(클립보드 이미지는 PNG 만 됨).
+   */
+  async function extensionBody(): Promise<{ html: string; images: { token: string; dataUrl: string }[] }> {
+    const withMarks = settings.format.imageMarkers ? html : renderHtml(doc.draft, { ...settings, format: { ...settings.format, imageMarkers: true } }, slotsOf(doc));
+    const P = (t: string) => `<p style="text-align:center;">${t}</p>`;
+    const list: { token: string; dataUrl: string }[] = [];
+    let out = withMarks;
+    for (const it of images) {
+      const key = it.kind === "thumbnail" ? "thumb" : `s${it.sectionIndex}`;
+      const src = await renderBlob(it, settings.image).then((b) => shrinkForPaste(b, "image/png")).catch(() => null);
+      const token = imageToken(list.length + 1);
+      const re = new RegExp(`<p data-slot="${key}"[^>]*>.*?</p>`);
+      if (!src || !re.test(out)) continue;
+      list.push({ token, dataUrl: src });
+      out = out.replace(re, P(token));
+    }
+    return { html: out, images: list };
+  }
+
   /** 확장으로 보내기: 이미지를 담은 본문을 확장에 넘겨 네이버 창을 오른쪽 절반에 열게 하고, 클립보드에도 복사해 둔다. 실패하면 새 탭으로 연다. */
   async function sendToNaver() {
     setSending(true);
     const body = htmlWithImages().catch(() => html);
-    const copied = copyBody(true, body);
+    const copied = copyBody(true, body); // 자동 입력이 안 될 때 사용자가 직접 ⌘V 할 수 있게
+    // 이미지 준비(수 초)가 끝난 뒤에 확장의 응답 대기(5초)를 시작한다. 먼저 세면 확장이 받기 전에 시간이 다 돼
+    // 같은 창에 네이버 탭이 하나 더 열리고(분할 창이 깨짐), 안 보이는 탭이 글을 가져가 이미지 붙여넣기가 실패한다.
+    const ext = await extensionBody().catch(() => ({ html, images: [] }));
     const stored = new Promise<boolean>((resolve) => {
       const on = (e: MessageEvent) => {
         if (e.source !== window || e.data?.source !== "bbolog-extension" || !["stored", "failed"].includes(e.data.type)) return;
@@ -184,7 +209,7 @@ export default function PublishView({
       {
         source: "bbolog-app",
         type: "handoff",
-        payload: { title: doc.draft.title, html: await body, plainText, place: settings.brand.placeName.trim() },
+        payload: { title: doc.draft.title, ...ext, plainText, place: settings.brand.placeName.trim() },
         // 확장이 이 창을 왼쪽 절반, 네이버 글쓰기 창을 오른쪽 절반에 놓는다
         screen: (({ availLeft = 0, availTop = 0, availWidth, availHeight }) => ({ left: availLeft, top: availTop, width: availWidth, height: availHeight }))(
           screen as Screen & { availLeft?: number; availTop?: number }, // 크롬 전용 속성(여러 모니터에서 현재 화면의 위치)

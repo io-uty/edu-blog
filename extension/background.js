@@ -21,9 +21,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const half = Math.floor(s.width / 2);
     const left = { left: s.left, top: s.top, width: half, height: s.height };
     const right = { left: s.left + half, top: s.top, width: s.width - half, height: s.height };
-    // 최대화·전체화면 상태에서는 크기를 바꿀 수 없어 먼저 일반 창으로 돌린다
-    await chrome.windows.update(sender.tab.windowId, { state: "normal" });
-    await chrome.windows.update(sender.tab.windowId, left);
+    // 최대화·전체화면 상태에서는 크기를 바꿀 수 없어 먼저 일반 창으로 돌린다.
+    // 뚝딱 창을 줄이지 못해도(전체 화면 등) 네이버는 같은 창의 탭이 아니라 오른쪽 새 창으로 연다.
+    try {
+      const w = await chrome.windows.get(sender.tab.windowId);
+      if (w.state !== "normal") {
+        await chrome.windows.update(sender.tab.windowId, { state: "normal" });
+        await new Promise((r) => setTimeout(r, w.state === "fullscreen" ? 800 : 200)); // 전체 화면 해제 애니메이션
+      }
+      await chrome.windows.update(sender.tab.windowId, left);
+    } catch {
+      /* 창 크기 조정 실패는 무시 */
+    }
     await chrome.windows.create({ url: NAVER_WRITE_URL, type: "normal", focused: true, ...right });
   })()
     .catch(() => chrome.tabs.create({ url: NAVER_WRITE_URL }))
@@ -45,9 +54,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (s.click) {
           const [x, y] = s.click;
           await cmd("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
-          for (const type of ["mousePressed", "mouseReleased"]) await cmd("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 });
+          // count: 3 이면 세 번 눌러 문단 전체 선택
+          for (let n = 1; n <= (s.count || 1); n++)
+            for (const type of ["mousePressed", "mouseReleased"]) await cmd("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: n });
         }
         if (s.text) await cmd("Input.insertText", { text: s.text });
+        if (s.key === "Backspace") {
+          const k = { key: "Backspace", code: "Backspace", windowsVirtualKeyCode: 8, nativeVirtualKeyCode: 8 };
+          await cmd("Input.dispatchKeyEvent", { type: "rawKeyDown", ...k });
+          await cmd("Input.dispatchKeyEvent", { type: "keyUp", ...k });
+        }
         if (s.key === "Enter") {
           const k = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 };
           await cmd("Input.dispatchKeyEvent", { type: "rawKeyDown", ...k });

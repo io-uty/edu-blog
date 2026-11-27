@@ -2,7 +2,6 @@
 
 import type { Settings } from "@/lib/settings";
 import { imageLabel, sortImages, type DocRecord, type ImageItem } from "@/lib/store";
-import { greetingSticker } from "@/lib/extras";
 import { renderBlob } from "./useRendered";
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 40) || "블로그글";
@@ -39,7 +38,6 @@ export async function buildZip(
   const zip = new JSZip();
   const items = sortImages(doc.images);
   const dir = text ? zip.folder("images")! : zip;
-  dir.file("00-인사스티커.png", await greetingSticker(doc.id, settings.image));
   for (const it of items) dir.file(imageFileName(items, it), await renderFile(items, it, settings.image));
   if (text) {
     zip.file("제목.txt", doc.draft.title);

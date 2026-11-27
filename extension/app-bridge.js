@@ -11,11 +11,21 @@ if (!window.__bbologBridge) {
     if (e.source !== window || e.origin !== window.location.origin) return;
     const m = e.data;
     if (!m || m.source !== "bbolog-app" || m.type !== "handoff" || !m.payload) return;
-    const { title, html, plainText, place } = m.payload;
+    const { title, html, plainText, place, images } = m.payload;
     if (typeof title !== "string" || typeof html !== "string") return;
     try {
       await chrome.storage.local.set({
-        bbologPending: { title, html, plainText: plainText || "", place: typeof place === "string" ? place.slice(0, 100) : "", at: Date.now() },
+        bbologPending: {
+          title,
+          html,
+          plainText: plainText || "",
+          place: typeof place === "string" ? place.slice(0, 100) : "",
+          // 자리 표시와 PNG 이미지(dataURL)만 받는다
+          images: Array.isArray(images)
+            ? images.filter((x) => typeof x?.token === "string" && /^data:image\/png;base64,/.test(x?.dataUrl || "")).slice(0, 12)
+            : [],
+          at: Date.now(),
+        },
       });
       const s = m.screen;
       const ok = s && [s.left, s.top, s.width, s.height].every(Number.isFinite);
