@@ -312,7 +312,7 @@ export default function DocEditor({
         {refine && refine.field === field && (
           <div className="mt-1 rounded-2xl border border-line bg-bg2 p-4 text-[14px]">
             <div className="mb-2 flex items-center justify-between">
-              <span className="font-medium">{ACTIONS.find((a) => a.key === refine.action)?.label} · 적용 전 미리보기</span>
+              <span className="font-medium">{ACTIONS.find((a) => a.key === refine.action)?.label} / 적용 전 미리보기</span>
               <button className="btn btn-ghost btn-sm" onClick={cancelRefine} aria-label="닫기">
                 <X size={14} />
               </button>
@@ -500,7 +500,7 @@ export default function DocEditor({
               <div className="mb-1 flex items-center justify-between text-xs text-sub">
                 <span>
                   {s.example.kind === "practice" ? "예문" : "예시"}
-                  {!s.example.is_fictional && " · 실제 사례로 표시됨 (근거 필요)"}
+                  {!s.example.is_fictional && " / 실제 사례로 표시됨 (근거 필요)"}
                 </span>
                 <button className="hover:text-err" onClick={() => setSection(i, { example: null })}>
                   예시 삭제
@@ -525,9 +525,9 @@ export default function DocEditor({
         <p className="label">해시태그 (쉼표 또는 공백으로 구분)</p>
         <TagInput tags={draft.hashtags} onChange={(hashtags) => onChange({ ...draft, hashtags })} />
         <p className="mt-4 text-xs text-sub">
-          {[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl].some((v) => v.trim())
-            ? `본문 끝에 자동으로 붙습니다: ${[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl].filter((v) => v.trim()).join(" · ")}`
-            : "블로그 설정에 예약 링크·전화번호·플레이스 링크를 넣으면 본문 끝에 자동으로 붙습니다."}
+          {[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl, shownBrand.talkUrl].some((v) => v.trim())
+            ? `본문 끝에 자동으로 붙습니다: ${[shownBrand.bookingUrl, shownBrand.placePhone, shownBrand.placeUrl, shownBrand.talkUrl].filter((v) => v.trim()).join(" / ")}`
+            : "블로그 설정에 예약 링크/전화번호/플레이스 링크를 넣으면 본문 끝에 자동으로 붙습니다."}
         </p>
       </section>
     </article>

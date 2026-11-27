@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { assemble } from "@/lib/assemble";
 import { IS_MOCK, MODEL, toUserMessage } from "@/lib/llm";
-import { runAnalysis, runDraft, runPlan, runPolish, type StageName } from "@/lib/pipeline";
+import { runBrief, runDraft, runPolish, type StageName } from "@/lib/pipeline";
 import { checkQuality } from "@/lib/quality";
 import { renderHtml, renderPlainText } from "@/lib/render";
 import { verticalOf } from "@/lib/prompt/verticals";
@@ -19,17 +19,19 @@ export const maxDuration = 300;
 const BodySchema = z.object({
   topic: z.string().trim().min(2).max(200),
   contentType: z.string().trim().min(1).max(40),
+  memo: z.string().trim().max(500).optional(),
   resume: z.object({ analysis: AnalysisSchema.optional(), plan: PlanSchema.optional() }).optional(),
   regionIndex: z.number().int().min(0).nullable().optional(),
   brand: z.unknown().optional(),
   tenant: z.unknown().optional(),
+  recent: z.unknown().optional(),
 });
 
 // NDJSON 스트림으로 단계별 진행 상태를 내려준다.
 export async function POST(req: Request) {
   const parsed = BodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "주제(2~200자)와 콘텐츠 유형을 확인해 주세요." }, { status: 400 });
-  const got = await getCtx(parsed.data);
+  const got = await getCtx(parsed.data, { recent: true });
   if (!got.ok) return got.res;
   const { ctx, session } = got;
 
@@ -71,19 +73,14 @@ export async function POST(req: Request) {
       try {
         send({ type: "meta", mock: IS_MOCK, model: IS_MOCK ? null : MODEL });
 
-        let analysis = input.resume?.analysis;
-        if (!analysis) {
+        // 분석과 기획은 한 번의 호출로 만든다(화면 단계 표시는 그대로 둘로 보낸다)
+        let { analysis, plan } = input.resume ?? {};
+        if (!analysis || !plan) {
           send({ type: "stage", stage, status: "running" });
-          analysis = await runAnalysis(input);
+          ({ analysis, plan } = await runBrief(input, vertical.factSensitiveTypes.includes(input.contentType)));
         }
         send({ type: "stage", stage, status: "done", data: analysis });
-
         stage = "plan";
-        let plan = input.resume?.plan;
-        if (!plan) {
-          send({ type: "stage", stage, status: "running" });
-          plan = await runPlan(input, analysis);
-        }
         send({ type: "stage", stage, status: "done", data: plan });
 
         stage = "draft";

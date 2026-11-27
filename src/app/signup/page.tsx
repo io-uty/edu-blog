@@ -97,7 +97,7 @@ export default function SignupPage() {
           <span className="text-xs tabular-nums text-sub">{step} / 2</span>
         </div>
         <ol className="mt-3 grid grid-cols-2 gap-1.5" aria-label="가입 단계">
-          {["기본 정보", "아이디·비밀번호"].map((s, i) => (
+          {["기본 정보", "아이디/비밀번호"].map((s, i) => (
             <li key={s} className="text-xs">
               <span className={`mb-1.5 block h-1 rounded-full transition-colors duration-300 ${i < step ? "bg-brand" : "bg-line"}`} />
               <span className={i + 1 === step ? "font-semibold text-ink" : "text-sub"}>{s}</span>
@@ -144,14 +144,14 @@ export default function SignupPage() {
           </form>
         ) : (
           <form className="mt-6 space-y-3" onSubmit={submit}>
-            <Field label="아이디" id="loginId" hint="영문·숫자·_ 4~20자">
+            <Field label="아이디" id="loginId" hint="영문/숫자/_ 4~20자">
               <input
                 id="loginId"
                 required
                 autoComplete="username"
                 autoCapitalize="none"
                 pattern="[A-Za-z0-9_]{4,20}"
-                title="영문·숫자·_ 4~20자"
+                title="영문/숫자/_ 4~20자"
                 className="field"
                 value={f.loginId}
                 onChange={set("loginId")}

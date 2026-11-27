@@ -1,6 +1,7 @@
 // 2) 학원별 브랜드 정보 · 4) 학원별 문체 — 테넌트 설정에서만 만든다. 다른 학원 값이 섞이지 않는다.
+import { z } from "zod";
 import type { Brand } from "../settings";
-import { displayName, type TenantProfile } from "../tenant";
+import { displayName, typesOf, type TenantProfile } from "../tenant";
 
 const line = (label: string, v: string | string[]) => {
   const s = Array.isArray(v) ? v.join(", ") : v;
@@ -12,14 +13,19 @@ export function tenantBrandBlock(t: TenantProfile, b: Brand) {
   return `[학원 정보 — 등록된 값만 사용, 없는 정보는 만들지 않음]
 ${lines([
   line("학원명", displayName(t)),
-  line("학원 유형", t.academyType === "기타 교육기관" && t.academyTypeCustom ? t.academyTypeCustom : t.academyType),
+  line("학원 유형", typesOf(t).map((x) => (x === "기타 교육기관" && t.academyTypeCustom ? t.academyTypeCustom : x))),
+  line("가르치는 학년", t.grades),
   line("작성자 표기", b.author),
   line("위치", t.location),
   line("주요 교육 과정", t.courses),
   line("학원 소개", t.description),
   line("학원 특징", t.features),
   line("강사진", t.instructors),
-])}`;
+])}${b.narrator.trim() ? `
+
+[글쓴이 시점]
+- 이 글은 "${b.narrator.trim()}"이(가) 직접 쓴다. "우리 반에서는", "상담하다 보면"처럼 이 사람이 현장에서 보고 겪는 시점으로 쓴다.
+- 시점만 빌린다. 등록 정보·현장 메모에 없는 경력·성과·학생 사례는 지어내지 않는다.` : ""}`;
 }
 
 export function tenantStyleBlock(t: TenantProfile) {
@@ -52,4 +58,26 @@ export function tenantStyleBlock(t: TenantProfile) {
     );
   }
   return lines(parts);
+}
+
+// ---------- 최근 발행 글(학원 블로그의 흐름을 이어 가기 위한 참고) ----------
+
+export const RecentPostSchema = z.object({ title: z.string().trim().max(120), excerpt: z.string().trim().max(800) });
+export type RecentPost = z.infer<typeof RecentPostSchema>;
+export const MAX_RECENT = 3;
+
+type DraftLike = { title?: string; introduction?: string[]; sections?: { heading?: string; paragraphs?: string[] }[] } | null | undefined;
+
+/** 발행한 글에서 문체가 드러나는 앞부분(도입 + 첫 소주제)만 잘라 낸다. */
+export function postExcerpt(d: DraftLike): RecentPost | null {
+  if (!d?.title) return null;
+  const s = d.sections?.[0];
+  const text = [...(d.introduction ?? []), s?.heading ?? "", ...(s?.paragraphs ?? [])].filter(Boolean).join("\n");
+  return text ? { title: d.title.slice(0, 120), excerpt: text.slice(0, 800) } : null;
+}
+
+export function recentPostsBlock(posts: RecentPost[] = []) {
+  if (!posts.length) return "";
+  return `[이 학원이 최근 발행한 글 — 같은 블로그의 다음 글처럼 말투·호흡을 이어 간다. 이미 다룬 내용·예시·문장은 반복하지 않고, 사실 정보로 인용하지 않는다]
+${posts.map((p, i) => `<recent_${i + 1} title="${p.title.replace(/"/g, "'")}">\n${p.excerpt}\n</recent_${i + 1}>`).join("\n")}`;
 }

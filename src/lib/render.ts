@@ -1,6 +1,6 @@
 import type { Draft } from "./schemas";
 import { DEFAULT_SETTINGS, resolveBrand, type FormatTemplate, type Settings } from "./settings";
-import { fmtHtml, stripFmt } from "./richtext";
+import { FONTS, fmtHtml, stripFmt } from "./richtext";
 
 /** 본문에 이미지가 들어갈 위치(썸네일 여부, 이미지가 있는 소주제 번호) */
 export interface ImageSlots {
@@ -13,9 +13,9 @@ export function slotLabels(d: Draft, slots?: ImageSlots) {
   const labels = new Map<string, string>();
   if (!slots) return labels;
   let n = 1;
-  if (slots.thumbnail) labels.set("thumb", `[이미지 ${n++} · 썸네일]`);
+  if (slots.thumbnail) labels.set("thumb", `[이미지 ${n++} / 썸네일]`);
   d.sections.forEach((_, i) => {
-    if (slots.sections.includes(i)) labels.set(`s${i}`, `[이미지 ${n++} · 소주제 ${i + 1}]`);
+    if (slots.sections.includes(i)) labels.set(`s${i}`, `[이미지 ${n++} / 소주제 ${i + 1}]`);
   });
   return labels;
 }
@@ -25,6 +25,9 @@ export function headingText(i: number, h: string, f: FormatTemplate) {
   if (f.headingPrefix === "dash") return `- ${h}`;
   return h;
 }
+
+/** 순수 텍스트에서 목록 항목 앞 표시 */
+const listPrefix = (f: FormatTemplate, i: number) => (f.listStyle === "number" ? `${i + 1}.` : f.listStyle === "check" ? "✓" : "•");
 
 export function renderHashtags(tags: string[]) {
   return tags.map((t) => `#${t.replace(/^#/, "").replace(/\s+/g, "")}`).join(" ");
@@ -44,7 +47,7 @@ export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?
     out.push(headingText(i, sec.heading, f), ...gap);
     if (labels.has(`s${i}`)) out.push(labels.get(`s${i}`)!, ...gap);
     sec.paragraphs.forEach((p) => out.push(p, ...gap));
-    if (sec.bullets?.length) out.push(...sec.bullets.map((b) => `${f.listMarker} ${b}`), ...gap);
+    if (sec.bullets?.length) out.push(...sec.bullets.map((b, j) => `${listPrefix(f, j)} ${b}`), ...gap);
     if (sec.table) out.push(sec.table.headers.join(" | "), ...sec.table.rows.map((r) => r.join(" | ")), ...gap);
     if (sec.example) out.push(sec.example.text, ...gap);
   });
@@ -54,6 +57,7 @@ export function renderPlainText(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?
   if (brand.bookingUrl) out.push(...gap, brand.bookingUrl);
   if (brand.placePhone.trim()) out.push(...gap, `전화 ${brand.placePhone.trim()}`);
   if (brand.placeUrl.trim()) out.push(...gap, brand.placeUrl.trim());
+  if (brand.talkUrl.trim()) out.push(...gap, `톡톡 상담 ${brand.talkUrl.trim()}`);
   return stripFmt(out.join("\n").trim());
 }
 
@@ -73,14 +77,26 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   const headPx = size(f.headingSize, 24);
   const headColor = color(f.headingColor, "#8c8c8c");
   const labels = f.imageMarkers ? slotLabels(d, slots) : new Map<string, string>();
+  const font = FONTS.includes(f.fontFamily) ? `font-family:'${f.fontFamily}';` : "";
+  const bodyColor = color(f.bodyColor, "") ? `color:${f.bodyColor};` : "";
+  const headBg = color(f.headingBg, "") ? `background-color:${f.headingBg};` : "";
 
   const P = (inner: string) => `<p style="text-align:${align};">${inner}</p>`;
-  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${extra}">${fmtHtml(esc(t))}</span>`;
-  const body = (t: string) => P(span(t));
+  const span = (t: string, extra = "") => `<span style="font-size:${bodyPx}px;${font}${bodyColor}${extra}">${fmtHtml(esc(t))}</span>`;
+  const body = (t: string) => P(f.bodyBold ? `<b>${span(t)}</b>` : span(t));
   const gap = f.blankLineBetween ? "<p><br></p>" : "";
   const heading = (t: string) => {
-    const inner = `<span style="font-size:${headPx}px;color:${headColor};">${esc(t)}</span>`;
-    return P(f.headingBold ? `<b>${inner}</b>` : inner);
+    const inner = `<span style="font-size:${headPx}px;color:${headColor};${font}${headBg}">${esc(t)}</span>`;
+    const p = P(f.headingBold ? `<b>${inner}</b>` : inner);
+    // 네이버 에디터는 붙여넣은 blockquote 를 인용구로, hr 을 구분선으로 받는다
+    if (f.headingStyle === "quote") return `<blockquote>${p}</blockquote>`;
+    if (f.headingStyle === "line") return `<hr>${p}`;
+    return p;
+  };
+  const list = (items: string[]) => {
+    if (f.listStyle === "check") return items.map((b) => body(`✓ ${b}`)).join("");
+    const tag = f.listStyle === "number" ? "ol" : "ul";
+    return `<${tag}>${items.map((b) => `<li>${f.bodyBold ? `<b>${span(b)}</b>` : span(b)}</li>`).join("")}</${tag}>`;
   };
   // data-slot: 본문 복사 때 이 자리를 실제 이미지로 바꾼다(PublishView)
   const marker = (k: string) =>
@@ -90,7 +106,7 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   d.sections.forEach((sec, i) => {
     html.push(heading(headingText(i, sec.heading, f)), gap, ...marker(`s${i}`));
     sec.paragraphs.forEach((p) => html.push(body(p), gap));
-    if (sec.bullets?.length) html.push(...sec.bullets.map((b) => body(`${f.listMarker} ${b}`)), gap);
+    if (sec.bullets?.length) html.push(list(sec.bullets), gap);
     if (sec.table) {
       const cell = (tag: "th" | "td", t: string) =>
         `<${tag} style="border:1px solid #dddddd;padding:6px 10px;">${span(t)}</${tag}>`;
@@ -114,6 +130,9 @@ export function renderHtml(d: Draft, s: Settings = DEFAULT_SETTINGS, slots?: Ima
   // 네이버 플레이스 링크 — 에디터가 링크 카드(지도)로 바꿔 보여준다
   const place = brand.placeUrl.trim();
   if (/^https?:\/\//i.test(place)) html.push(gap, P(`<a href="${esc(place)}">${esc(place)}</a>`));
+  // 네이버 톡톡 상담 링크 — 에디터가 링크 카드로 보여준다
+  const talk = brand.talkUrl.trim();
+  if (/^https?:\/\//i.test(talk)) html.push(gap, P(`<a href="${esc(talk)}">${esc(talk)}</a>`));
   return html.join("");
 }
 

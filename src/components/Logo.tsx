@@ -13,12 +13,14 @@ export function PixelMark({ size = 24, className = "" }: { size?: number; classN
   );
 }
 
-/** 뚝딱 워드마크 */
+/** 뚝딱 워드마크. 누르면 홈(새 콘텐츠 작성)으로 간다. 앱 안에서는 주소의 # 만 바뀌어 새로고침 없이 이동한다. */
 export default function Logo({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`} aria-label="뚝딱">
+    // 앱 화면은 주소의 # 로 바뀐다. next/link 는 # 만 바뀔 때 hashchange 를 내지 않아 화면이 그대로라 일반 링크를 쓴다.
+    // eslint-disable-next-line @next/next/no-html-link-for-pages
+    <a href="/#/compose" className={`inline-flex items-center gap-2 ${className}`} aria-label="뚝딱 홈으로">
       <PixelMark size={22} />
       <span className="text-[20px] font-extrabold leading-none tracking-[-0.03em]">뚝딱</span>
-    </span>
+    </a>
   );
 }

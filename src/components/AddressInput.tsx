@@ -62,7 +62,7 @@ export default function AddressInput({ value, onChange, notify }: { value: strin
         <input
           className="field"
           value={detail}
-          placeholder="상세 주소(층·호수, 선택)"
+          placeholder="상세 주소(층/호수, 선택)"
           onChange={(e) => {
             setDetail(e.target.value);
             onChange(join(base, e.target.value));

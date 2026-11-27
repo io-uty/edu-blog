@@ -29,6 +29,40 @@
         "3100"
       ],
       "port": 3100
+    },
+    {
+      "name": "local-ai",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_SUPABASE_URL=",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
+        "SUPABASE_SERVICE_ROLE_KEY=",
+        "OPENAI_API_KEY=",
+        "npx",
+        "next",
+        "dev",
+        "-p",
+        "3200"
+      ],
+      "port": 3200
+    },
+    {
+      "name": "local-ext",
+      "runtimeExecutable": "/usr/bin/env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_SUPABASE_URL=",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY=",
+        "SUPABASE_SERVICE_ROLE_KEY=",
+        "ANTHROPIC_API_KEY=",
+        "OPENAI_API_KEY=",
+        "NEXT_PUBLIC_EXTENSION_URL=https://chromewebstore.google.com/detail/test",
+        "npx",
+        "next",
+        "dev",
+        "-p",
+        "3300"
+      ],
+      "port": 3300
     }
   ]
 }

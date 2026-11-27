@@ -5,7 +5,7 @@ import PixelFx from "@/components/PixelFx";
 
 export const metadata: Metadata = {
   title: "뚝딱",
-  description: "블로그 콘텐츠 제작·관리 도구",
+  description: "블로그 콘텐츠 제작/관리 도구",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -28,7 +28,7 @@ export default function AdminPage() {
       <div className="flex h-dvh flex-col">
         <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line bg-ink px-4 text-white md:px-6">
           <Logo className="text-white [&_svg_rect]:fill-white [&_svg_path]:stroke-ink" />
-          <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs font-semibold">운영 · 개인용</span>
+          <span className="rounded-full bg-white/15 px-3 py-0.5 text-xs font-semibold">운영 / 개인용</span>
           <span className="ml-auto hidden truncate text-[13px] text-white/70 sm:block">{st.email}</span>
           <form action="/auth/signout" method="post">
             <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[13px] hover:bg-white/20">

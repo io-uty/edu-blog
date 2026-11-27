@@ -174,6 +174,29 @@ export interface PageText {
   text: string;
 }
 
+/** 공개 페이지 하나를 robots.txt·접근 제한·로그인 여부를 지키며 읽는다. */
+export async function readPage(
+  u: URL,
+  robots: Robots,
+  { allowLogin = false, maxChars = 15000, mainOnly = false } = {},
+): Promise<{ page: PageText; html?: string; finalUrl?: URL }> {
+  if (!robotsAllows(robots, u.pathname + u.search)) return { page: { url: u.href, ok: false, reason: "robots.txt 에서 수집이 허용되지 않음", text: "" } };
+  try {
+    const r = await safeFetch(u, "text/html");
+    if (r.status === 401 || r.status === 403) return { page: { url: u.href, ok: false, reason: "접근 제한 페이지(읽지 않음)", text: "" } };
+    if (r.status >= 400 || !/html/i.test(r.type)) return { page: { url: u.href, ok: false, reason: `읽을 수 없는 페이지(${r.status})`, text: "" } };
+    if (!allowLogin && /<input[^>]+type=["']?password/i.test(r.text)) return { page: { url: u.href, ok: false, reason: "로그인 페이지(읽지 않음)", text: "" } };
+    // 블로그 글은 본문 영역이 있으면 그것만(메뉴·댓글 제외)
+    const main = (mainOnly && r.text.match(/<(article|main)\b[\s\S]*?<\/\1>/i)?.[0]) || r.text;
+    return { page: { url: r.url.href, ok: true, text: htmlToText(main).slice(0, maxChars) }, html: r.text, finalUrl: r.url };
+  } catch (e) {
+    return { page: { url: u.href, ok: false, reason: e instanceof Error ? e.message : "읽기 실패", text: "" } };
+  }
+}
+
+/** 네이버 블로그는 robots.txt 에서 AI 학습·RAG 목적 봇 접근을 금지하므로 서버가 읽지 않는다. */
+export const isNaverBlog = (u: URL) => /(^|\.)blog\.naver\.com$/i.test(u.hostname);
+
 /** 홈페이지 + 같은 사이트의 소개·강사·위치 페이지 최대 3개를 읽는다. */
 export async function readSite(start: URL, robots: Robots): Promise<PageText[]> {
   const pages: PageText[] = [];
@@ -184,39 +207,18 @@ export async function readSite(start: URL, robots: Robots): Promise<PageText[]> 
     const key = u.origin + u.pathname;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (!robotsAllows(robots, u.pathname + u.search)) {
-      pages.push({ url: u.href, ok: false, reason: "robots.txt 에서 수집이 허용되지 않음", text: "" });
-      continue;
-    }
-    try {
-      const r = await safeFetch(u, "text/html");
-      if (r.status === 401 || r.status === 403) {
-        pages.push({ url: u.href, ok: false, reason: "접근 제한 페이지(읽지 않음)", text: "" });
-        continue;
+    const { page, html, finalUrl } = await readPage(u, robots, { allowLogin: pages.length === 0, maxChars: 9000 });
+    pages.push(page);
+    if (pages.length !== 1 || !html || !finalUrl) continue;
+    for (const m of html.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+      try {
+        const link = new URL(m[1], finalUrl);
+        if (link.origin !== finalUrl.origin) continue;
+        if (INFO_LINK.test(link.pathname) || INFO_LINK.test(htmlToText(m[2]))) queue.push(link);
+      } catch {
+        /* 잘못된 링크 무시 */
       }
-      if (r.status >= 400 || !/html/i.test(r.type)) {
-        pages.push({ url: u.href, ok: false, reason: `읽을 수 없는 페이지(${r.status})`, text: "" });
-        continue;
-      }
-      if (/<input[^>]+type=["']?password/i.test(r.text) && pages.length > 0) {
-        pages.push({ url: u.href, ok: false, reason: "로그인 페이지(읽지 않음)", text: "" });
-        continue;
-      }
-      pages.push({ url: r.url.href, ok: true, text: htmlToText(r.text).slice(0, 9000) });
-      if (pages.length === 1) {
-        for (const m of r.text.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
-          try {
-            const link = new URL(m[1], r.url);
-            if (link.origin !== r.url.origin) continue;
-            if (INFO_LINK.test(link.pathname) || INFO_LINK.test(htmlToText(m[2]))) queue.push(link);
-          } catch {
-            /* 잘못된 링크 무시 */
-          }
-          if (queue.length >= 6) break;
-        }
-      }
-    } catch (e) {
-      pages.push({ url: u.href, ok: false, reason: e instanceof Error ? e.message : "읽기 실패", text: "" });
+      if (queue.length >= 6) break;
     }
   }
   return pages;

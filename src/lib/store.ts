@@ -17,6 +17,7 @@ export interface ImageItem {
   copy: ImageCopy;
   layout?: ImageLayout; // 없으면 블로그 설정의 기본 레이아웃
   illustration: "none" | "ready";
+  photoId?: string; // 학원 사진 보관함에서 가져온 사진이면 그 id
   updatedAt: number;
 }
 

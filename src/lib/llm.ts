@@ -52,7 +52,7 @@ export async function generateJson<T>(opts: {
   ];
   const logUsage = (u: Anthropic.Usage) =>
     console.info(
-      `[llm:usage] effort=${effort} in=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0} out=${u.output_tokens}`,
+      `[llm:usage] model=${model} effort=${effort} search=${u.server_tool_use?.web_search_requests ?? 0} in=${u.input_tokens} cache_read=${u.cache_read_input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0} out=${u.output_tokens}`,
     );
 
   // 1) 구조화 출력: API가 스키마에 맞는 JSON만 내도록 강제한다(문법이 깨진 JSON 방지).

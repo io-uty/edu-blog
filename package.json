@@ -8,12 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ext:zip": "rm -f ddookddak-extension.zip && cd extension && zip -rq ../ddookddak-extension.zip . -x README.md '*.DS_Store'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.10.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.1",
+    "gifenc": "^1.0.3",
     "jszip": "^3.10.2",
     "lucide-react": "^1.75.0",
     "next": "15.5.29",

@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { addPhoto, getPhoto, listPhotoIds, MAX_PHOTOS, removePhoto } from "@/lib/photos";
 import { shrinkImage } from "@/lib/imageRender";
+import { FONTS } from "@/lib/richtext";
 import { DEFAULT_SETTINGS, ILLUSTRATION_STYLES, NAME_TOKEN, resolveBrand, NAVER_FONT_SIZES, type IllustrationStyle, type Brand, type FormatTemplate, type ImageDesign, type ImageLayout, type Settings } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
 import { displayName, type TenantProfile } from "@/lib/tenant";
@@ -84,12 +87,136 @@ function Section({ id, title, desc, children }: { id: string; title: string; des
   );
 }
 
+function ListTag({ listStyle, ...p }: { listStyle: FormatTemplate["listStyle"] } & React.HTMLAttributes<HTMLElement>) {
+  return listStyle === "number" ? <ol {...p} /> : <ul {...p} />;
+}
+
+// 누르면 열리는 팔레트(굿노트처럼). 기본은 보기 편한 파스텔, 글자에는 차분한 진한 톤.
+const PALETTE: { label: string; colors: string[] }[] = [
+  { label: "파스텔", colors: ["#FFFFFF", "#F4EFE6", "#FFF4B8", "#FFDCC2", "#FFD6E0", "#E5DBFA", "#D6EAFB", "#D7F2E3"] },
+  { label: "글자용", colors: ["#2B2B2B", "#8C8C8C", "#3F4A5A", "#6B7A99", "#8A79B8", "#B5687A", "#C98B5B", "#5E8C74"] },
+];
+
 function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  const pick = (c: string) => {
+    onChange(c);
+    setOpen(false);
+  };
   return (
-    <span className="inline-flex items-center gap-2">
-      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-10 cursor-pointer border border-line bg-white p-0.5" />
-      <input className="field h-9 w-[110px] font-mono text-xs" value={value} onChange={(e) => onChange(e.target.value)} />
-    </span>
+    <div ref={box} className="relative inline-block">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`색 바꾸기 (지금 ${value})`}
+        onClick={() => setOpen(!open)}
+        className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-1.5 pr-2"
+      >
+        <span className="h-6 w-6 rounded-full border border-line" style={{ backgroundColor: value }} />
+        <ChevronDown size={14} className="text-sub" />
+      </button>
+      {open && (
+        <div role="dialog" aria-label="색 고르기" className="absolute left-0 top-11 z-30 w-[236px] rounded-2xl border border-line bg-white p-3 shadow-lg">
+          {PALETTE.map((g) => (
+            <div key={g.label} className="mb-2">
+              <p className="mb-1 text-[11px] text-sub">{g.label}</p>
+              <div className="grid grid-cols-8 gap-1">
+                {g.colors.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    title={c}
+                    aria-label={`색 ${c}`}
+                    onClick={() => pick(c)}
+                    className={`h-6 w-6 rounded-full border ${value.toLowerCase() === c.toLowerCase() ? "border-ink ring-2 ring-ink/30" : "border-line"}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center gap-1.5 border-t border-bg2 pt-2">
+            <input type="color" aria-label="직접 고르기" value={value} onChange={(e) => onChange(e.target.value)} className="h-8 w-9 cursor-pointer border border-line bg-white p-0.5" />
+            <input className="field h-8 min-w-0 flex-1 font-mono text-xs" value={value} onChange={(e) => onChange(e.target.value)} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 학원 사진 보관함: 올려 둔 사진을 이미지 배경으로 쓰고 AI 그림 생성을 건너뛴다. */
+function PhotoLibrary({ notify }: { notify: (m: string) => void }) {
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const reload = async () => {
+    const ids = await listPhotoIds();
+    setPhotos((await Promise.all(ids.map(async (id) => ({ id, url: (await getPhoto(id)) ?? "" })))).filter((p) => p.url));
+  };
+  useEffect(() => {
+    reload();
+  }, []);
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {photos.map((p) => (
+          <span key={p.id} className="group relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.url} alt="" className="h-16 w-16 rounded-lg border border-line object-cover" />
+            <button
+              type="button"
+              aria-label="사진 삭제"
+              className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-ink text-[11px] leading-5 text-white"
+              onClick={async () => {
+                await removePhoto(p.id);
+                reload();
+              }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {photos.length < MAX_PHOTOS && (
+          <label className={`flex h-16 w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-line text-xs text-sub ${busy ? "opacity-50" : ""}`}>
+            {busy ? "저장 중" : "+ 추가"}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              hidden
+              disabled={busy}
+              onChange={async (e) => {
+                const files = [...(e.target.files ?? [])].slice(0, MAX_PHOTOS - photos.length);
+                e.target.value = "";
+                setBusy(true);
+                let failed = 0;
+                for (const f of files) if (!(await addPhoto(f))) failed++;
+                setBusy(false);
+                if (failed) notify(`사진 ${failed}장을 저장하지 못했습니다.`);
+                reload();
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs leading-5 text-sub">
+        사진이 있으면 새 이미지는 AI 그림 대신 이 사진 위에 글을 얹어 만듭니다(생성권 차감 없음). 이 브라우저에만 저장됩니다. 최대 {MAX_PHOTOS}장.
+      </p>
+    </div>
   );
 }
 
@@ -144,19 +271,24 @@ export default function SettingsView({
   const setBrand = (p: Partial<Brand>) => onChange({ ...settings, brand: { ...b, ...p } });
   const setFormat = (p: Partial<FormatTemplate>) => onChange({ ...settings, format: { ...f, ...p } });
   const setImage = (p: Partial<ImageDesign>) => onChange({ ...settings, image: { ...im, ...p } });
+  // 작성자가 비어 있으면 처음 열 때 학원명으로 채운다(직접 지우고 입력하는 중에는 건드리지 않음)
+  useEffect(() => {
+    if (!b.author.trim() && academy) setBrand({ author: academy });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const bodyPx = f.bodySize;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
         title="블로그 설정"
-        sub="모든 글에 공통으로 적용됩니다 · 변경 즉시 저장"
+        sub="모든 글에 공통으로 적용됩니다 / 변경 즉시 저장"
         actions={
           <button
             className="btn"
             onClick={() => {
               onChange({ ...settings, format: DEFAULT_SETTINGS.format, image: { ...DEFAULT_SETTINGS.image, label: im.label, logo: im.logo } });
-              notify("서식·이미지 디자인을 기본값으로 되돌렸습니다");
+              notify("서식/이미지 디자인을 기본값으로 되돌렸습니다");
             }}
           >
             서식 기본값으로
@@ -168,8 +300,8 @@ export default function SettingsView({
           ["set-academy", "학원 정보"],
           ["set-format", "글 서식"],
           ["set-image", "이미지 디자인"],
-          ["set-brand", "인사말·예약 링크"],
-          ["set-tags", "제목·해시태그"],
+          ["set-brand", "인사말/예약 링크"],
+          ["set-tags", "제목/해시태그"],
         ].map(([id, label]) => (
           <button
             key={id}
@@ -182,15 +314,15 @@ export default function SettingsView({
       </nav>
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[900px] px-5 pb-16 text-[14px] md:px-8">
-          <Section id="set-academy" title="학원 정보" desc="AI가 글을 쓸 때 쓰는 학원 유형·브랜드·문체입니다. 등록한 값만 쓰이고, 다른 학원과 섞이지 않습니다.">
+          <Section id="set-academy" title="학원 정보" desc="AI가 글을 쓸 때 쓰는 학원 유형/브랜드/문체입니다. 등록한 값만 쓰이고, 다른 학원과 섞이지 않습니다.">
             <Field label="학원">
               <div className="flex flex-wrap items-center gap-2 pt-1.5">
                 <span className="font-medium">{tenant ? displayName(tenant) : "미등록"}</span>
                 {tenant && (
                   <span className="text-sub">
                     {tenant.academyType === "기타 교육기관" && tenant.academyTypeCustom ? tenant.academyTypeCustom : tenant.academyType}
-                    {tenant.styleProfile ? " · 문체 분석 완료" : ""}
-                    {tenant.sources.some((x) => x.type === "homepage") ? " · 홈페이지 정보 반영" : ""}
+                    {tenant.styleProfile ? " / 문체 분석 완료" : ""}
+                    {tenant.sources.some((x) => x.type === "homepage") ? " / 홈페이지 정보 반영" : ""}
                   </span>
                 )}
               </div>
@@ -203,7 +335,7 @@ export default function SettingsView({
                 <ul className="space-y-1 pt-1.5 text-xs text-sub">
                   {tenant.sources.map((x, i) => (
                     <li key={i} className="truncate" title={x.url}>
-                      {x.type === "homepage" ? "홈페이지" : "기존 글"} · {x.url} · {new Date(x.checkedAt).toLocaleDateString("ko-KR")} 확인 · {x.fields.join(", ")}
+                      {x.type === "homepage" ? "홈페이지" : "기존 글"} / {x.url} / {new Date(x.checkedAt).toLocaleDateString("ko-KR")} 확인 / {x.fields.join(", ")}
                     </li>
                   ))}
                 </ul>
@@ -211,7 +343,7 @@ export default function SettingsView({
             )}
           </Section>
 
-          <Section id="set-format" title="글 서식" desc="본문 복사·자동 붙여넣기 때 네이버 에디터에 그대로 적용되는 서식입니다.">
+          <Section id="set-format" title="글 서식" desc="본문 복사/자동 붙여넣기 때 네이버 에디터에 그대로 적용되는 서식입니다.">
             <Field label="전체 정렬">
               <div className="flex gap-1">
                 {(
@@ -234,6 +366,23 @@ export default function SettingsView({
                 ))}
               </select>
             </Field>
+            <Field label="글꼴" hint="본문/소제목 공통">
+              <select className="field h-9 w-[200px] py-0" value={f.fontFamily} onChange={(e) => setFormat({ fontFamily: e.target.value })}>
+                <option value="">에디터 기본</option>
+                {FONTS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="본문 글자색/굵기">
+              <div className="flex flex-wrap items-center gap-3">
+                <ColorInput value={f.bodyColor || "#000000"} onChange={(v) => setFormat({ bodyColor: v })} />
+                {f.bodyColor && <button className="btn btn-sm" onClick={() => setFormat({ bodyColor: "" })}>기본색으로</button>}
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={f.bodyBold} onChange={(e) => setFormat({ bodyBold: e.target.checked })} /> 굵게
+                </label>
+              </div>
+            </Field>
             <Field label="소제목">
               <div className="flex flex-wrap items-center gap-3">
                 <select className="field h-9 w-[120px] py-0" value={f.headingSize} onChange={(e) => setFormat({ headingSize: Number(e.target.value) })}>
@@ -246,19 +395,33 @@ export default function SettingsView({
                   <input type="checkbox" checked={f.headingBold} onChange={(e) => setFormat({ headingBold: e.target.checked })} /> 굵게
                 </label>
               </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <span className="text-xs text-sub">박스색</span>
+                <ColorInput value={f.headingBg || "#fff59d"} onChange={(v) => setFormat({ headingBg: v })} />
+                {f.headingBg ? (
+                  <button className="btn btn-sm" onClick={() => setFormat({ headingBg: "" })}>박스 없음</button>
+                ) : (
+                  <span className="text-xs text-sub">지금은 박스 없음 / 색을 고르면 적용됩니다</span>
+                )}
+              </div>
             </Field>
-            <Field label="소제목 앞 표시">
-              <select className="field h-9 w-[200px] py-0" value={f.headingPrefix} onChange={(e) => setFormat({ headingPrefix: e.target.value as FormatTemplate["headingPrefix"] })}>
-                <option value="number">번호 (1. 소제목)</option>
-                <option value="dash">대시 (- 소제목)</option>
-                <option value="none">없음</option>
-              </select>
+            <Field label="소제목 모양" hint="네이버 에디터의 인용구/구분선으로 들어갑니다">
+              <div className="flex flex-wrap items-center gap-3">
+                <select className="field h-9 w-[200px] py-0" value={f.headingStyle} onChange={(e) => setFormat({ headingStyle: e.target.value as FormatTemplate["headingStyle"] })}>
+                  <option value="text">글자만</option>
+                  <option value="quote">인용구 박스</option>
+                  <option value="line">위에 구분선</option>
+                </select>
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={f.headingPrefix === "number"} onChange={(e) => setFormat({ headingPrefix: e.target.checked ? "number" : "none" })} /> 번호 붙이기 (1. 2. 3.)
+                </label>
+              </div>
             </Field>
-            <Field label="목록 기호" hint="체크리스트·항목을 나눌 때">
-              <select className="field h-9 w-[200px] py-0" value={f.listMarker} onChange={(e) => setFormat({ listMarker: e.target.value })}>
-                {["-", "·", "•", "✓", "▶"].map((m) => (
-                  <option key={m} value={m}>{m} 항목</option>
-                ))}
+            <Field label="항목 나열" hint="체크리스트/단계를 나열할 때 / 네이버 목록으로 들어갑니다">
+              <select className="field h-9 w-[200px] py-0" value={f.listStyle} onChange={(e) => setFormat({ listStyle: e.target.value as FormatTemplate["listStyle"] })}>
+                <option value="bullet">글머리 기호 목록 (•)</option>
+                <option value="number">번호 목록 (1. 2.)</option>
+                <option value="check">체크 표시 (✓)</option>
               </select>
             </Field>
             <Field label="기타">
@@ -267,27 +430,44 @@ export default function SettingsView({
                   <input type="checkbox" checked={f.blankLineBetween} onChange={(e) => setFormat({ blankLineBetween: e.target.checked })} /> 문단 사이 빈 줄 넣기
                 </label>
                 <label className="flex items-center gap-1.5">
-                  <input type="checkbox" checked={f.imageMarkers} onChange={(e) => setFormat({ imageMarkers: e.target.checked })} /> 이미지 들어갈 자리 표시 넣기 ([이미지 1 · 썸네일])
+                  <input type="checkbox" checked={f.imageMarkers} onChange={(e) => setFormat({ imageMarkers: e.target.checked })} /> 이미지 들어갈 자리 표시 넣기 ([이미지 1 / 썸네일])
                 </label>
               </div>
             </Field>
             <Field label="미리보기">
-              <div className="rounded-2xl border border-line px-5 py-4" style={{ textAlign: f.align }}>
-                <p style={{ fontSize: f.headingSize, color: f.headingColor, fontWeight: f.headingBold ? 700 : 400, lineHeight: 1.5 }}>
-                  {f.headingPrefix === "number" ? "1. " : f.headingPrefix === "dash" ? "- " : ""}보기를 보기 전에 빈칸의 역할부터 정합니다
+              <div
+                className="rounded-2xl border border-line px-5 py-4"
+                style={{ textAlign: f.align, fontFamily: f.fontFamily ? `'${f.fontFamily}', sans-serif` : undefined, color: f.bodyColor || undefined, fontWeight: f.bodyBold ? 700 : undefined }}
+              >
+                {f.headingStyle === "line" && <hr className="mb-3 border-line" />}
+                <p
+                  className={f.headingStyle === "quote" ? "border-l-4 border-line pl-3" : ""}
+                  style={{ fontSize: f.headingSize, color: f.headingColor, fontWeight: f.headingBold ? 700 : 400, lineHeight: 1.5 }}
+                >
+                  <span style={{ backgroundColor: f.headingBg || undefined }}>
+                    {f.headingPrefix === "number" ? "1. " : f.headingPrefix === "dash" ? "- " : ""}보기를 보기 전에 빈칸의 역할부터 정합니다
+                  </span>
                 </p>
                 {f.blankLineBetween && <br />}
                 <p style={{ fontSize: bodyPx, lineHeight: 1.8 }}>
                   빈칸이 글에서 어떤 기능을 하는지 먼저 정하면 풀기 쉬워집니다. 주장, 이유, 예시, 대조 중 무엇을 채우는 자리인지 정한 다음 보기를 보세요.
                 </p>
-                <p style={{ fontSize: bodyPx, lineHeight: 1.8 }}>{f.listMarker} 빈칸 앞뒤 문장에서 핵심어에 밑줄 긋기</p>
-                <p style={{ fontSize: bodyPx, lineHeight: 1.8 }}>{f.listMarker} 연결어로 글의 방향 확인하기</p>
+                {f.listStyle === "check" ? (
+                  ["빈칸 앞뒤 문장에서 핵심어에 밑줄 긋기", "연결어로 글의 방향 확인하기"].map((x) => (
+                    <p key={x} style={{ fontSize: bodyPx, lineHeight: 1.8 }}>✓ {x}</p>
+                  ))
+                ) : (
+                  <ListTag listStyle={f.listStyle} className={`${f.listStyle === "number" ? "list-decimal" : "list-disc"} pl-6 text-left`} style={{ fontSize: bodyPx, lineHeight: 1.8 }}>
+                    <li>빈칸 앞뒤 문장에서 핵심어에 밑줄 긋기</li>
+                    <li>연결어로 글의 방향 확인하기</li>
+                  </ListTag>
+                )}
               </div>
               <p className="mt-1 text-xs text-sub">실제 크기 비율은 네이버 에디터 표시와 조금 다를 수 있습니다.</p>
             </Field>
           </Section>
 
-          <Section id="set-image" title="이미지 디자인" desc="썸네일과 소주제 이미지(1:1, 1080px)에 공통으로 쓰이는 디자인입니다. 글자·로고는 코드로 그려 정확하게 들어갑니다.">
+          <Section id="set-image" title="이미지 디자인" desc="썸네일과 소주제 이미지(1:1, 1080px)에 공통으로 쓰이는 디자인입니다. 글자/로고는 코드로 그려 정확하게 들어갑니다.">
             <div className="grid gap-6 py-3 md:grid-cols-[1fr_320px]">
               <div className="divide-y divide-bg2">
                 <Field label="카드뉴스 템플릿">
@@ -299,7 +479,7 @@ export default function SettingsView({
                     ))}
                   </div>
                 </Field>
-                <Field label="상담 문구" hint="썸네일 위쪽에 표시(파일 폴더·말풍선)">
+                <Field label="상담 문구" hint="썸네일 위쪽에 표시(파일 폴더/말풍선)">
                   <input className="field" placeholder="예) 무료상담 02-000-0000" value={im.contact ?? ""} onChange={(e) => setImage({ contact: e.target.value })} />
                 </Field>
                 <Field label="로고" hint="PNG 권장(투명 배경)">
@@ -336,14 +516,17 @@ export default function SettingsView({
                 <Field label="배경색">
                   <ColorInput value={im.bg} onChange={(v) => setImage({ bg: v })} />
                 </Field>
-                <Field label="제목·주조색">
+                <Field label="제목/주조색">
                   <ColorInput value={im.primary} onChange={(v) => setImage({ primary: v })} />
                 </Field>
-                <Field label="강조색" hint="강조 줄·하이라이트">
+                <Field label="강조색" hint="강조 줄/하이라이트">
                   <ColorInput value={im.accent} onChange={(v) => setImage({ accent: v })} />
                 </Field>
                 <Field label="포인트색" hint="요약 문구">
                   <ColorInput value={im.point} onChange={(v) => setImage({ point: v })} />
+                </Field>
+                <Field label="학원 사진" hint="교실/자습실/수업 장면 등">
+                  <PhotoLibrary notify={notify} />
                 </Field>
                 <Field label="일러스트 그림체" hint="이미지 API 연결 후 그림에 적용됩니다">
                   <div className="flex flex-wrap gap-1">
@@ -367,21 +550,24 @@ export default function SettingsView({
                 </Field>
                 <Field label="하단 띠">
                   <label className="flex items-center gap-1.5 pt-2">
-                    <input type="checkbox" checked={im.footer} onChange={(e) => setImage({ footer: e.target.checked })} /> 로고·이름 띠 넣기
+                    <input type="checkbox" checked={im.footer} onChange={(e) => setImage({ footer: e.target.checked })} /> 로고/이름 띠 넣기
                   </label>
                 </Field>
               </div>
               <div>
-                <p className="label">미리보기 · {LAYOUT_LABEL[im.layout]}</p>
+                <p className="label">미리보기 / {LAYOUT_LABEL[im.layout]}</p>
                 <DesignPreview design={im} layout={im.layout} />
                 <p className="mt-2 text-xs leading-5 text-sub">학원별 예시 이미지를 더 주시면 레이아웃을 추가할 수 있습니다.</p>
               </div>
             </div>
           </Section>
 
-          <Section id="set-brand" title="인사말·예약 링크" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
+          <Section id="set-brand" title="인사말/예약 링크" desc="붙여넣기 결과에 들어가는 고정 문구입니다. AI가 이 값을 바꾸지 않습니다.">
             <Field label="작성자">
-              <input className="field" value={b.author} onChange={(e) => setBrand({ author: e.target.value })} />
+              <input className="field" value={b.author} placeholder={academy} onChange={(e) => setBrand({ author: e.target.value })} />
+            </Field>
+            <Field label="글쓴이 시점" hint="AI가 이 사람의 눈으로 씁니다. 비우면 학원 공식 안내 말투">
+              <input className="field" value={b.narrator} maxLength={200} placeholder="예: 원장이 직접 / 10년 차 중등 수학 강사" onChange={(e) => setBrand({ narrator: e.target.value })} />
             </Field>
             <Field label="인사말" hint="본문 맨 앞에 들어갑니다">
               <input className="field" value={b.greeting} onChange={(e) => setBrand({ greeting: e.target.value })} />
@@ -391,7 +577,7 @@ export default function SettingsView({
               <input className="field" value={b.closingHeading} onChange={(e) => setBrand({ closingHeading: e.target.value })} />
               <NamePreview text={resolveBrand(b, academy).closingHeading} hasToken={b.closingHeading.includes(NAME_TOKEN)} onInsert={() => setBrand({ closingHeading: `${NAME_TOKEN} 상담 안내` })} />
             </Field>
-            <Field label="예약·문의 링크" hint="본문 맨 끝에 붙습니다. 비우면 생략">
+            <Field label="예약/문의 링크" hint="본문 맨 끝에 붙습니다. 비우면 생략">
               <input className="field" value={b.bookingUrl} onChange={(e) => setBrand({ bookingUrl: e.target.value })} />
             </Field>
             <Field label="학원 전화번호" hint="본문 맨 끝에 작은 굵은 글씨로 붙습니다. 비우면 생략">
@@ -400,10 +586,16 @@ export default function SettingsView({
             <Field label="네이버 플레이스 링크" hint="네이버 지도에서 학원 → 공유 → 링크 복사(naver.me/…). 본문 맨 끝에 붙습니다">
               <input className="field" value={b.placeUrl} onChange={(e) => setBrand({ placeUrl: e.target.value })} placeholder="https://naver.me/..." />
             </Field>
+            <Field label="지도에 넣을 장소" hint="'네이버로 한 번에 보내기' 때 글 끝에 네이버 지도(장소)를 넣습니다. 이 이름으로 검색해 첫 결과를 고릅니다 / 비우면 넣지 않음">
+              <input className="field" value={b.placeName} maxLength={100} onChange={(e) => setBrand({ placeName: e.target.value })} placeholder={academy ? `예) ${academy}` : "예) 브레인매쓰에듀학원"} />
+            </Field>
+            <Field label="네이버 톡톡 상담 링크" hint="톡톡 파트너센터에서 복사한 상담 링크(talk.naver.com/…). 본문 맨 끝에 붙습니다">
+              <input className="field" value={b.talkUrl} onChange={(e) => setBrand({ talkUrl: e.target.value })} placeholder="https://talk.naver.com/..." />
+            </Field>
           </Section>
 
-          <Section id="set-tags" title="제목·해시태그 규칙" desc="코드가 자동으로 붙이는 값입니다.">
-            <Field label="제목 끝 지역 표기" hint="쉼표로 구분 · 글마다 하나씩 순환">
+          <Section id="set-tags" title="제목/해시태그 규칙" desc="코드가 자동으로 붙이는 값입니다.">
+            <Field label="제목 끝 지역 표기" hint="쉼표로 구분 / 글마다 하나씩 순환">
               <ParsedInput
                 value={b.titleSuffixes}
                 format={(v) => v.join(", ")}
@@ -414,7 +606,7 @@ export default function SettingsView({
             <Field label="고정 해시태그">
               <ParsedInput value={b.fixedHashtags} format={tagsToText} parse={textToTags} onChange={(v) => setBrand({ fixedHashtags: v })} />
             </Field>
-            <Field label="지역 해시태그 묶음" hint="한 줄에 한 묶음 · 글마다 한 묶음씩 순환">
+            <Field label="지역 해시태그 묶음" hint="한 줄에 한 묶음 / 글마다 한 묶음씩 순환">
               <ParsedInput
                 multiline
                 rows={Math.max(3, b.regionHashtagGroups.length + 1)}

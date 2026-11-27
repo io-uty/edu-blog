@@ -135,9 +135,9 @@ function BankTransfer({ order, onChange }: { order: Order; onChange: (o: Partial
         <Loader2 size={14} className="shrink-0 animate-spin" /> 입금을 확인하는 중이에요. 입금하시면 이 화면이 자동으로 바뀝니다.
       </p>
       <ul className="space-y-1 text-xs leading-5 text-sub">
-        <li>· 입금액은 {order.amount.toLocaleString()}원 그대로, 입금자명은 위 이름과 같게 보내 주세요.</li>
-        {until && <li>· {until}까지 입금해 주세요. 지나면 주문이 만료됩니다.</li>}
-        <li>· 확인이 오래 걸리면 운영자가 입금을 직접 확인해 생성권을 충전해 드려요.</li>
+        <li>/ 입금액은 {order.amount.toLocaleString()}원 그대로, 입금자명은 위 이름과 같게 보내 주세요.</li>
+        {until && <li>/ {until}까지 입금해 주세요. 지나면 주문이 만료됩니다.</li>}
+        <li>/ 확인이 오래 걸리면 운영자가 입금을 직접 확인해 생성권을 충전해 드려요.</li>
       </ul>
       <Link className="btn h-11 w-full" href="/#/compose">나중에 하기</Link>
     </div>
@@ -217,7 +217,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
             {order.provider === "bank_transfer" ? (
               !order.available ? <p className="mt-6 text-[14px] text-sub">결제 준비 중입니다. 잠시 뒤 다시 시도해 주세요.</p> : <BankTransfer order={order} onChange={(o) => setOrder((prev) => (prev ? { ...prev, ...o } : prev))} />
             ) : order.status === "paid" ? (
-              <Link className="btn btn-primary mt-6 h-11 w-full" href="/#/compose">이미 결제된 주문입니다 · 돌아가기</Link>
+              <Link className="btn btn-primary mt-6 h-11 w-full" href="/#/compose">이미 결제된 주문입니다 / 돌아가기</Link>
             ) : order.status !== "pending" ? (
               <p className="mt-6 text-[14px] text-sub">이 주문은 더 이상 결제할 수 없습니다. 생성권을 다시 선택해 주세요.</p>
             ) : !order.available ? (
