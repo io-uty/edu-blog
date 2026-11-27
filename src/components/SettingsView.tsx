@@ -85,9 +85,26 @@ function Section({ id, title, desc, children }: { id: string; title: string; des
   );
 }
 
-function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// 굿노트 기본 펜·형광펜 팔레트를 본뜬 추천색(값은 화면 기준 근사치)
+const PEN = ["#000000", "#5E5E5E", "#1C3F94", "#2F7BF5", "#D3302F", "#F08A24", "#2E8B57", "#7B3FB8"];
+const HIGHLIGHT = ["#FFF59D", "#FFD1DC", "#C8F0D8", "#CDE7FF", "#E3D4FF", "#FFE0B2"];
+
+function ColorInput({ value, onChange, palette = PEN }: { value: string; onChange: (v: string) => void; palette?: string[] }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <span className="inline-flex gap-1">
+        {palette.map((c) => (
+          <button
+            key={c}
+            type="button"
+            title={c}
+            aria-label={`색 ${c}`}
+            onClick={() => onChange(c)}
+            className={`h-6 w-6 rounded-full border ${value.toLowerCase() === c.toLowerCase() ? "border-ink ring-2 ring-ink/30" : "border-line"}`}
+            style={{ backgroundColor: c }}
+          />
+        ))}
+      </span>
       <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-10 cursor-pointer border border-line bg-white p-0.5" />
       <input className="field h-9 w-[110px] font-mono text-xs" value={value} onChange={(e) => onChange(e.target.value)} />
     </span>
@@ -266,7 +283,7 @@ export default function SettingsView({
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <span className="text-xs text-sub">박스색</span>
-                <ColorInput value={f.headingBg || "#fff59d"} onChange={(v) => setFormat({ headingBg: v })} />
+                <ColorInput palette={HIGHLIGHT} value={f.headingBg || "#fff59d"} onChange={(v) => setFormat({ headingBg: v })} />
                 {f.headingBg ? (
                   <button className="btn btn-sm" onClick={() => setFormat({ headingBg: "" })}>박스 없음</button>
                 ) : (
@@ -366,13 +383,13 @@ export default function SettingsView({
                   </div>
                 </Field>
                 <Field label="배경색">
-                  <ColorInput value={im.bg} onChange={(v) => setImage({ bg: v })} />
+                  <ColorInput palette={["#FFFFFF", "#F4EFE6", ...HIGHLIGHT]} value={im.bg} onChange={(v) => setImage({ bg: v })} />
                 </Field>
                 <Field label="제목·주조색">
                   <ColorInput value={im.primary} onChange={(v) => setImage({ primary: v })} />
                 </Field>
                 <Field label="강조색" hint="강조 줄·하이라이트">
-                  <ColorInput value={im.accent} onChange={(v) => setImage({ accent: v })} />
+                  <ColorInput palette={HIGHLIGHT} value={im.accent} onChange={(v) => setImage({ accent: v })} />
                 </Field>
                 <Field label="포인트색" hint="요약 문구">
                   <ColorInput value={im.point} onChange={(v) => setImage({ point: v })} />

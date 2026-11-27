@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { idbGet } from "@/lib/idb";
+import { toGif } from "@/lib/extras";
 import { autoLayout, canvasToBlob, loadImage, photoFinish, renderImage, variantDesign } from "@/lib/imageRender";
 import type { ImageDesign } from "@/lib/settings";
 import type { ImageItem } from "@/lib/store";
@@ -33,7 +34,8 @@ export function useRendered(item: ImageItem | undefined, design: ImageDesign) {
   return url;
 }
 
-export async function renderBlob(item: ImageItem, design: ImageDesign): Promise<Blob> {
+/** gif: 마지막 이미지는 움짤로 내보낸다(exporter.isAnimated). */
+export async function renderBlob(item: ImageItem, design: ImageDesign, gif = false): Promise<Blob> {
   const [illustration, logo] = await Promise.all([
     item.illustration === "ready"
       ? idbGet(illustrationKey(item.id)).then((d) => (d ? loadImage(d) : null))
@@ -50,5 +52,5 @@ export async function renderBlob(item: ImageItem, design: ImageDesign): Promise<
     illustration: finished,
     logo,
   });
-  return canvasToBlob(canvas);
+  return gif ? toGif(canvas) : canvasToBlob(canvas);
 }

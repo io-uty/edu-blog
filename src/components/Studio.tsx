@@ -26,13 +26,13 @@ import Paywall from "./Paywall";
 import { contentLeft, type PaymentInfo, type PlanInfo, type UsageInfo } from "@/lib/billingTypes";
 import ComposeView, { type Form, type StageState } from "./ComposeView";
 import EditorView, { type SaveState } from "./EditorView";
-import { imageFileName, saveBlob } from "./exporter";
+import { imageFileName, renderFile, saveBlob } from "./exporter";
 import { copyBusyKey, type ImageActions } from "./images";
 import { HistoryView, ListView } from "./Pages";
 import PublishView from "./PublishView";
 import SettingsView from "./SettingsView";
 import Sidebar, { type ApiState } from "./Sidebar";
-import { illustrationKey, renderBlob } from "./useRendered";
+import { illustrationKey } from "./useRendered";
 import { autoLayout, normalizeLayout } from "@/lib/imageRender";
 import { useLock } from "@/lib/useLock";
 
@@ -391,7 +391,7 @@ export default function Studio() {
     },
     download: async (item) => {
       try {
-        saveBlob(await renderBlob(item, settings.image), imageFileName(doc.images ?? [], item));
+        saveBlob(await renderFile(doc.images ?? [], item, settings.image), imageFileName(doc.images ?? [], item));
       } catch {
         notify("이미지를 만들지 못했습니다.");
       }

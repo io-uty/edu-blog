@@ -2,14 +2,24 @@
 
 import type { Settings } from "@/lib/settings";
 import { imageLabel, sortImages, type DocRecord, type ImageItem } from "@/lib/store";
+import { greetingSticker } from "@/lib/extras";
 import { renderBlob } from "./useRendered";
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").trim().slice(0, 40) || "블로그글";
 
+/** 글의 마지막 이미지(이미지가 2장 이상일 때)는 움짤(GIF)로 내보낸다. */
+export function isAnimated(items: ImageItem[], it: ImageItem) {
+  const s = sortImages(items);
+  return s.length > 1 && s[s.length - 1].id === it.id;
+}
+
 export function imageFileName(items: ImageItem[], it: ImageItem) {
   const n = sortImages(items).findIndex((x) => x.id === it.id) + 1;
-  return `${String(n).padStart(2, "0")}-${imageLabel(it).replace(/\s/g, "")}.png`;
+  return `${String(n).padStart(2, "0")}-${imageLabel(it).replace(/\s/g, "")}.${isAnimated(items, it) ? "gif" : "png"}`;
 }
+
+/** 목록 순서대로 파일 이름·형식(마지막은 GIF)을 맞춰 렌더링한다. */
+export const renderFile = (items: ImageItem[], it: ImageItem, design: Settings["image"]) => renderBlob(it, design, isAnimated(items, it));
 
 export function saveBlob(blob: Blob, name: string) {
   const a = document.createElement("a");
@@ -29,7 +39,8 @@ export async function buildZip(
   const zip = new JSZip();
   const items = sortImages(doc.images);
   const dir = text ? zip.folder("images")! : zip;
-  for (const it of items) dir.file(imageFileName(items, it), await renderBlob(it, settings.image));
+  dir.file("00-인사스티커.png", await greetingSticker(doc.id, settings.image));
+  for (const it of items) dir.file(imageFileName(items, it), await renderFile(items, it, settings.image));
   if (text) {
     zip.file("제목.txt", doc.draft.title);
     zip.file("본문.txt", text.plainText);

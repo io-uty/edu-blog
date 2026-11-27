@@ -5,7 +5,8 @@ import { ArrowLeft, Check, Copy, Download, ExternalLink, Loader2 } from "lucide-
 import { renderHashtags } from "@/lib/render";
 import type { Settings } from "@/lib/settings";
 import { formatTime, imagePosition, sortImages, type DocRecord, type ImageItem } from "@/lib/store";
-import { buildZip, imageFileName, saveBlob } from "./exporter";
+import { greetingSticker } from "@/lib/extras";
+import { buildZip, imageFileName, renderFile, saveBlob } from "./exporter";
 import { renderBlob, useRendered } from "./useRendered";
 import { PageHeader, StepBar } from "./ui";
 import { PixelMark } from "./Logo";
@@ -37,12 +38,12 @@ function Thumb({ item, settings, items }: { item: ImageItem; settings: Settings;
       )}
       <div className="mt-1 flex items-center justify-between gap-1">
         <span className="truncate text-sub" title={imagePosition(item)}>
-          {imageFileName(items, item).replace(".png", "")}
+          {imageFileName(items, item).replace(/\.(png|gif)$/, "")}
         </span>
         <button
           className="shrink-0 text-sub hover:text-ink"
           title="다운로드"
-          onClick={async () => saveBlob(await renderBlob(item, settings.image), imageFileName(items, item))}
+          onClick={async () => saveBlob(await renderFile(items, item, settings.image), imageFileName(items, item))}
         >
           <Download size={14} />
         </button>
@@ -133,7 +134,9 @@ export default function PublishView({
 
   /** 이미지 표시 자리를 실제 이미지(dataURL)로 바꾼 본문 HTML. 렌더 실패한 이미지는 표시 문구를 남긴다. */
   async function htmlWithImages(): Promise<string> {
-    let out = html;
+    // 맨 위 인사 스티커
+    const sticker = await greetingSticker(doc.id, settings.image).then(shrinkForPaste).catch(() => null);
+    let out = sticker ? `<p style="text-align:center;"><img src="${sticker}" alt="" style="max-width:260px;"></p>${html}` : html;
     for (const it of images) {
       const key = it.kind === "thumbnail" ? "thumb" : `s${it.sectionIndex}`;
       const src = await renderBlob(it, settings.image).then(shrinkForPaste).catch(() => null);
