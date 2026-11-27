@@ -184,7 +184,7 @@ export default function PublishView({
       {
         source: "bbolog-app",
         type: "handoff",
-        payload: { title: doc.draft.title, html: await body, plainText },
+        payload: { title: doc.draft.title, html: await body, plainText, place: settings.brand.placeName.trim() },
         // 확장이 이 창을 왼쪽 절반, 네이버 글쓰기 창을 오른쪽 절반에 놓는다
         screen: (({ availLeft = 0, availTop = 0, availWidth, availHeight }) => ({ left: availLeft, top: availTop, width: availWidth, height: availHeight }))(
           screen as Screen & { availLeft?: number; availTop?: number }, // 크롬 전용 속성(여러 모니터에서 현재 화면의 위치)
@@ -200,7 +200,7 @@ export default function PublishView({
     track("naver_sent", ok ? "extension" : "extension_failed");
     notify(
       ok
-        ? "오른쪽 네이버 글쓰기 창에 제목·본문·이미지를 넣는 중입니다. 확인 후 발행해 주세요."
+        ? "오른쪽 네이버 글쓰기 창에 제목/본문/이미지를 넣는 중입니다. 확인 후 발행해 주세요."
         : "확장에 전달하지 못했습니다. 본문은 복사되어 있으니 네이버 본문 칸에 붙여넣으세요(⌘V).",
     );
   }
@@ -270,7 +270,7 @@ export default function PublishView({
           <div className="mx-auto max-w-[760px] px-5 py-8 md:px-10">
             <p className="label">블로그 제목</p>
             <h2 className="mb-8 border-b border-line pb-6 text-[24px] font-semibold leading-snug">{doc.draft.title}</h2>
-            <p className="label">본문 미리보기 · 네이버에 붙여넣으면 이렇게 보입니다</p>
+            <p className="label">본문 미리보기 / 네이버에 붙여넣으면 이렇게 보입니다</p>
             <div className="blog-preview" dangerouslySetInnerHTML={{ __html: html }} />
           </div>
         </div>
@@ -283,16 +283,16 @@ export default function PublishView({
                 {sending ? "이미지 준비 중…" : "네이버로 한 번에 보내기"}
               </button>
               <p className="mt-2 text-[12px] leading-5 text-sub">
-                화면 오른쪽에 네이버 글쓰기 창이 열리고 제목·본문·이미지가 자동으로 들어갑니다. 발행은 직접 눌러 주세요. 안 되면 아래 “직접 옮기려면”을 펼쳐 주세요.
+                화면 오른쪽에 네이버 글쓰기 창이 열리고 제목/본문/이미지가 자동으로 들어갑니다. 발행은 직접 눌러 주세요. 안 되면 아래 “직접 옮기려면”을 펼쳐 주세요.
               </p>
             </div>
           ) : (
             installable && (
               <div className="border-b border-line px-5 py-4">
                 <div className="rounded-xl border border-[#f6d9c2] bg-brand-soft p-4">
-                  <p className="text-[15px] font-semibold">복사·붙여넣기 없이 한 번에</p>
+                  <p className="text-[15px] font-semibold">복사/붙여넣기 없이 한 번에</p>
                   <p className="mt-1 text-[13px] leading-5 text-[#6b4a35]">
-                    뚝딱 확장 프로그램을 추가하면 버튼 하나로 제목·본문·이미지가 네이버 글쓰기에 바로 들어갑니다.
+                    뚝딱 확장 프로그램을 추가하면 버튼 하나로 제목/본문/이미지가 네이버 글쓰기에 바로 들어갑니다.
                   </p>
                   <a
                     className="btn mt-3 w-full"
@@ -303,7 +303,7 @@ export default function PublishView({
                   >
                     <Puzzle size={15} /> Chrome에 추가
                   </a>
-                  <p className="mt-2 text-center text-[12px] text-[#6b4a35]">무료 · 추가하고 이 탭으로 돌아오면 바로 켜집니다</p>
+                  <p className="mt-2 text-center text-[12px] text-[#6b4a35]">무료 / 추가하고 이 탭으로 돌아오면 바로 켜집니다</p>
                 </div>
               </div>
             )
@@ -334,7 +334,7 @@ export default function PublishView({
                   <Copy size={15} /> 제목 복사
                 </button>
               </Step>
-              <Step n={3} done={!!done.body} title="본문 넣기" desc={`본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기·정렬 같은 서식${images.length ? "과 이미지" : ""}도 함께 들어갑니다.`}>
+              <Step n={3} done={!!done.body} title="본문 넣기" desc={`본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기/정렬 같은 서식${images.length ? "과 이미지" : ""}도 함께 들어갑니다.`}>
                 <button
                   className="btn w-full"
                   onClick={async () => {
@@ -368,7 +368,7 @@ export default function PublishView({
                   title={`이미지가 빠졌다면 직접 넣기`}
                   desc={
                     <>
-                      붙여넣은 본문에 <b>[이미지 1 · 썸네일]</b> 같은 표시가 남아 있으면, 그 자리에 같은 번호의 이미지를 올리고 표시 문구는 지워 주세요.
+                      붙여넣은 본문에 <b>[이미지 1 / 썸네일]</b> 같은 표시가 남아 있으면, 그 자리에 같은 번호의 이미지를 올리고 표시 문구는 지워 주세요.
                     </>
                   }
                 >
@@ -407,7 +407,7 @@ export default function PublishView({
                 {published ? (
                   <>
                     <div className="flex items-center justify-between gap-2 text-[13px]">
-                      <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` · ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
+                      <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` / ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
                       <button className="text-sub underline underline-offset-2" onClick={() => onConfirmPublished(false)}>
                         표시 취소
                       </button>
@@ -451,7 +451,7 @@ export default function PublishView({
                   <Copy size={15} /> 제목 복사
                 </button>
               </Step>
-              <Step n={3} done={!!done.body} title="본문 넣기" desc={`본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기·정렬 같은 서식${images.length ? "과 이미지" : ""}도 함께 들어갑니다.`}>
+              <Step n={3} done={!!done.body} title="본문 넣기" desc={`본문 칸을 한 번 클릭하고 붙여넣으세요. 글자 크기/정렬 같은 서식${images.length ? "과 이미지" : ""}도 함께 들어갑니다.`}>
                 <button
                   className="btn w-full"
                   onClick={async () => {
@@ -485,7 +485,7 @@ export default function PublishView({
                   title={`이미지가 빠졌다면 직접 넣기`}
                   desc={
                     <>
-                      붙여넣은 본문에 <b>[이미지 1 · 썸네일]</b> 같은 표시가 남아 있으면, 그 자리에 같은 번호의 이미지를 올리고 표시 문구는 지워 주세요.
+                      붙여넣은 본문에 <b>[이미지 1 / 썸네일]</b> 같은 표시가 남아 있으면, 그 자리에 같은 번호의 이미지를 올리고 표시 문구는 지워 주세요.
                     </>
                   }
                 >
@@ -524,7 +524,7 @@ export default function PublishView({
                 {published ? (
                   <>
                     <div className="flex items-center justify-between gap-2 text-[13px]">
-                      <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` · ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
+                      <span className="text-ok">발행 완료로 표시함{doc.publishedAt ? ` / ${formatTime(doc.publishedAt)}` : ""} (직접 확인)</span>
                       <button className="text-sub underline underline-offset-2" onClick={() => onConfirmPublished(false)}>
                         표시 취소
                       </button>
@@ -546,7 +546,7 @@ export default function PublishView({
 
           <section className="border-t border-line bg-bg2 px-5 py-4">
             <button className="btn btn-sm w-full" disabled={!!zipping} onClick={() => zip("all")}>
-              {zipping === "all" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 글·이미지 전체 백업 (.zip)
+              {zipping === "all" ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 글/이미지 전체 백업 (.zip)
             </button>
           </section>
         </aside>

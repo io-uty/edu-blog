@@ -26,6 +26,8 @@ export const SettingsInputSchema = z.object({
     bodyColor: HEX.or(z.literal("")).default(""),
     bodyBold: z.boolean().default(false),
     headingPrefix: z.enum(["number", "dash", "none"]),
+    headingStyle: z.enum(["text", "quote", "line"]).default("text"),
+    listStyle: z.enum(["bullet", "number", "check"]).default("bullet"),
     listMarker: z.string().max(4),
     blankLineBetween: z.boolean(),
     imageMarkers: z.boolean(),
@@ -66,6 +68,7 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
     academyType: tr.academy_type,
     academyTypeCustom: tr.academy_type_custom ?? "",
     grades: cr.grade_levels ?? [],
+    academyTypes: cr.academy_types ?? [],
     name: tr.name,
     branch: tr.branch_name ?? "",
     homepage: br.official_website ?? "",
@@ -97,6 +100,7 @@ export async function loadTenant(db: SupabaseClient, tenantId: string): Promise<
   const brand = { ...DEFAULT_SETTINGS.brand, ...(br.brand_guidelines ?? {}) };
   // 이름이 비어 있으면 등록된 학원명을 쓴다(인사말·마무리 소제목의 {학원명} 자리)
   if (!String(brand.name ?? "").trim()) brand.name = displayName(tenant);
+  if (!String(brand.author ?? "").trim()) brand.author = brand.name; // 작성자 기본값은 학원명
   const settings: Settings = migrateSettings(
     {
       brand,
@@ -157,8 +161,8 @@ export async function saveTenantProfile(db: SupabaseClient, tenantId: string, t:
       .eq("tenant_id", tenantId),
   );
   // 학년: 새 칸(20261127000001 마이그레이션)이라 적용 전 DB 에서도 나머지 저장이 막히지 않게 따로 저장한다
-  const g = await db.from("tenant_content_settings").update({ grade_levels: t.grades }).eq("tenant_id", tenantId);
-  if (g.error) console.error("[tenant:grades] 마이그레이션 20261127000001 적용 필요:", g.error.message);
+  const g = await db.from("tenant_content_settings").update({ grade_levels: t.grades, academy_types: t.academyTypes }).eq("tenant_id", tenantId);
+  if (g.error) console.error("[tenant:grades/types] 마이그레이션 20261127000001 적용 필요:", g.error.message);
   // 출처는 화면의 목록과 같게 맞춘다
   check(await db.from("tenant_sources").delete().eq("tenant_id", tenantId).in("source_type", ["homepage", "blog_sample", "upload"]));
   if (t.sources.length)

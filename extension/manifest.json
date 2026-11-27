@@ -1,12 +1,15 @@
 {
   "manifest_version": 3,
   "name": "뚝딱 - 네이버 블로그로 보내기",
-  "version": "0.3.0",
+  "version": "0.6.1",
   "description": "뚝딱에서 '네이버로 보내기'를 누르면 네이버 블로그 글쓰기 화면에 제목·본문·이미지를 자동으로 넣습니다.",
   "permissions": [
     "storage",
     "unlimitedStorage",
-    "scripting"
+    "scripting",
+    "clipboardRead",
+    "clipboardWrite",
+    "debugger"
   ],
   "content_scripts": [
     {

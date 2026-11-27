@@ -12,6 +12,8 @@ export const BrandSchema = z.object({
   bookingUrl: z.string().max(300),
   placePhone: z.string().max(40),
   placeUrl: z.string().max(300).default(""), // 네이버 플레이스(지도) 링크
+  placeName: z.string().max(100).default(""), // 확장이 네이버 글쓰기의 '장소'로 검색해 넣을 이름(비우면 넣지 않음)
+  talkUrl: z.string().max(300).default(""), // 네이버 톡톡 상담 링크(글쓰기 툴바에 톡톡이 없어 링크로 넣는다)
   titleSuffixes: z.array(z.string().max(40)).max(10),
   fixedHashtags: z.array(z.string().max(40)).max(10),
   regionHashtagGroups: z.array(z.array(z.string().max(40)).max(10)).max(10),
@@ -52,7 +54,11 @@ export interface FormatTemplate {
   bodyColor: string; // 본문 글자색 ("" = 에디터 기본)
   bodyBold: boolean;
   headingPrefix: "number" | "dash" | "none";
-  listMarker: string;
+  // 네이버 에디터 요소로 들어가는 소제목 모양: 글자만 / 인용구 / 위에 구분선
+  headingStyle: "text" | "quote" | "line";
+  // 항목 나열: 네이버 글머리 기호 목록 / 번호 목록 / 체크 표시(글자)
+  listStyle: "bullet" | "number" | "check";
+  listMarker: string; // 이전 설정 호환용(화면에서는 쓰지 않음)
   blankLineBetween: boolean;
   imageMarkers: boolean;
 }
@@ -112,6 +118,8 @@ export const DEFAULT_SETTINGS: Settings = {
     bookingUrl: "",
     placePhone: "",
     placeUrl: "",
+    placeName: "",
+    talkUrl: "",
     titleSuffixes: [],
     fixedHashtags: [],
     regionHashtagGroups: [],
@@ -127,6 +135,8 @@ export const DEFAULT_SETTINGS: Settings = {
     bodyColor: "",
     bodyBold: false,
     headingPrefix: "number",
+    headingStyle: "text",
+    listStyle: "bullet",
     listMarker: "-",
     blankLineBetween: true,
     imageMarkers: true,

@@ -11,10 +11,12 @@ if (!window.__bbologBridge) {
     if (e.source !== window || e.origin !== window.location.origin) return;
     const m = e.data;
     if (!m || m.source !== "bbolog-app" || m.type !== "handoff" || !m.payload) return;
-    const { title, html, plainText } = m.payload;
+    const { title, html, plainText, place } = m.payload;
     if (typeof title !== "string" || typeof html !== "string") return;
     try {
-      await chrome.storage.local.set({ bbologPending: { title, html, plainText: plainText || "", at: Date.now() } });
+      await chrome.storage.local.set({
+        bbologPending: { title, html, plainText: plainText || "", place: typeof place === "string" ? place.slice(0, 100) : "", at: Date.now() },
+      });
       const s = m.screen;
       const ok = s && [s.left, s.top, s.width, s.height].every(Number.isFinite);
       await chrome.runtime.sendMessage({ type: "openSplit", screen: ok ? s : null });

@@ -49,7 +49,7 @@ export default function Paywall({
                 {p.price.toLocaleString()}원
               </p>
               <p className="text-xs tabular-nums text-sub">
-                {p.content_limit ? `1개당 ${Math.round(p.price / p.content_limit).toLocaleString()}원 · ` : ""}구매 후 {p.period_days ?? 365}일 사용
+                {p.content_limit ? `1개당 ${Math.round(p.price / p.content_limit).toLocaleString()}원 / ` : ""}구매 후 {p.period_days ?? 365}일 사용
               </p>
               <ul className="mt-3 flex-1 space-y-1.5 text-[14px]">
                 <li className="flex items-center gap-2">
@@ -59,7 +59,7 @@ export default function Paywall({
                   <Check size={15} className="text-ok" /> 이미지 {p.image_limit === null ? "무제한" : `${p.image_limit}장`}
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check size={15} className="text-ok" /> 학원 맞춤 문체·브랜드 적용
+                  <Check size={15} className="text-ok" /> 학원 맞춤 문체/브랜드 적용
                 </li>
               </ul>
               <button
@@ -81,7 +81,7 @@ export default function Paywall({
         </ul>
         {plans.length === 0 && <p className="mt-6 text-[14px] text-sub">구매할 수 있는 생성권이 아직 없습니다. 관리자에게 문의해 주세요.</p>}
         <p className="mt-5 text-xs leading-5 text-sub">
-          지금까지 만든 글은 그대로 보고 편집·다운로드할 수 있어요.{payment?.test ? " (결제 테스트 중이라 실제로 결제되지 않습니다.)" : ""}
+          지금까지 만든 글은 그대로 보고 편집/다운로드할 수 있어요.{payment?.test ? " (결제 테스트 중이라 실제로 결제되지 않습니다.)" : ""}
         </p>
       </div>
     </div>

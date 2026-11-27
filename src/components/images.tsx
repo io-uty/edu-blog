@@ -88,7 +88,7 @@ export function ImageSlot({
       <button
         className="relative block w-full max-w-[360px] overflow-hidden rounded-2xl border border-line text-left hover:border-sub"
         onClick={() => actions.open(item.id)}
-        title="크게 보기 · 수정"
+        title="크게 보기 / 수정"
       >
         <Preview item={item} design={actions.design} />
         {(busy || actions.busy[illBusyKey(item.id)]) && (
@@ -98,7 +98,7 @@ export function ImageSlot({
         )}
       </button>
       <figcaption className="mt-1.5 text-xs text-sub">
-        이미지 {number} · {imageLabel(item)} · {imagePosition(item)}
+        이미지 {number} / {imageLabel(item)} / {imagePosition(item)}
       </figcaption>
     </figure>
   );
@@ -130,11 +130,11 @@ export function ImageGallery({ items, actions, sectionCount }: { items: ImageIte
               </button>
               <div className="min-w-0 flex-1">
                 <p className="font-medium">
-                  이미지 {idx + 1} · {imageLabel(it)}
+                  이미지 {idx + 1} / {imageLabel(it)}
                 </p>
                 <p className="text-xs text-sub">{imagePosition(it)}</p>
                 <p className="text-xs text-sub">
-                  {LAYOUT_LABEL[it.layout ?? autoLayout(it.kind, it.sectionIndex, actions.design, it.copy)]} · {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
+                  {LAYOUT_LABEL[it.layout ?? autoLayout(it.kind, it.sectionIndex, actions.design, it.copy)]} / {it.illustration === "ready" ? "일러스트 포함" : "일러스트 없음"}
                 </p>
                 <div className="mt-1.5 flex gap-1">
                   <IconBtn label="문구 다시 만들기" disabled={busy || !actions.aiEnabled} onClick={() => actions.regenerate(it)}>
@@ -216,9 +216,9 @@ export function ImageLightbox({
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <div>
               <p className="font-semibold">
-                이미지 {number} · {imageLabel(item)}
+                이미지 {number} / {imageLabel(item)}
               </p>
-              <p className="text-xs text-sub">{imagePosition(item)} · 1080×1080</p>
+              <p className="text-xs text-sub">{imagePosition(item)} / 1080×1080</p>
             </div>
             <button className="btn btn-sm px-2" onClick={onClose} aria-label="닫기">
               <X size={15} />
@@ -258,7 +258,7 @@ export function ImageLightbox({
               <select className="field h-9 py-0" value={item.copy.highlight} onChange={(e) => setCopy({ highlight: Number(e.target.value) })}>
                 <option value={-1}>없음</option>
                 {item.copy.title.map((t, i) => (
-                  <option key={i} value={i}>{i + 1}번째 줄 · {t}</option>
+                  <option key={i} value={i}>{i + 1}번째 줄 / {t}</option>
                 ))}
               </select>
             </div>

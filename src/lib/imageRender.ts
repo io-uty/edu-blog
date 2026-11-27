@@ -223,7 +223,15 @@ function star(ctx: Ctx, x: number, y: number, s: number) {
   ctx.restore();
 }
 
-const bandColor = (d: ImageDesign) => (luminance(d.primary) < 0.35 ? d.primary : "#141B34");
+/** 밝은 색은 같은 색 계열을 유지한 채 흰 글자가 읽힐 만큼만 어둡게 한다(검정으로 바꾸지 않음). */
+export function deepen(hex: string, maxLum = 0.42) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  let c = hex;
+  for (let t = 0.1; luminance(c) >= maxLum && t <= 0.9; t += 0.1) c = mix(hex, "#000000", t);
+  return c;
+}
+const pointColor = (d: ImageDesign) => deepen(d.point);
+
 const hiColor = (d: ImageDesign) => (luminance(d.accent) > 0.45 ? d.accent : "#FFD84D");
 
 /** 항목(라벨+설명)이 있으면 그것을, 없으면 체크 항목을 쓴다. 최대 4개 */
@@ -427,7 +435,7 @@ function layoutFolder(ctx: Ctx, r: RenderInput) {
   ctx.fillRect(0, 0, SIZE, SIZE);
   grain(ctx, 0.035, 7);
 
-  const fc = luminance(d.point) < 0.5 ? d.point : bandColor(d);
+  const fc = pointColor(d);
   const L = 200;
   const T = 156;
   const R = 952;
@@ -677,7 +685,7 @@ function glassBubble(ctx: Ctx, x: number, y: number, w: number, h: number, base:
 function layoutBubble(ctx: Ctx, r: RenderInput) {
   const { copy: c, design: d } = r;
   const thumb = r.kind === "thumbnail";
-  const base = luminance(d.point) < 0.5 ? d.point : bandColor(d);
+  const base = pointColor(d);
   const ink = "#15161A";
 
   if (r.illustration) {

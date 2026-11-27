@@ -284,7 +284,7 @@ function TenantDrawer({ id, onClose, onDeleted }: { id: string; onClose: () => v
         <div className="flex items-start justify-between border-b border-line px-6 py-4">
           <div>
             <p className="text-[18px] font-bold">{t ? [t.name, t.branch_name].filter(Boolean).join(" ") : "불러오는 중…"}</p>
-            {t && <p className="text-[13px] text-sub">{t.academy_type_custom || t.academy_type} · 가입 {dt(t.created_at)}</p>}
+            {t && <p className="text-[13px] text-sub">{t.academy_type_custom || t.academy_type} / 가입 {dt(t.created_at)}</p>}
           </div>
           <button className="btn btn-sm px-2" onClick={onClose} aria-label="닫기"><X size={15} /></button>
         </div>
@@ -294,10 +294,10 @@ function TenantDrawer({ id, onClose, onDeleted }: { id: string; onClose: () => v
           {d && (
             <>
               <section>
-                <p className="label">계정·이용권</p>
-                {d.members.map((m: any, i: number) => <Row key={i} k={m.role === "owner" ? "소유자" : m.role} v={`${m.email ?? "-"} · 최근 로그인 ${dt(m.lastSignIn)}`} />)}
+                <p className="label">계정/이용권</p>
+                {d.members.map((m: any, i: number) => <Row key={i} k={m.role === "owner" ? "소유자" : m.role} v={`${m.email ?? "-"} / 최근 로그인 ${dt(m.lastSignIn)}`} />)}
                 <Row k="현재 상태" v={t.subscription_status} />
-                {d.subscriptions.map((s: any, i: number) => <Row key={i} k={`이용권 ${i + 1}`} v={`${s.plan_id} · ${s.status} · ${dt(s.started_at)} ~ ${s.expires_at ? dt(s.expires_at) : "기한 없음"}`} />)}
+                {d.subscriptions.map((s: any, i: number) => <Row key={i} k={`이용권 ${i + 1}`} v={`${s.plan_id} / ${s.status} / ${dt(s.started_at)} ~ ${s.expires_at ? dt(s.expires_at) : "기한 없음"}`} />)}
               </section>
               <section>
                 <p className="label">학원 설정</p>
@@ -317,7 +317,7 @@ function TenantDrawer({ id, onClose, onDeleted }: { id: string; onClose: () => v
                   {d.projects.map((p: any) => (
                     <li key={p.id} className="px-3 py-2 text-[13px]">
                       <p className="truncate font-medium" title={p.title}>{p.title || "(제목 없음)"}</p>
-                      <p className="text-xs text-sub">{p.content_type} · {dt(p.created_at)} · {p.status === "published_confirmed" ? "발행 완료 표시" : "작성 중"}</p>
+                      <p className="text-xs text-sub">{p.content_type} / {dt(p.created_at)} / {p.status === "published_confirmed" ? "발행 완료 표시" : "작성 중"}</p>
                     </li>
                   ))}
                 </ul>
@@ -325,7 +325,7 @@ function TenantDrawer({ id, onClose, onDeleted }: { id: string; onClose: () => v
               <section>
                 <p className="label">결제</p>
                 {d.payments.length === 0 ? <p className="text-[13px] text-sub">결제 기록 없음</p> : d.payments.map((p: any) => (
-                  <Row key={p.order_id} k={dt(p.created_at)} v={`${p.plan_id} · ${won(p.amount)} · ${p.status}${p.mode === "test" ? " (테스트)" : ""}`} />
+                  <Row key={p.order_id} k={dt(p.created_at)} v={`${p.plan_id} / ${won(p.amount)} / ${p.status}${p.mode === "test" ? " (테스트)" : ""}`} />
                 ))}
               </section>
               <section>
@@ -349,7 +349,7 @@ function TenantDrawer({ id, onClose, onDeleted }: { id: string; onClose: () => v
               </section>
               <section className="rounded-2xl border border-[#f2c9c0] bg-[#fff6f3] p-4">
                 <p className="text-[14px] font-bold text-err">이 학원 삭제</p>
-                <p className="mt-1 text-[13px] leading-5 text-sub">학원 설정, 만든 글, 사용·결제·행동 기록이 모두 삭제되고 되돌릴 수 없습니다. 확인을 위해 학원명 <b className="text-ink">{t.name}</b> 을(를) 그대로 입력해 주세요.</p>
+                <p className="mt-1 text-[13px] leading-5 text-sub">학원 설정, 만든 글, 사용/결제/행동 기록이 모두 삭제되고 되돌릴 수 없습니다. 확인을 위해 학원명 <b className="text-ink">{t.name}</b> 을(를) 그대로 입력해 주세요.</p>
                 <input className="field mt-2" placeholder="학원명 입력" value={delName} onChange={(e) => setDelName(e.target.value)} />
                 <label className="mt-2 flex items-center gap-2 text-[13px]">
                   <input type="checkbox" checked={alsoAccount} onChange={(e) => setAlsoAccount(e.target.checked)} /> 소유 계정(로그인 정보)도 함께 삭제
@@ -389,7 +389,7 @@ function ResetCard({ totals, onDone }: { totals: Stats["totals"]; onDone: (msg: 
     if (!r?.ok) return setErr(j?.error || "초기화하지 못했습니다.");
     setScope(null);
     setText("");
-    onDone(`초기화했습니다 · 학원 ${j.before.tenants}곳, 글 ${j.before.projects}편, 결제 ${j.before.payments}건, 이벤트 ${j.before.events}건 삭제${j.accountsDeleted ? `, 계정 ${j.accountsDeleted}개 삭제` : ""}`);
+    onDone(`초기화했습니다 / 학원 ${j.before.tenants}곳, 글 ${j.before.projects}편, 결제 ${j.before.payments}건, 이벤트 ${j.before.events}건 삭제${j.accountsDeleted ? `, 계정 ${j.accountsDeleted}개 삭제` : ""}`);
   }
   const Opt = ({ k, title, body }: { k: "data" | "all"; title: string; body: string }) => (
     <button
@@ -401,12 +401,12 @@ function ResetCard({ totals, onDone }: { totals: Stats["totals"]; onDone: (msg: 
     </button>
   );
   return (
-    <Card title="데이터 관리" desc="되돌릴 수 없는 작업입니다. 요금제 설정·운영자 등록·삭제 기록은 어떤 경우에도 지우지 않습니다.">
+    <Card title="데이터 관리" desc="되돌릴 수 없는 작업입니다. 요금제 설정/운영자 등록/삭제 기록은 어떤 경우에도 지우지 않습니다.">
       <p className="mb-3 text-[13px] text-sub">
-        지금 저장된 데이터: 학원 {n(totals.tenants)}곳 · 글 {n(totals.projects)}편 · 결제 {n(totals.payments)}건 · 사용 기록 {n(totals.usage)}건 · 이벤트 {n(totals.events)}건 · 고객 계정 {n(totals.customers)}개
+        지금 저장된 데이터: 학원 {n(totals.tenants)}곳 / 글 {n(totals.projects)}편 / 결제 {n(totals.payments)}건 / 사용 기록 {n(totals.usage)}건 / 이벤트 {n(totals.events)}건 / 고객 계정 {n(totals.customers)}개
       </p>
       <div className="grid gap-3 md:grid-cols-2">
-        <Opt k="data" title="데이터 초기화" body="학원·글·사용·결제·이벤트를 모두 지웁니다. 가입 계정은 남아서, 다시 로그인하면 학원 등록부터 시작합니다." />
+        <Opt k="data" title="데이터 초기화" body="학원/글/사용/결제/이벤트를 모두 지웁니다. 가입 계정은 남아서, 다시 로그인하면 학원 등록부터 시작합니다." />
         <Opt k="all" title="전체 삭제" body="위 데이터에 더해 고객 계정(로그인 정보)도 모두 지웁니다. 운영자 계정은 남습니다." />
       </div>
       {scope && (
@@ -486,7 +486,7 @@ function PendingDeposits({ onChanged }: { onChanged: () => void }) {
                   <td className="px-3 py-2.5 font-semibold">{o.tenant}</td>
                   <td className="px-3 py-2.5">{o.depositorName ?? <span className="text-sub">아직 입력 전</span>}</td>
                   <td className="px-3 py-2.5 text-right font-semibold">{won(o.amount)}</td>
-                  <td className="px-3 py-2.5 text-xs text-sub">{dt(o.createdAt)}{o.expired ? " · 만료됨" : ""}</td>
+                  <td className="px-3 py-2.5 text-xs text-sub">{dt(o.createdAt)}{o.expired ? " / 만료됨" : ""}</td>
                   <td className="px-3 py-2.5 text-right">
                     <div className="flex justify-end gap-1.5">
                       <button className="btn btn-sm btn-primary" disabled={!!busy} onClick={() => act(o.orderId, "confirm")}>
@@ -508,8 +508,8 @@ function PendingDeposits({ onChanged }: { onChanged: () => void }) {
           <ul className="mt-2 divide-y divide-bg2 rounded-xl border border-line text-[13px]">
             {d.deposits.map((x) => (
               <li key={x.tx_id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                <span><b>{x.depositor_name}</b> · {won(x.amount)}</span>
-                <span className="text-xs text-sub">{x.status === "ambiguous" ? "주문 여러 개와 일치" : "일치하는 주문 없음"} · {dt(x.occurred_at ?? x.created_at)}</span>
+                <span><b>{x.depositor_name}</b> / {won(x.amount)}</span>
+                <span className="text-xs text-sub">{x.status === "ambiguous" ? "주문 여러 개와 일치" : "일치하는 주문 없음"} / {dt(x.occurred_at ?? x.created_at)}</span>
               </li>
             ))}
           </ul>
@@ -577,7 +577,7 @@ export default function AdminView() {
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
         title="운영자 대시보드"
-        sub={data ? `기준 ${new Date(data.generatedAt).toLocaleString("ko-KR")} · 모든 숫자는 실제 DB 기준 · 운영자 계정은 통계에서 제외` : "불러오는 중"}
+        sub={data ? `기준 ${new Date(data.generatedAt).toLocaleString("ko-KR")} / 모든 숫자는 실제 DB 기준 / 운영자 계정은 통계에서 제외` : "불러오는 중"}
         actions={
           <>
             <div className="flex rounded-full bg-bg2 p-1" role="tablist" aria-label="기간">
@@ -601,9 +601,9 @@ export default function AdminView() {
             <>
               <PendingDeposits onChanged={load} />
               <div className="grid gap-5 lg:grid-cols-3">
-                <Card title="사용자" desc={`${periodLabel} 기준 신규·활성`}>
+                <Card title="사용자" desc={`${periodLabel} 기준 신규/활성`}>
                   <div className="grid grid-cols-2 gap-2">
-                    <Tile label="가입 계정" value={n(k.users)} sub={`신규 +${n(k.usersNew)} · 메일 확인 ${n(k.usersConfirmed)}`} />
+                    <Tile label="가입 계정" value={n(k.users)} sub={`신규 +${n(k.usersNew)} / 메일 확인 ${n(k.usersConfirmed)}`} />
                     <Tile label="등록 학원" value={n(k.tenants)} sub={`신규 +${n(k.tenantsNew)}`} />
                     <Tile label="활성 학원" value={n(k.activeTenants)} sub={`${periodLabel} 안에 글을 만들거나 고친 학원`} />
                     <Tile label="무료 체험 중" value={n(k.trialing)} sub={`체험 소진 ${n(k.trialUsedUp)}곳`} />
@@ -617,10 +617,10 @@ export default function AdminView() {
                     <Tile label="발행 완료 표시" value={`${n(k.publishConfirmed)}건`} sub="사용자가 직접 누른 표시" hint="네이버 공식 연동이 아니므로 실제 발행 여부는 확인할 수 없습니다" />
                   </div>
                 </Card>
-                <Card title="매출·전환" desc="계좌이체 입금이 확인된 건 기준">
+                <Card title="매출/전환" desc="계좌이체 입금이 확인된 건 기준">
                   <div className="grid grid-cols-2 gap-2">
                     <Tile label="유료 학원" value={n(k.paying)} sub={`유료 전환율 ${pct(k.paidConversion)}`} />
-                    <Tile label="결제 완료" value={`${n(k.paymentsCompleted)}건`} sub={`결제 시작 ${n(k.checkoutStarted)}건 · 완료율 ${pct(k.checkoutConversion)}`} />
+                    <Tile label="결제 완료" value={`${n(k.paymentsCompleted)}건`} sub={`결제 시작 ${n(k.checkoutStarted)}건 / 완료율 ${pct(k.checkoutConversion)}`} />
                     <Tile label="실결제 매출" value={won(k.revenueLive)} sub={periodLabel} />
                     <Tile label="테스트 결제 금액" value={won(k.revenueTest)} sub="테스트 키로 처리된 금액(실제 돈 아님)" />
                   </div>
@@ -632,7 +632,7 @@ export default function AdminView() {
               </Card>
 
               <div className="grid gap-5 lg:grid-cols-2">
-                <Card title="단계별 이탈" desc={`${periodLabel} 안에 가입한 사람 기준 · 주황 표시가 가장 많이 빠지는 단계`}>
+                <Card title="단계별 이탈" desc={`${periodLabel} 안에 가입한 사람 기준 / 주황 표시가 가장 많이 빠지는 단계`}>
                   <Funnel steps={data.funnel} />
                   <p className="mt-3 text-xs leading-5 text-sub">‘무료 체험 소진’은 무료 횟수를 다 썼거나 결제한 경우입니다. 네이버 이동과 발행 완료 표시는 퍼널에 넣지 않았습니다(발행은 사용자가 직접 누른 표시).</p>
                 </Card>
@@ -643,12 +643,12 @@ export default function AdminView() {
 
               <Card
                 title={`학원 목록 (${rows.length}/${data.tenants.length})`}
-                desc="줄을 누르면 학원 상세(만든 글·사용 기록·결제·행동 기록)가 열립니다."
+                desc="줄을 누르면 학원 상세(만든 글/사용 기록/결제/행동 기록)가 열립니다."
                 right={
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-sub" />
-                      <input className="field h-9 w-[200px] py-0 pl-8 text-[13px]" placeholder="학원명·이메일·유형" value={q} onChange={(e) => setQ(e.target.value)} />
+                      <input className="field h-9 w-[200px] py-0 pl-8 text-[13px]" placeholder="학원명/이메일/유형" value={q} onChange={(e) => setQ(e.target.value)} />
                     </label>
                   </div>
                 }
@@ -682,14 +682,14 @@ export default function AdminView() {
                         <tr key={t.id} className="cursor-pointer border-b border-bg2 hover:bg-bg2" onClick={() => setOpen(t.id)}>
                           <td className="px-3 py-3">
                             <p className="font-semibold">{t.name}</p>
-                            <p className="text-xs text-sub">{t.type} · {t.ownerEmail ?? "소유자 없음"}</p>
+                            <p className="text-xs text-sub">{t.type} / {t.ownerEmail ?? "소유자 없음"}</p>
                           </td>
                           <td className="px-3 py-3">
                             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATE_STYLE[t.state]}`}>{STATE_LABEL[t.state]}</span>
                             <p className="mt-1 text-xs text-sub">{t.plan}</p>
                           </td>
                           <td className="px-3 py-3 text-right tabular-nums">{t.used}{t.limit !== null ? ` / ${t.limit}` : ""}</td>
-                          <td className="px-3 py-3 text-right tabular-nums">{t.projects}<span className="text-xs text-sub">{t.published ? ` · 발행 ${t.published}` : ""}</span></td>
+                          <td className="px-3 py-3 text-right tabular-nums">{t.projects}<span className="text-xs text-sub">{t.published ? ` / 발행 ${t.published}` : ""}</span></td>
                           <td className="px-3 py-3 text-right tabular-nums">{t.naverOpened}</td>
                           <td className="px-3 py-3 text-right tabular-nums">{t.paidAmount ? `${won(t.paidAmount)}${t.paidMode === "test" ? " (테스트)" : ""}` : "-"}</td>
                           <td className="px-3 py-3 text-[13px] text-sub">{dt(t.createdAt)}</td>
@@ -704,12 +704,12 @@ export default function AdminView() {
                 </div>
               </Card>
 
-              <Card title="최근 활동" desc="모든 학원의 최근 행동 40건(글 본문·개인정보는 기록하지 않음)">
+              <Card title="최근 활동" desc="모든 학원의 최근 행동 40건(글 본문/개인정보는 기록하지 않음)">
                 {data.recent.length === 0 ? <p className="text-[14px] text-sub">아직 기록된 활동이 없습니다.</p> : (
                   <ul className="divide-y divide-bg2">
                     {data.recent.map((e, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 py-2 text-[14px]">
-                        <span><b className="font-semibold">{e.tenant}</b> <span className="text-sub">·</span> {EVENT_LABEL[e.type] ?? e.type}</span>
+                        <span><b className="font-semibold">{e.tenant}</b> <span className="text-sub">/</span> {EVENT_LABEL[e.type] ?? e.type}</span>
                         <span className="shrink-0 text-[13px] text-sub" title={new Date(e.at).toLocaleString("ko-KR")}>{ago(e.at)}</span>
                       </li>
                     ))}
@@ -719,12 +719,12 @@ export default function AdminView() {
 
               <ResetCard totals={data.totals} onDone={(m) => { setNote(m); load(); }} />
 
-              <Card title="운영 작업 기록" desc="삭제·초기화 기록(초기화로도 지워지지 않음)">
+              <Card title="운영 작업 기록" desc="삭제/초기화 기록(초기화로도 지워지지 않음)">
                 {data.audit.length === 0 ? <p className="text-[14px] text-sub">아직 기록이 없습니다.</p> : (
                   <ul className="divide-y divide-bg2">
                     {data.audit.map((a, i) => (
                       <li key={i} className="flex items-center justify-between gap-3 py-2 text-[14px]">
-                        <span><b className="font-semibold">{AUDIT_LABEL[a.action] ?? a.action}</b>{a.target ? ` · ${a.target}` : ""} <span className="text-sub">· {a.admin_email ?? "-"}</span></span>
+                        <span><b className="font-semibold">{AUDIT_LABEL[a.action] ?? a.action}</b>{a.target ? ` / ${a.target}` : ""} <span className="text-sub">/ {a.admin_email ?? "-"}</span></span>
                         <span className="shrink-0 text-[13px] text-sub">{dt(a.created_at)}</span>
                       </li>
                     ))}

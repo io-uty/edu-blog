@@ -1,7 +1,7 @@
 // 2) 학원별 브랜드 정보 · 4) 학원별 문체 — 테넌트 설정에서만 만든다. 다른 학원 값이 섞이지 않는다.
 import { z } from "zod";
 import type { Brand } from "../settings";
-import { displayName, type TenantProfile } from "../tenant";
+import { displayName, typesOf, type TenantProfile } from "../tenant";
 
 const line = (label: string, v: string | string[]) => {
   const s = Array.isArray(v) ? v.join(", ") : v;
@@ -13,7 +13,7 @@ export function tenantBrandBlock(t: TenantProfile, b: Brand) {
   return `[학원 정보 — 등록된 값만 사용, 없는 정보는 만들지 않음]
 ${lines([
   line("학원명", displayName(t)),
-  line("학원 유형", t.academyType === "기타 교육기관" && t.academyTypeCustom ? t.academyTypeCustom : t.academyType),
+  line("학원 유형", typesOf(t).map((x) => (x === "기타 교육기관" && t.academyTypeCustom ? t.academyTypeCustom : x))),
   line("가르치는 학년", t.grades),
   line("작성자 표기", b.author),
   line("위치", t.location),

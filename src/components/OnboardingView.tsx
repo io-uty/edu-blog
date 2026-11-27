@@ -9,6 +9,7 @@ import {
   GRADE_LEVELS,
   TenantProfileSchema,
   displayName,
+  typesOf,
   type AcademyType,
   type Source,
   type StyleProfile,
@@ -161,7 +162,13 @@ export default function OnboardingView({
   const [samples, setSamples] = useState<{ name: string; text: string }[]>([]);
   const [paste, setPaste] = useState("");
 
-  const canSubmit = t.name.trim().length > 0 && (t.academyType !== "기타 교육기관" || !!t.academyTypeCustom.trim());
+  const types = typesOf(t);
+  // 여러 개 고를 수 있다. 처음 고른 유형이 대표(글 구성 기준), 하나는 꼭 남긴다.
+  const toggleType = (a: AcademyType) => {
+    const next = types.includes(a) ? types.filter((x) => x !== a) : [...types, a];
+    if (next.length) set({ academyTypes: next, academyType: next[0] });
+  };
+  const canSubmit = t.name.trim().length > 0 && (!types.includes("기타 교육기관") || !!t.academyTypeCustom.trim());
 
   const analyzeSite = () =>
     runSite(async () => {
@@ -242,7 +249,7 @@ export default function OnboardingView({
             ...t.sources.filter((s) => s.type !== "blog_sample"),
           ].slice(0, 20),
         });
-        const skipped = j.failed?.length ? ` · 읽지 못한 주소: ${j.failed.join(" / ")}` : "";
+        const skipped = j.failed?.length ? ` / 읽지 못한 주소: ${j.failed.join(" / ")}` : "";
         notify((j.profile ? "문체를 분석했습니다" : "글을 저장했습니다(샘플 모드라 분석은 생략)") + skipped);
       } catch {
         notify("서버에 연결하지 못했습니다.");
@@ -272,19 +279,21 @@ export default function OnboardingView({
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[860px] divide-y divide-bg2 px-5 py-4 text-[14px] md:px-8">
-          <Row label="학원 유형" required>
+          <Row label="학원 유형" required hint="여러 개 고를 수 있어요 / 처음 고른 것이 대표 유형">
             <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
               {ACADEMY_TYPES.map((a) => (
                 <button
                   key={a}
-                  className={`btn justify-start ${t.academyType === a ? "border-ink font-semibold" : ""}`}
-                  onClick={() => set({ academyType: a as AcademyType })}
+                  aria-pressed={types.includes(a)}
+                  className={`btn justify-start ${types.includes(a) ? "border-ink font-semibold" : ""}`}
+                  onClick={() => toggleType(a)}
                 >
-                  {a}
+                  {types.includes(a) && <Check size={12} />} {a}
+                  {types.length > 1 && types[0] === a && <span className="ml-auto text-[11px] font-normal text-sub">대표</span>}
                 </button>
               ))}
             </div>
-            {t.academyType === "기타 교육기관" && (
+            {types.includes("기타 교육기관") && (
               <input
                 className="field mt-2"
                 placeholder="교육기관 유형을 입력하세요 (예: 코딩학원, 미술학원)"
@@ -340,7 +349,7 @@ export default function OnboardingView({
                   {site && (
                     <div className="mt-3 space-y-2 text-xs">
                       <p className="text-sub">
-                        확인 {new Date(site.checkedAt).toLocaleString("ko-KR")} · 읽기 허용 여부 {site.robots === "allowed" ? "확인함" : site.robots === "missing" ? "표시 없음(허용으로 봄)" : "확인 못 함"} · 읽은 페이지{" "}
+                        확인 {new Date(site.checkedAt).toLocaleString("ko-KR")} / 읽기 허용 여부 {site.robots === "allowed" ? "확인함" : site.robots === "missing" ? "표시 없음(허용으로 봄)" : "확인 못 함"} / 읽은 페이지{" "}
                         {site.pages.filter((p) => p.ok).length}/{site.pages.length}
                       </p>
                       {site.pages.filter((p) => !p.ok).map((p) => (
@@ -368,11 +377,11 @@ export default function OnboardingView({
                                 />
                                 <div className="min-w-0">
                                   <p>
-                                    <span className="text-sub">{FIELD_LABEL[it.field]} · </span>
+                                    <span className="text-sub">{FIELD_LABEL[it.field]} / </span>
                                     {it.value}
                                   </p>
                                   <p className="truncate text-sub" title={it.evidence}>
-                                    근거: “{it.evidence}” · {it.url}
+                                    근거: “{it.evidence}” / {it.url}
                                   </p>
                                 </div>
                               </li>
@@ -392,22 +401,22 @@ export default function OnboardingView({
 
           <details className="py-3" open={more} onToggle={(e) => setMore(e.currentTarget.open)}>
             <summary className="cursor-pointer select-none py-2 text-[14px] font-semibold">
-              추가 입력하기 <span className="font-normal text-sub">(선택 · 채울수록 우리 학원에 맞는 글이 나와요)</span>
+              추가 입력하기 <span className="font-normal text-sub">(선택 / 채울수록 우리 학원에 맞는 글이 나와요)</span>
             </summary>
             <div className="divide-y divide-bg2">
               <Row label="학원 소개" hint="어떤 학원인지 두세 문장으로">
                 <textarea className="field resize-none" rows={3} value={t.description} onChange={(e) => set({ description: e.target.value })} />
               </Row>
-              <Row label="학원의 특징" hint="다른 학원과 다른 점 · 한 줄에 하나 · 적은 내용만 글에 씁니다">
+              <Row label="학원의 특징" hint="다른 학원과 다른 점 / 한 줄에 하나 / 적은 내용만 글에 씁니다">
                 <ListInput value={t.features} onChange={(x) => set({ features: x })} />
               </Row>
-              <Row label="강사진" hint="한 줄에 한 명 (예: 김OO · 영어 문법)">
+              <Row label="강사진" hint="한 줄에 한 명 (예: 김OO / 영어 문법)">
                 <ListInput value={t.instructors} onChange={(x) => set({ instructors: x })} />
               </Row>
-              <Row label="운영하는 수업" hint="반·과정 이름 · 한 줄에 하나 (예: 중2 내신반)">
+              <Row label="운영하는 수업" hint="반/과정 이름 / 한 줄에 하나 (예: 중2 내신반)">
                 <ListInput value={t.courses} onChange={(x) => set({ courses: x })} />
               </Row>
-              <Row label="블로그·SNS 주소" hint="한 칸에 주소 하나">
+              <Row label="블로그/SNS 주소" hint="한 칸에 주소 하나">
                 <UrlList value={t.sns} onChange={(x) => set({ sns: x })} />
               </Row>
               <Row label="주로 읽을 사람" hint="글을 읽을 사람 (예: 중학생 자녀를 둔 학부모)">
@@ -428,7 +437,7 @@ export default function OnboardingView({
                   <input className="field mt-2" value={t.tone.trimStart()} onChange={(e) => set({ tone: e.target.value })} placeholder="원하는 말투를 설명해 주세요" />
                 )}
               </Row>
-              <Row label="자주 쓸 글 주제" hint="새 글 화면에 예시로 보여 줍니다 · 고르거나 직접 추가">
+              <Row label="자주 쓸 글 주제" hint="새 글 화면에 예시로 보여 줍니다 / 고르거나 직접 추가">
                 <div className="flex flex-wrap gap-1">
                   {[...new Set([...v.defaultTopics, ...t.topics])].map((x) => {
                     const on = t.topics.includes(x);
@@ -455,10 +464,10 @@ export default function OnboardingView({
                   }}
                 />
               </Row>
-              <Row label="동네 검색어" hint="학부모가 학원을 찾을 때 검색창에 치는 동네 이름이에요. 글에 한두 번 자연스럽게 넣어 검색에 잘 걸리게 합니다 · 쉼표로 구분">
+              <Row label="동네 검색어" hint="학부모가 학원을 찾을 때 검색창에 치는 동네 이름이에요. 글에 한두 번 자연스럽게 넣어 검색에 잘 걸리게 합니다 / 쉼표로 구분">
                 <ListInput sep="comma" value={t.seoKeywords} onChange={(x) => set({ seoKeywords: x })} placeholder={v.seoPatterns.join(", ")} />
               </Row>
-              <Row label="기존 블로그 글" hint="최대 3개 · 글 주소나 글 내용을 붙여 넣으면 그 말투를 따라 씁니다(내용은 가져오지 않아요)">
+              <Row label="기존 블로그 글" hint="최대 3개 / 글 주소나 글 내용을 붙여 넣으면 그 말투를 따라 씁니다(내용은 가져오지 않아요)">
                 <div className="space-y-2">
                   <label className="btn btn-sm cursor-pointer">
                     <Upload size={13} /> 파일 올리기

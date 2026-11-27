@@ -45,9 +45,9 @@ export function ListView({
                   </button>
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-sub">
                     {d.mock ? <span>샘플</span> : d.status === "published_confirmed" ? <span className="font-medium text-ok">발행 완료</span> : <span>작성 중</span>}
-                    <span aria-hidden>·</span>
+                    <span aria-hidden>/</span>
                     <span>{d.contentType}</span>
-                    <span aria-hidden>·</span>
+                    <span aria-hidden>/</span>
                     <span className="tabular-nums">{formatTime(d.updatedAt)}</span>
                   </p>
                 </div>
@@ -82,7 +82,7 @@ export function ListView({
 export function HistoryView({ history, onOpen, hasDoc }: { history: HistoryEntry[]; onOpen: (id: string) => void; hasDoc: (id: string) => boolean }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <PageHeader title="생성 이력" sub={`${history.length}건 · 이 브라우저에 저장됨`} />
+      <PageHeader title="생성 이력" sub={`${history.length}건 / 이 브라우저에 저장됨`} />
       <div className="flex-1 overflow-auto">
         {history.length === 0 ? (
           <Empty text="아직 생성 이력이 없습니다." />
@@ -94,18 +94,18 @@ export function HistoryView({ history, onOpen, hasDoc }: { history: HistoryEntry
                 <div className="min-w-0 flex-1">
                   <p className="text-[14px]">{h.topic}</p>
                   <p className="text-xs text-sub">
-                    {h.contentType} · {h.mock ? "샘플" : "AI 생성"}
+                    {h.contentType} / {h.mock ? "샘플" : "AI 생성"}
                   </p>
                 </div>
                 <div className="shrink-0 text-[14px]">
                   {h.outcome === "success" ? (
                     h.docId && hasDoc(h.docId) ? (
-                      <button className="underline underline-offset-2" onClick={() => onOpen(h.docId!)}>완료 · 열기</button>
+                      <button className="underline underline-offset-2" onClick={() => onOpen(h.docId!)}>완료 / 열기</button>
                     ) : (
                       <span className="text-sub">완료 (삭제됨)</span>
                     )
                   ) : (
-                    <span className="text-err">실패{h.message ? ` · ${h.message}` : ""}</span>
+                    <span className="text-err">실패{h.message ? ` / ${h.message}` : ""}</span>
                   )}
                 </div>
               </li>

@@ -24,7 +24,7 @@ export function PageHeader({
   );
 }
 
-const FLOW = ["주제 입력", "내용 확인·수정", "네이버에 올리기"];
+const FLOW = ["주제 입력", "내용 확인/수정", "네이버에 올리기"];
 
 /** 지금 어느 단계인지 보여주는 흐름 표시줄 */
 export function StepBar({ current }: { current: 0 | 1 | 2 }) {

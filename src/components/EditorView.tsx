@@ -16,7 +16,7 @@ export type SaveState = { state: "idle" | "saving" | "saved" | "error"; at?: num
 
 export function SaveLabel({ save }: { save: SaveState }) {
   if (save.state === "saving") return <>저장 중…</>;
-  if (save.state === "error") return <span className="text-err">저장 실패 · 연결을 확인하세요(다음 수정 때 다시 저장)</span>;
+  if (save.state === "error") return <span className="text-err">저장 실패 / 연결을 확인하세요(다음 수정 때 다시 저장)</span>;
   if (save.state === "saved" && save.at) {
     const d = new Date(save.at);
     return <>자동 저장됨 {String(d.getHours()).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}</>;
@@ -116,7 +116,7 @@ export default function EditorView({
           <Lightbulb size={18} className="mt-0.5 shrink-0 text-brand" />
           <div className="flex-1">
             <p>
-              <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 선택하면 <b>문장 다듬기·길이 줄이기</b> 같은 도구가 나타납니다.
+              <b>글을 바로 고칠 수 있습니다.</b> 고칠 문장을 선택하면 <b>문장 다듬기/길이 줄이기</b> 같은 도구가 나타납니다.
             </p>
             <p className="text-sub">이미지를 누르면 크게 보고 문구를 바꿀 수 있고, 수정한 내용은 자동으로 저장됩니다. 다 확인했으면 위쪽 <b>발행 준비</b>를 누르세요.</p>
           </div>
@@ -160,7 +160,7 @@ export default function EditorView({
           />
           <p className="pb-10 text-center text-xs text-sub">
             {settings.brand.name}
-            {settings.brand.author && settings.brand.author !== settings.brand.name ? ` · 작성자 ${settings.brand.author}` : ""}
+            {settings.brand.author && settings.brand.author !== settings.brand.name ? ` / 작성자 ${settings.brand.author}` : ""}
           </p>
         </div>
 

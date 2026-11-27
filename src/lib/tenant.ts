@@ -14,7 +14,7 @@ export const ACADEMY_TYPES = [
 ] as const;
 
 /** 가르치는 학년(복수 선택) */
-export const GRADE_LEVELS = ["유아", "초등", "중등", "고등", "성인·대학"] as const;
+export const GRADE_LEVELS = ["유아", "초등", "중등", "고등", "성인/대학"] as const;
 export type AcademyType = (typeof ACADEMY_TYPES)[number];
 
 const str = (n: number) => z.string().trim().max(n);
@@ -45,7 +45,8 @@ export const SourceSchema = z.object({
 export type Source = z.infer<typeof SourceSchema>;
 
 export const TenantProfileSchema = z.object({
-  academyType: z.enum(ACADEMY_TYPES),
+  academyType: z.enum(ACADEMY_TYPES), // 대표 유형(첫 번째로 고른 것): 글 구성·주제 예시의 기준
+  academyTypes: z.array(z.enum(ACADEMY_TYPES)).max(ACADEMY_TYPES.length).default([]), // 복수 선택한 전체 유형
   academyTypeCustom: str(40),
   grades: z.array(z.enum(GRADE_LEVELS)).max(GRADE_LEVELS.length).default([]),
   name: str(60).min(1),
@@ -71,6 +72,7 @@ export type TenantProfile = z.infer<typeof TenantProfileSchema>;
 
 export const EMPTY_TENANT: TenantProfile = {
   academyType: "기타 교육기관",
+  academyTypes: [],
   academyTypeCustom: "",
   grades: [],
   name: "",
@@ -92,6 +94,9 @@ export const EMPTY_TENANT: TenantProfile = {
   sources: [],
   onboardedAt: null,
 };
+
+/** 선택한 학원 유형 전체(이전 데이터는 대표 유형 하나) */
+export const typesOf = (t: Pick<TenantProfile, "academyType" | "academyTypes">) => (t.academyTypes.length ? t.academyTypes : [t.academyType]);
 
 export const displayName = (t: Pick<TenantProfile, "name" | "branch">) => [t.name, t.branch].filter(Boolean).join(" ");
 
