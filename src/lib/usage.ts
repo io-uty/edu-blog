@@ -36,14 +36,17 @@ export interface UsageSummary {
 
 type PlanRow = { id: string; name: string; is_trial: boolean; content_limit: number | null; image_limit: number | null };
 
-/** 남은 생성권: 유효한 체험·구매 묶음의 한도를 모두 더하고, 가장 이른 시작 이후 사용량을 뺀다(DB consume_usage 와 같은 계산) */
+/** 남은 생성권: 계정(같은 owner)의 모든 학원에 걸린 유효한 체험·구매 묶음 한도를 더하고, 가장 이른 시작 이후 계정 전체 사용량을 뺀다(DB consume_usage 와 같은 계산) */
 export async function summary(tenantId: string): Promise<UsageSummary> {
   const admin = supabaseAdmin();
   const now = new Date();
+  const { data: ids, error } = await admin.rpc("account_tenants", { p_tenant: tenantId });
+  if (error) throw error;
+  const tenants = (ids as string[] | null)?.length ? (ids as string[]) : [tenantId];
   const { data: subs } = await admin
     .from("subscriptions")
     .select("status, started_at, expires_at, plans(id, name, is_trial, content_limit, image_limit)")
-    .eq("tenant_id", tenantId)
+    .in("tenant_id", tenants)
     .in("status", ["trial", "active"])
     .order("started_at", { ascending: false });
   const live = (subs ?? []).filter((s) => s.plans && (!s.expires_at || new Date(s.expires_at) > now));
@@ -53,7 +56,7 @@ export async function summary(tenantId: string): Promise<UsageSummary> {
   }
   const plans = live.map((s) => s.plans as unknown as PlanRow);
   const since = live.map((s) => s.started_at).sort()[0];
-  const { data: rows } = await admin.from("usage_ledger").select("usage_type, quantity").eq("tenant_id", tenantId).gte("created_at", since);
+  const { data: rows } = await admin.from("usage_ledger").select("usage_type, quantity").in("tenant_id", tenants).gte("created_at", since);
   const sum = (t: UsageType) => (rows ?? []).filter((r) => r.usage_type === t).reduce((a, r) => a + r.quantity, 0);
   const limit = (k: "content_limit" | "image_limit") => (plans.some((p) => p[k] === null) ? null : plans.reduce((a, p) => a + (p[k] ?? 0), 0));
   const paid = live.find((s) => !(s.plans as unknown as PlanRow).is_trial);

@@ -132,6 +132,7 @@ export default function OnboardingView({
   initial,
   phone: initialPhone,
   editing,
+  adding = false,
   onComplete,
   onCancel,
   notify,
@@ -139,6 +140,7 @@ export default function OnboardingView({
   initial: TenantProfile;
   phone: string;
   editing: boolean;
+  adding?: boolean; // 이미 학원이 있는 계정이 학원을 하나 더 추가
   onComplete: (t: TenantProfile, phone: string) => void | Promise<void>;
   onCancel: () => void;
   notify: (m: string) => void;
@@ -266,10 +268,10 @@ export default function OnboardingView({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader
-        title={editing ? "학원 정보 수정" : "학원 정보 등록"}
-        sub={editing ? displayName(t) : "처음 한 번만 등록하면 모든 글과 이미지에 적용됩니다"}
+        title={editing ? "학원 정보 수정" : adding ? "학원 추가" : "학원 정보 등록"}
+        sub={editing ? displayName(t) : adding ? "추가한 학원도 이 계정의 무료체험/생성권을 함께 씁니다" : "처음 한 번만 등록하면 모든 글과 이미지에 적용됩니다"}
         actions={
-          editing ? (
+          editing || adding ? (
             <button className="btn" onClick={onCancel}>
               취소
             </button>

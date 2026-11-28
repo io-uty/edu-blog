@@ -122,6 +122,8 @@ export default function Studio() {
   // ---------- 저장소 ----------
   // cloud: 로그인 + Supabase(서버 DB, 학원별 분리) / null: Supabase 미설정 로컬 모드(브라우저 저장)
   const [cloud, setCloud] = useState<{ email: string; tenantId: string | null } | null>(null);
+  const [tenants, setTenants] = useState<{ id: string; name: string }[]>([]); // 이 계정의 학원들
+  const [adding, setAdding] = useState(false); // 학원 추가 화면
   const [localSeed, setLocalSeed] = useState<TenantProfile | null>(null);
   const [localImport, setLocalImport] = useState<DocRecord[]>([]);
   const persisted = useRef(new Map<string, DocRecord>()); // 서버에 마지막으로 저장한 문서
@@ -151,7 +153,7 @@ export default function Studio() {
   useEffect(() => {
     (async () => {
       setHistory(loadHistory());
-      let me: { mode?: string; user?: { email: string }; tenantId?: string; tenant?: TenantProfile | null; settings?: Settings | null } | null = null;
+      let me: { mode?: string; user?: { email: string }; tenantId?: string; tenants?: { id: string; name: string }[]; tenant?: TenantProfile | null; settings?: Settings | null } | null = null;
       try {
         const r = await fetch("/api/me", { cache: "no-store" });
         if (r.status === 401) {
@@ -164,6 +166,7 @@ export default function Studio() {
       }
       if (me?.mode === "cloud" && me.user) {
         setCloud({ email: me.user.email, tenantId: me.tenantId ?? null });
+        setTenants(me.tenants ?? []);
         if (me.tenant && me.tenantId) {
           setTenant(me.tenant);
           setSettings(me.settings ?? DEFAULT_SETTINGS);
@@ -587,9 +590,10 @@ export default function Studio() {
   const needsOnboarding = ready && !tenant?.onboardedAt;
 
   async function completeOnboarding(t: TenantProfile, phone: string) {
-    const base = settings;
+    // 학원 추가는 지금 학원의 설정을 물려받지 않고 기본값에서 시작한다
+    const base = adding ? DEFAULT_SETTINGS : settings;
     const name = displayName(t);
-    const oldName = tenant ? displayName(tenant) : "";
+    const oldName = tenant && !adding ? displayName(tenant) : "";
     const b = base.brand;
     // 비어 있거나 예전 학원명으로 자동 생성된 값만 새 학원명으로 채운다(사용자가 직접 바꾼 값은 유지)
     const auto = (cur: string, make: (n: string) => string) => (!cur || (oldName && cur === make(oldName)) ? make(name) : cur);
@@ -615,13 +619,15 @@ export default function Studio() {
       const r = await fetch("/api/tenant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenant: t, settings: nextSettings }),
+        body: JSON.stringify({ tenant: t, settings: nextSettings, create: adding }),
       }).catch(() => null);
       const j = await r?.json().catch(() => ({}));
       if (!r?.ok) {
         notify(j?.error || "학원 정보를 저장하지 못했습니다.");
         return;
       }
+      // 새 학원이 선택된 상태로 처음부터 다시 불러온다(글·설정·사용량이 학원마다 다름)
+      if (adding) return void (window.location.href = "/");
       setSettings(nextSettings);
       if (!cloud.tenantId) {
         setCloud({ ...cloud, tenantId: j.tenantId });
@@ -634,6 +640,14 @@ export default function Studio() {
     setTenant(t);
     notify(tenant?.onboardedAt ? "학원 정보를 저장했습니다" : "학원 정보를 등록했습니다. 첫 글을 만들어 보세요.");
     go({ name: "compose" });
+  }
+
+  async function switchTenant(id: string) {
+    if (id === cloud?.tenantId) return;
+    if (dirty.current || save.state === "saving") return notify("저장 중입니다. 잠시 뒤 다시 눌러 주세요.");
+    const r = await fetch("/api/tenant/select", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tenantId: id }) }).catch(() => null);
+    if (!r?.ok) return notify("학원을 바꾸지 못했습니다.");
+    window.location.href = "/";
   }
 
   const track = useCallback((type: string, plan?: string, kind?: string) => {
@@ -699,6 +713,19 @@ export default function Studio() {
           <div className="skeleton h-4 w-2/3" />
         </div>
       </div>
+    );
+  } else if (adding && cloud) {
+    view = (
+      <OnboardingView
+        key="add"
+        initial={EMPTY_TENANT}
+        phone=""
+        editing={false}
+        adding
+        onComplete={completeOnboarding}
+        onCancel={() => setAdding(false)}
+        notify={notify}
+      />
     );
   } else if (needsOnboarding || route.name === "onboarding") {
     view = (
@@ -837,7 +864,17 @@ export default function Studio() {
           locked={needsOnboarding}
           ready={ready}
           email={cloud?.email ?? null}
-          onNavigate={go}
+          tenants={cloud ? tenants : []}
+          currentTenantId={cloud?.tenantId ?? null}
+          onSwitchTenant={switchTenant}
+          onAddTenant={() => {
+            setAdding(true);
+            setMenu(false);
+          }}
+          onNavigate={(r) => {
+            setAdding(false);
+            go(r);
+          }}
           onRecheck={checkApi}
         />
       </aside>

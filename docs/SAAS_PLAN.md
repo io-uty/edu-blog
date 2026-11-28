@@ -169,7 +169,7 @@ src/lib/prompt/
 참고: 공유용 Vercel 배포(https://edu-blog-studio.vercel.app)는 Supabase 없이 로컬 모드 + 접속 비밀번호로 운영 중
 
 ### 2026-11-20 · 과금(Phase 6 일부)·이미지 다양화·디자인
-- 무료 체험 2회(plans.trial, 관리자가 DB에서 변경), 서버에서만 차감·실패 시 환불, 같은 요청 재전송은 한 번만 차감
+- 한 달 무료체험(글 20편·이미지 50장, plans.trial, 관리자가 DB에서 변경), 서버에서만 차감·실패 시 환불, 같은 요청 재전송은 한 번만 차감
 - 한도 초과 시 작성 화면 대신 이용권 안내(기존 글은 계속 이용), 베이직·프로 예시 요금제
 - 결제: 테스트 모드만(실제 돈 없음). 주문 금액은 서버 요금제 기준, 승인 시 서버 검증 후 activate_subscription 으로 결제·구독·학원 상태를 한 번에 반영(중복 승인 1회만)
 - 이벤트: pricing_viewed / purchase_clicked / checkout_started / payment_completed / content_generation_started·completed

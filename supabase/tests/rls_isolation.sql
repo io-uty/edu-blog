@@ -79,6 +79,7 @@ reset role;
 do $$
 declare r record;
 begin
+  update plans set content_limit = 2 where id = 'trial';  -- 한도 초과 동작을 짧게 보려고 낮춘다
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, '1회차';
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-1'); assert r.allowed and r.used = 1, '같은 키 재시도가 중복 차감됨';
   select * into r from consume_usage('aaaaaaaa-0000-0000-0000-000000000000', null, 'content', 1, null, 'req-2'); assert r.used = 2;
@@ -93,8 +94,8 @@ declare v uuid; v2 uuid; n int;
 begin
   insert into auth.users values ('00000000-0000-0000-0000-00000000000c');
   v  := create_tenant_for_user('00000000-0000-0000-0000-00000000000c', 'C학원', '수학학원');
-  v2 := create_tenant_for_user('00000000-0000-0000-0000-00000000000c', 'C학원 중복', '수학학원');
-  assert v = v2, '같은 사용자에게 학원이 두 번 만들어짐';
+  v2 := create_tenant_for_user('00000000-0000-0000-0000-00000000000c', 'C학원', '수학학원');
+  assert v = v2, '같은 요청 재전송에 학원이 두 번 만들어짐';
   select count(*) into n from tenant_members where user_id = '00000000-0000-0000-0000-00000000000c'; assert n = 1;
   select count(*) into n from tenant_brands where tenant_id = v; assert n = 1, '브랜드 행 없음';
   select count(*) into n from subscriptions where tenant_id = v and status = 'trial'; assert n = 1, '체험 구독 없음';

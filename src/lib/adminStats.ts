@@ -56,25 +56,28 @@ export async function buildStats(days: number | null) {
   const planById = new Map(plans.map((p) => [p.id, p]));
   const typeOf = (t: any) => (t.academy_type === "기타 교육기관" && t.academy_type_custom ? t.academy_type_custom : t.academy_type);
 
-  // 학원별 현재 이용권(가장 최근 trial/active)
+  // 이용권·사용량은 계정(학원 owner) 단위: 한 계정의 학원들이 같은 체험·생성권을 나눠 쓴다
+  const ownerOf = new Map<string, string>();
+  for (const m of members) if (m.role === "owner") ownerOf.set(m.tenant_id, m.user_id);
+  const acct = (tid: string) => ownerOf.get(tid) ?? tid;
+
+  // 계정별 현재 이용권(가장 최근 trial/active)
   const currentSub = new Map<string, any>();
   for (const s of [...subs].sort((a, b) => a.started_at.localeCompare(b.started_at)))
-    if (s.status === "trial" || s.status === "active") currentSub.set(s.tenant_id, s);
+    if (s.status === "trial" || s.status === "active") currentSub.set(acct(s.tenant_id), s);
 
   const usedSince = (tid: string, type: string, start: string) =>
-    usage.filter((u) => u.tenant_id === tid && u.usage_type === type && u.created_at >= start).reduce((a, u) => a + u.quantity, 0);
+    usage.filter((u) => acct(u.tenant_id) === acct(tid) && u.usage_type === type && u.created_at >= start).reduce((a, u) => a + u.quantity, 0);
 
   const evBy = (type: string) => events.filter((e) => e.event_type === type);
   const tenantsWith = (type: string) => new Set(evBy(type).map((e) => e.tenant_id).filter(Boolean));
 
   // ---------- 학원별 표 ----------
-  const ownerOf = new Map<string, string>();
-  for (const m of members) if (m.role === "owner") ownerOf.set(m.tenant_id, m.user_id);
   const emailOf = new Map(users.map((u) => [u.id, u.email]));
   const paidTenants = new Set(payments.filter((p) => p.status === "paid").map((p) => p.tenant_id));
 
   const rows = tenants.map((t) => {
-    const sub = currentSub.get(t.id);
+    const sub = currentSub.get(acct(t.id));
     const plan = sub ? planById.get(sub.plan_id) : null;
     const expired = sub?.expires_at && new Date(sub.expires_at).getTime() < now;
     const used = sub ? usedSince(t.id, "content", sub.started_at) : 0;

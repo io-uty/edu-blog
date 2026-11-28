@@ -38,19 +38,22 @@ export interface TenantSession {
   db: SupabaseClient; // 사용자 권한(RLS)
 }
 
-/** 로그인 사용자와 소속 학원을 서버에서 확인한다. 클라이언트가 보낸 tenant_id 는 쓰지 않는다. */
+/** 지금 보고 있는 학원(한 계정이 여러 학원을 가질 때). 값은 선택일 뿐, 소속 여부는 getSession 이 확인한다. */
+export const TENANT_COOKIE = "ebs_tenant";
+
+export async function setCurrentTenant(tenantId: string) {
+  (await cookies()).set(TENANT_COOKIE, tenantId, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 365 });
+}
+
+/** 로그인 사용자와 선택한 학원을 서버에서 확인한다. 선택한 학원에 소속이 아니면 첫 학원을 쓴다. */
 export async function getSession(): Promise<TenantSession | null> {
   if (!SUPABASE_ENABLED) return null;
   const db = await supabaseUser();
   const { data, error } = await db.auth.getUser();
   if (error || !data.user) return null;
-  const { data: m } = await db
-    .from("tenant_members")
-    .select("tenant_id, role")
-    .eq("user_id", data.user.id)
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
+  const want = (await cookies()).get(TENANT_COOKIE)?.value;
+  const { data: ms } = await db.from("tenant_members").select("tenant_id, role").eq("user_id", data.user.id).order("created_at");
+  const m = ms?.find((x) => x.tenant_id === want) ?? ms?.[0];
   return { user: data.user, tenantId: m?.tenant_id ?? null, role: (m?.role as TenantSession["role"]) ?? null, db };
 }
 

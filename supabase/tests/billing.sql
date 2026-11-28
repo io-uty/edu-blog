@@ -3,7 +3,9 @@ insert into auth.users values ('00000000-0000-0000-0000-0000000000d1');
 do $$
 declare t uuid; r record; s uuid; s2 uuid; n int;
 begin
+  update plans set content_limit = 2 where id = 'trial';  -- 체험 한도 소진 동작을 짧게 보려고 낮춘다
   t := create_tenant_for_user('00000000-0000-0000-0000-0000000000d1', '결제테스트학원', '수학학원');
+  assert (select expires_at from subscriptions where tenant_id = t and status = 'trial') between now() + interval '29 days' and now() + interval '31 days', '체험 만료일이 30일 뒤가 아님';
   select * into r from consume_usage(t, null, 'content', 1, null, 'g1'); assert r.allowed and r.used = 1;
   select * into r from consume_usage(t, null, 'content', 1, null, 'g2'); assert r.allowed and r.used = 2;
   select * into r from consume_usage(t, null, 'content', 1, null, 'g3'); assert not r.allowed and r.usage_limit = 2, '무료 2회 넘게 허용됨';

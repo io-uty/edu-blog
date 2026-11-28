@@ -8,7 +8,13 @@ export async function GET() {
   if (!SUPABASE_ENABLED) return Response.json({ mode: "local" });
   const s = await getSession();
   if (!s) return Response.json({ mode: "cloud", user: null }, { status: 401 });
-  const base = { mode: "cloud", user: { id: s.user.id, email: s.user.email }, role: s.role };
+  // 이 계정이 가진 학원 목록(왼쪽 아래 학원 전환 메뉴)
+  const { data: rows } = await s.db.from("tenant_members").select("tenant_id, created_at, tenants(name, branch_name)").eq("user_id", s.user.id).order("created_at");
+  const tenants = (rows ?? []).map((r) => {
+    const t = r.tenants as unknown as { name: string; branch_name: string | null } | null;
+    return { id: r.tenant_id as string, name: [t?.name, t?.branch_name].filter(Boolean).join(" ") };
+  });
+  const base = { mode: "cloud", user: { id: s.user.id, email: s.user.email }, role: s.role, tenants };
   if (!s.tenantId) return Response.json({ ...base, tenant: null, settings: null });
   try {
     const { tenant, settings } = await loadTenant(s.db, s.tenantId);

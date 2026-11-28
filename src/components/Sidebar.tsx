@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, History, LogIn, LogOut, Settings2, SquarePen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronsUpDown, FileText, History, LogIn, LogOut, Plus, Settings2, SquarePen } from "lucide-react";
 import Logo from "./Logo";
 import type { Route } from "./Studio";
 
@@ -28,6 +29,10 @@ export default function Sidebar({
   locked,
   ready,
   email,
+  tenants,
+  currentTenantId,
+  onSwitchTenant,
+  onAddTenant,
   onNavigate,
   onRecheck,
 }: {
@@ -38,11 +43,32 @@ export default function Sidebar({
   locked: boolean;
   ready: boolean;
   email: string | null;
+  tenants: { id: string; name: string }[];
+  currentTenantId: string | null;
+  onSwitchTenant: (id: string) => void;
+  onAddTenant: () => void;
   onNavigate: (r: Route) => void;
   onRecheck: () => void;
 }) {
+  // 왼쪽 아래 계정 메뉴: 학원 전환·학원 추가·로그아웃
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [open]);
+  const current = tenants.find((t) => t.id === currentTenantId);
+
   // 편집/발행 화면에서는 '콘텐츠 목록'을 현재 위치로 표시
-  const current = route.name === "edit" || route.name === "publish" ? "list" : route.name === "onboarding" ? "settings" : route.name;
+  const here = route.name === "edit" || route.name === "publish" ? "list" : route.name === "onboarding" ? "settings" : route.name;
 
   let apiLine = "확인 중…";
   let apiTone = "text-sub";
@@ -70,7 +96,7 @@ export default function Sidebar({
           <button
             key={name}
             className="nav-item"
-            aria-current={current === name ? "page" : undefined}
+            aria-current={here === name ? "page" : undefined}
             disabled={locked}
             onClick={() => onNavigate({ name } as Route)}
           >
@@ -84,12 +110,61 @@ export default function Sidebar({
         {!ready ? (
           <div className="skeleton h-10" aria-hidden />
         ) : email ? (
-          <form action="/auth/signout" method="post" className="space-y-2">
-            <p className="truncate px-1 text-xs text-sub" title={email}>{email}</p>
-            <button className="btn h-10 w-full justify-center gap-2 text-[14px]">
-              <LogOut size={15} /> 로그아웃
+          <div ref={box} className="relative">
+            <button
+              className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-bg2"
+              aria-expanded={open}
+              aria-haspopup="true"
+              onClick={() => setOpen((o) => !o)}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold">{current?.name || "학원 등록 전"}</span>
+                <span className="block truncate text-xs text-sub" title={email}>{email}</span>
+              </span>
+              <ChevronsUpDown size={15} className="shrink-0 text-sub" />
             </button>
-          </form>
+            {open && (
+              <div className="absolute inset-x-0 bottom-full z-50 mb-2 rounded-2xl border border-line bg-white p-1.5 shadow-lg">
+                {tenants.length > 0 && (
+                  <>
+                    <p className="px-2.5 pb-1 pt-1.5 text-xs text-sub">내 학원</p>
+                    <ul className="max-h-60 overflow-y-auto">
+                      {tenants.map((t) => (
+                        <li key={t.id}>
+                          <button
+                            className="nav-item"
+                            aria-current={t.id === currentTenantId ? "true" : undefined}
+                            onClick={() => {
+                              setOpen(false);
+                              onSwitchTenant(t.id);
+                            }}
+                          >
+                            <span className="flex-1 truncate">{t.name}</span>
+                            {t.id === currentTenantId && <Check size={15} className="shrink-0" />}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      className="nav-item"
+                      onClick={() => {
+                        setOpen(false);
+                        onAddTenant();
+                      }}
+                    >
+                      <Plus size={15} /> 학원 추가
+                    </button>
+                    <div className="my-1 border-t border-line" />
+                  </>
+                )}
+                <form action="/auth/signout" method="post">
+                  <button className="nav-item">
+                    <LogOut size={15} /> 로그아웃
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         ) : (
           <a className="btn btn-primary h-10 w-full justify-center gap-2 text-[14px]" href="/login">
             <LogIn size={15} /> 로그인
