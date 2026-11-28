@@ -126,13 +126,27 @@ export default function PublishView({
   const [ext, setExt] = useState(false);
   const [sending, setSending] = useState(false);
   const [installable, setInstallable] = useState(false);
+  const [hideInstall, setHideInstall] = useState(false); // "나중에"를 누르면 큰 카드 대신 한 줄 링크만 남긴다
+  const extRef = useRef(false);
+  const notifyRef = useRef(notify);
+  notifyRef.current = notify;
 
   // 확장의 app-bridge.js 가 <html data-bbolog-extension> 을 달고 ready 메시지를 보낸다
   useEffect(() => {
-    if (document.documentElement.dataset.bbologExtension) setExt(true);
+    if (document.documentElement.dataset.bbologExtension) {
+      extRef.current = true;
+      setExt(true);
+    }
     setInstallable(!!EXTENSION_URL && canInstallExtension());
+    try {
+      setHideInstall(localStorage.getItem("bbolog.hideExtInstall") === "1");
+    } catch {}
     const on = (e: MessageEvent) => {
-      if (e.source === window && e.data?.source === "bbolog-extension" && e.data.type === "ready") setExt(true);
+      if (e.source !== window || e.data?.source !== "bbolog-extension" || e.data.type !== "ready") return;
+      // 이 화면을 연 채로 스토어에서 설치하고 돌아온 경우: 새로고침 없이 켜졌음을 알려 준다
+      if (!extRef.current) notifyRef.current("확장이 연결됐어요. 이제 버튼 한 번으로 네이버에 보낼 수 있어요.");
+      extRef.current = true;
+      setExt(true);
     };
     window.addEventListener("message", on);
     return () => window.removeEventListener("message", on);
@@ -312,7 +326,15 @@ export default function PublishView({
               </p>
             </div>
           ) : (
-            installable && (
+            installable &&
+            (hideInstall ? (
+              <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3 text-[13px] text-sub">
+                <span>확장을 추가하면 한 번에 보낼 수 있어요</span>
+                <a className="shrink-0 font-semibold text-brand-dark hover:underline" href={EXTENSION_URL} target="_blank" rel="noreferrer" onClick={() => track("extension_install_clicked", "link")}>
+                  추가하기
+                </a>
+              </div>
+            ) : (
               <div className="border-b border-line px-5 py-4">
                 <div className="rounded-xl border border-[#f6d9c2] bg-brand-soft p-4">
                   <p className="text-[15px] font-semibold">복사/붙여넣기 없이 한 번에</p>
@@ -328,10 +350,23 @@ export default function PublishView({
                   >
                     <Puzzle size={15} /> Chrome에 추가
                   </a>
-                  <p className="mt-2 text-center text-[12px] text-[#6b4a35]">무료 / 추가하고 이 탭으로 돌아오면 바로 켜집니다</p>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-[12px] text-[#6b4a35]">
+                    <span>무료 / 추가하고 이 탭으로 돌아오면 바로 켜집니다</span>
+                    <button
+                      className="shrink-0 underline underline-offset-2 hover:text-ink"
+                      onClick={() => {
+                        setHideInstall(true);
+                        try {
+                          localStorage.setItem("bbolog.hideExtInstall", "1");
+                        } catch {}
+                      }}
+                    >
+                      나중에
+                    </button>
+                  </div>
                 </div>
               </div>
-            )
+            ))
           )}
           {ext ? (
             <details className="group">
